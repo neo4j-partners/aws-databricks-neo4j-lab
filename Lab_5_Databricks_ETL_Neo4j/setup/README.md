@@ -12,7 +12,7 @@ Complete these steps before the workshop begins:
 - [ ] Create a Volume for CSV data
 - [ ] Upload CSV files to the Volume
 - [ ] Configure a Dedicated cluster with Neo4j Spark Connector
-- [ ] Import the template notebook
+- [ ] Provide DBC file to participants (or host for download)
 - [ ] Test the complete workflow
 - [ ] Document connection details for participants
 
@@ -134,77 +134,6 @@ The Neo4j Spark Connector requires **Dedicated (Single User)** access mode.
 
 ---
 
-## Step 4: Import Template Notebook
-
-### 4.1 Create Workshop Folder
-
-1. Navigate to **Workspace**
-2. Create a folder: `Workshop_Materials` (or similar shared location)
-3. Set permissions so participants can read but not modify
-
-### 4.2 Import the Notebook
-
-The notebook file is provided at `Lab_5_Databricks_ETL_Neo4j/aircraft_etl_to_neo4j.ipynb`.
-
-**To import:**
-
-1. Navigate to the `Workshop_Materials` folder
-2. Click the **...** menu (or right-click)
-3. Select **Import**
-4. Choose **File** and upload `aircraft_etl_to_neo4j.ipynb`
-5. The notebook will appear as `aircraft_etl_to_neo4j`
-6. Optionally rename to `aircraft_etl_to_neo4j_template` for clarity
-
-### 4.3 Update Volume Path (if needed)
-
-If your Unity Catalog path differs from the default, update the `DATA_PATH` in the Configuration cell:
-
-```python
-# Default path - update if your setup differs
-DATA_PATH = "/Volumes/aircraft_workshop/aircraft_lab/aircraft_data"
-```
-
-### 4.4 Notebook Contents
-
-The imported notebook contains 6 sections with ~30 cells:
-
-| Section | Description |
-|---------|-------------|
-| **Section 1** | Introduction & Configuration (Neo4j credentials) |
-| **Section 2** | Data Preview (read and display CSVs) |
-| **Section 3** | Load Nodes (Aircraft, System, Component) |
-| **Section 4** | Load Relationships (HAS_SYSTEM, HAS_COMPONENT) |
-| **Section 5** | Verification Queries (counts, sample queries) |
-| **Section 6** | Next Steps (Neo4j Aura exploration guidance) |
-
-Participants will clone this notebook, enter their Neo4j credentials, and run all cells.
-
-### 4.5 Set Notebook Permissions
-
-1. Right-click the notebook
-2. Select **Permissions**
-3. Add the participant group with **Can Read** permission
-4. This allows cloning but prevents modifications to the template
-
----
-
-## Step 5: Test the Complete Workflow
-
-Before the workshop, run through the entire participant experience:
-
-1. Clone the template notebook
-2. Enter test Neo4j credentials
-3. Run all cells
-4. Verify counts match expected values:
-   - Aircraft: 20
-   - System: 80
-   - Component: 320
-   - HAS_SYSTEM: 80
-   - HAS_COMPONENT: 320
-
-5. Open Neo4j Aura and verify data is visible
-
----
 
 ## Step 6: Prepare Participant Instructions
 
@@ -216,19 +145,20 @@ Create a handout or slide with:
 |----------|-------|
 | Databricks Workspace URL | `https://your-workspace.cloud.databricks.com` |
 | Cluster Name | `aircraft-workshop-cluster` |
-| Template Notebook Location | `/Workspace/Workshop_Materials/aircraft_etl_to_neo4j_template` |
+| Notebook DBC File | `aircraft_etl_to_neo4j.dbc` (provide download link) |
 | Data Volume Path | `/Volumes/aircraft_workshop/aircraft_lab/aircraft_data/` |
 
 ### Quick Start Instructions
 
 1. Sign in to Databricks with your workshop credentials
 2. Navigate to Compute and ensure the cluster is running
-3. Go to Workspace > Workshop_Materials
-4. Right-click `aircraft_etl_to_neo4j_template` > Clone
-5. Open your cloned notebook
-6. Enter your Neo4j credentials from Lab 1
-7. Run all cells (Shift+Enter or Run All)
-8. Verify the counts in the output cells
+3. Download the `aircraft_etl_to_neo4j.dbc` file
+4. Go to Workspace > your personal folder
+5. Right-click > Import > upload the DBC file
+6. Open the imported notebook
+7. Enter your Neo4j credentials from Lab 1
+8. Run all cells (Shift+Enter or Run All)
+9. Verify the counts in the output cells
 
 ---
 

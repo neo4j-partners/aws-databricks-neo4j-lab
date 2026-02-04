@@ -6,6 +6,23 @@ Load aircraft data from Databricks into Neo4j using the Spark Connector.
 
 ---
 
+## Import Notebook
+
+[![Import to Databricks](https://img.shields.io/badge/Import_Notebook-Databricks-FF3621?style=for-the-badge&logo=databricks&logoColor=white)](https://raw.githubusercontent.com/neo4j-partners/aws-databricks-neo4j-lab/main/Lab_5_Databricks_ETL_Neo4j/setup/aircraft_etl_to_neo4j.py)
+
+**To import this notebook into Databricks:**
+
+1. In your Databricks workspace, select **Import** from any folder's menu
+2. Choose **URL** and paste:
+   ```
+   https://raw.githubusercontent.com/neo4j-partners/aws-databricks-neo4j-lab/main/Lab_5_Databricks_ETL_Neo4j/setup/aircraft_etl_to_neo4j.py
+   ```
+3. Click **Import**
+
+Alternatively, download [`aircraft_etl_to_neo4j.dbc`](setup/aircraft_etl_to_neo4j.dbc) and import as a file.
+
+---
+
 ## Prerequisites
 
 Before starting this lab, ensure you have:
@@ -20,7 +37,7 @@ Before starting this lab, ensure you have:
 
 1. **Log in** to Databricks workspace
 2. **Start/verify** the workshop cluster is running
-3. **Clone** the template notebook to your folder
+3. **Import** the notebook (see [Import Notebook](#import-notebook) above)
 4. **Enter** your Neo4j credentials
 5. **Run All** cells
 6. **Explore** the graph in Neo4j Aura
@@ -38,14 +55,24 @@ Before starting this lab, ensure you have:
    - If stopped, click the cluster name and click **Start**
    - Wait for status to change to Running (may take 2-3 minutes)
 
-### Part B: Clone the Notebook
+### Part B: Import the Notebook
 
-1. Navigate to **Workspace** in the left sidebar
-2. Go to the **Workshop_Materials** folder (or location specified by instructor)
-3. Find the notebook: `aircraft_etl_to_neo4j_template`
-4. Right-click the notebook and select **Clone**
-5. Save the clone to your personal folder (e.g., `/Users/your-email/`)
-6. Open your cloned notebook
+**Option 1: Import from URL (Recommended)**
+1. In Databricks, navigate to **Workspace** > your personal folder
+2. Right-click and select **Import**
+3. Choose **URL** and paste:
+   ```
+   https://raw.githubusercontent.com/neo4j-partners/aws-databricks-neo4j-lab/main/Lab_5_Databricks_ETL_Neo4j/setup/aircraft_etl_to_neo4j.py
+   ```
+4. Click **Import**
+
+**Option 2: Import from File**
+1. Download [`aircraft_etl_to_neo4j.dbc`](setup/aircraft_etl_to_neo4j.dbc)
+2. In Databricks, navigate to **Workspace** > your personal folder
+3. Right-click and select **Import**
+4. Choose **File** and upload the `.dbc` file
+
+After importing, open the notebook (`aircraft_etl_to_neo4j`)
 
 ### Part C: Configure and Run
 
