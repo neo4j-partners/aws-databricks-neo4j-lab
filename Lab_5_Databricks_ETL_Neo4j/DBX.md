@@ -62,12 +62,11 @@ Participants arrive to find:
 
 ### Workflow Summary
 
-1. **Access Workspace** - Log into Databricks, access the shared cluster
-2. **Clone Notebook** - Right-click the template notebook and clone to their folder
-3. **Configure Credentials** - Enter their Neo4j Aura connection details
-4. **Run the Notebook** - Execute cells to load data
-5. **Verify in Notebook** - Run sample Cypher queries from Databricks
-6. **Explore in Neo4j** - Open Neo4j Aura and visualize the graph
+1. **Part A: Access Workspace** - Log into Databricks, access the shared cluster
+2. **Part B: Clone Notebook** - Right-click the template notebook and clone to their folder
+3. **Part C: Understand Data Model** - Review CSV structure and graph mapping
+4. **Part D: Load & Verify** - Run the notebook to load data and verify with queries (single notebook)
+5. **Part E: Explore in Neo4j** - Open Neo4j Aura and visualize the graph
 
 ---
 
@@ -131,47 +130,51 @@ Participants arrive to find:
 
 ---
 
-### Part D: Load Data with Neo4j Spark Connector
+### Part D: Load Data and Verify (Single Notebook)
 
-**Objective:** Participants execute the notebook to load nodes and relationships into Neo4j.
+**Objective:** Participants execute the notebook to load nodes and relationships into Neo4j, then verify the data loaded correctly.
 
-**Notebook Sections:**
+> **Note:** Parts D (Load) and E (Verify) are combined into a single notebook that participants run from start to finish. The notebook handles both loading and verification in one cohesive workflow.
 
-**Section 1: Configure Neo4j Connection**
-- Set Spark configuration with Neo4j connection details
-- Test the connection with a simple health check query
+**Notebook Structure:**
 
-**Section 2: Read CSV Data from Unity Catalog**
-- Read aircraft CSV from the Volume
-- Read systems CSV from the Volume
-- Read components CSV from the Volume
-- Display row counts to verify data loaded
+**Section 1: Introduction & Configuration**
+- Markdown cell explaining the lab objectives
+- Configuration cell for Neo4j credentials (participants fill in)
+- Spark configuration cell to set up the connector
 
-**Section 3: Write Nodes to Neo4j**
-- Transform aircraft DataFrame (rename ID column)
-- Write Aircraft nodes using Spark Connector
-- Transform systems DataFrame
-- Write System nodes
-- Transform components DataFrame
-- Write Component nodes
-- Display progress messages after each write
+**Section 2: Data Preview**
+- Read CSV files from Unity Catalog Volume
+- Display sample rows from each file
+- Show row counts
+- Markdown explaining the data model mapping
 
-**Section 4: Write Relationships to Neo4j**
-- Read relationship CSV for HAS_SYSTEM
-- Write HAS_SYSTEM relationships using "keys" strategy
-- Read relationship CSV for HAS_COMPONENT
+**Section 3: Load Nodes**
+- Transform DataFrames (rename ID columns)
+- Write Aircraft nodes to Neo4j
+- Write System nodes to Neo4j
+- Write Component nodes to Neo4j
+- Print progress after each write
+
+**Section 4: Load Relationships**
+- Read relationship CSVs
+- Transform column names to match node keys
+- Write HAS_SYSTEM relationships
 - Write HAS_COMPONENT relationships
-- Display relationship counts
+- Print "ETL Complete" summary with counts
 
-**Success Criteria:** All notebook cells execute without errors. Final cell shows "ETL Complete" with node and relationship counts.
+**Section 5: Verification Queries**
+- Helper function to run Cypher queries from Spark
+- Count nodes by label (expected: Aircraft=20, System=80, Component=320)
+- Count relationships by type (expected: HAS_SYSTEM=80, HAS_COMPONENT=320)
+- Sample query: View aircraft N95040A hierarchy
+- Sample query: Find Boeing aircraft
 
----
+**Section 6: Next Steps**
+- Markdown with instructions to explore in Neo4j Aura
+- Sample visualization queries to try in Aura console
 
-### Part E: Verify Data in Databricks
-
-**Objective:** Participants run verification queries from within the notebook to confirm data loaded correctly.
-
-**Verification Queries (run from Databricks):**
+**Verification Queries (included in notebook):**
 
 1. **Count all nodes:**
    ```cypher
@@ -192,17 +195,11 @@ Participants arrive to find:
    RETURN a.tail_number, s.name AS system, collect(c.name) AS components
    ```
 
-4. **Find all Boeing aircraft:**
-   ```cypher
-   MATCH (a:Aircraft {manufacturer: 'Boeing'})
-   RETURN a.tail_number, a.model, a.operator
-   ```
-
-**Success Criteria:** Query results match expected counts. Aircraft N95040A shows 4 systems with components.
+**Success Criteria:** All notebook cells execute without errors. Verification queries return expected counts.
 
 ---
 
-### Part F: Explore Data in Neo4j Aura
+### Part E: Explore Data in Neo4j Aura
 
 **Objective:** Participants visualize the loaded graph in Neo4j Aura console.
 
@@ -331,6 +328,65 @@ For participants who finish early:
 - [Neo4j Spark Connector Documentation](https://neo4j.com/docs/spark/current/)
 - [Databricks Unity Catalog Volumes](https://docs.databricks.com/en/connect/unity-catalog/volumes.html)
 - [Neo4j Cypher Query Language](https://neo4j.com/docs/cypher-manual/current/)
+
+---
+
+## Artifacts to Create
+
+The following artifacts need to be created to deliver this lab:
+
+### Required Artifacts
+
+| Artifact | Location | Status | Description |
+|----------|----------|--------|-------------|
+| **DBX.md** | `Lab_5_Databricks_ETL_Neo4j/DBX.md` | Complete | This proposal document |
+| **Admin Setup Guide** | `Lab_5_Databricks_ETL_Neo4j/setup/README.md` | Complete | Instructions for lab administrators |
+| **ETL Notebook** | `Lab_5_Databricks_ETL_Neo4j/aircraft_etl_to_neo4j.ipynb` | Complete | Jupyter notebook (ipynb format) |
+| **Participant README** | `Lab_5_Databricks_ETL_Neo4j/README.md` | Complete | Step-by-step guide for participants |
+
+### Data Files (Already Exist)
+
+| File | Location | Status |
+|------|----------|--------|
+| `nodes_aircraft.csv` | `setup/aircraft_digital_twin_data/` | Exists |
+| `nodes_systems.csv` | `setup/aircraft_digital_twin_data/` | Exists |
+| `nodes_components.csv` | `setup/aircraft_digital_twin_data/` | Exists |
+| `rels_aircraft_system.csv` | `setup/aircraft_digital_twin_data/` | Exists |
+| `rels_system_component.csv` | `setup/aircraft_digital_twin_data/` | Exists |
+
+### Artifact Details
+
+#### 1. ETL Notebook (`aircraft_etl_to_neo4j.ipynb`)
+
+A Jupyter notebook that can be imported directly into Databricks. Contains 6 sections with ~30 cells:
+- **Section 1:** Introduction & Configuration (credentials input)
+- **Section 2:** Data Preview (read and display CSVs)
+- **Section 3:** Load Nodes (Aircraft, System, Component)
+- **Section 4:** Load Relationships (HAS_SYSTEM, HAS_COMPONENT)
+- **Section 5:** Verification Queries (counts, sample queries)
+- **Section 6:** Next Steps (Neo4j Aura exploration guidance)
+
+**Format:** Jupyter notebook (`.ipynb`) following nbformat v4.5+ specification
+
+**To import:** In Databricks, go to Workspace > Import > select the `.ipynb` file
+
+#### 2. Participant README (`README.md`)
+
+A concise guide for participants covering:
+- Prerequisites checklist
+- Quick start (6 steps)
+- Detailed step-by-step instructions for Parts A-E
+- Expected results table
+- Data summary and sample queries
+- Troubleshooting guide with common issues
+- Key concepts learned
+
+### Optional Enhancements
+
+| Artifact | Purpose | Priority |
+|----------|---------|----------|
+| Architecture diagram | Visual showing Aircraft -> System -> Component | Nice to have |
+| Solution notebook | Completed notebook with sample output for instructors | Recommended |
 
 ---
 

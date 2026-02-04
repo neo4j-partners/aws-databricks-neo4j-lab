@@ -12,7 +12,7 @@ Complete these steps before the workshop begins:
 - [ ] Create a Volume for CSV data
 - [ ] Upload CSV files to the Volume
 - [ ] Configure a Dedicated cluster with Neo4j Spark Connector
-- [ ] Create the template notebook
+- [ ] Import the template notebook
 - [ ] Test the complete workflow
 - [ ] Document connection details for participants
 
@@ -134,7 +134,7 @@ The Neo4j Spark Connector requires **Dedicated (Single User)** access mode.
 
 ---
 
-## Step 4: Create Template Notebook
+## Step 4: Import Template Notebook
 
 ### 4.1 Create Workshop Folder
 
@@ -142,256 +142,44 @@ The Neo4j Spark Connector requires **Dedicated (Single User)** access mode.
 2. Create a folder: `Workshop_Materials` (or similar shared location)
 3. Set permissions so participants can read but not modify
 
-### 4.2 Create the Template Notebook
+### 4.2 Import the Notebook
 
-Create a new notebook named `aircraft_etl_to_neo4j_template` with the following structure:
+The notebook file is provided at `Lab_5_Databricks_ETL_Neo4j/aircraft_etl_to_neo4j.ipynb`.
 
-**Cell 1: Introduction (Markdown)**
-```markdown
-# Aircraft ETL to Neo4j
+**To import:**
 
-This notebook loads Aircraft, System, and Component data from Databricks into Neo4j.
+1. Navigate to the `Workshop_Materials` folder
+2. Click the **...** menu (or right-click)
+3. Select **Import**
+4. Choose **File** and upload `aircraft_etl_to_neo4j.ipynb`
+5. The notebook will appear as `aircraft_etl_to_neo4j`
+6. Optionally rename to `aircraft_etl_to_neo4j_template` for clarity
 
-## Instructions
-1. Clone this notebook to your personal folder
-2. Enter your Neo4j credentials in the configuration cell below
-3. Run all cells in order
-4. Verify the data loaded using the query cells at the end
-```
+### 4.3 Update Volume Path (if needed)
 
-**Cell 2: Configuration (Python)**
+If your Unity Catalog path differs from the default, update the `DATA_PATH` in the Configuration cell:
+
 ```python
-# ============================================
-# CONFIGURATION - Enter your Neo4j credentials
-# ============================================
-
-NEO4J_URI = ""  # e.g., "neo4j+s://xxxxxxxx.databases.neo4j.io"
-NEO4J_USERNAME = "neo4j"
-NEO4J_PASSWORD = ""  # Your password from Lab 1
-
-# Unity Catalog Volume path (pre-configured by admin)
+# Default path - update if your setup differs
 DATA_PATH = "/Volumes/aircraft_workshop/aircraft_lab/aircraft_data"
 ```
 
-**Cell 3: Set Spark Configuration (Python)**
-```python
-# Configure Neo4j Spark Connector
-spark.conf.set("neo4j.url", NEO4J_URI)
-spark.conf.set("neo4j.authentication.basic.username", NEO4J_USERNAME)
-spark.conf.set("neo4j.authentication.basic.password", NEO4J_PASSWORD)
-spark.conf.set("neo4j.database", "neo4j")
+### 4.4 Notebook Contents
 
-print("Neo4j connection configured!")
-print(f"URI: {NEO4J_URI}")
-```
+The imported notebook contains 6 sections with ~30 cells:
 
-**Cell 4: Helper Function (Python)**
-```python
-def read_csv(filename):
-    """Read a CSV file from the Unity Catalog Volume."""
-    path = f"{DATA_PATH}/{filename}"
-    return spark.read.option("header", "true").csv(path)
+| Section | Description |
+|---------|-------------|
+| **Section 1** | Introduction & Configuration (Neo4j credentials) |
+| **Section 2** | Data Preview (read and display CSVs) |
+| **Section 3** | Load Nodes (Aircraft, System, Component) |
+| **Section 4** | Load Relationships (HAS_SYSTEM, HAS_COMPONENT) |
+| **Section 5** | Verification Queries (counts, sample queries) |
+| **Section 6** | Next Steps (Neo4j Aura exploration guidance) |
 
-def write_nodes(df, label, id_column):
-    """Write a DataFrame as nodes to Neo4j."""
-    (df
-     .write
-     .format("org.neo4j.spark.DataSource")
-     .mode("Overwrite")
-     .option("labels", f":{label}")
-     .option("node.keys", id_column)
-     .save())
-    print(f"Wrote {df.count()} {label} nodes")
+Participants will clone this notebook, enter their Neo4j credentials, and run all cells.
 
-def write_relationships(df, rel_type, source_label, source_key, target_label, target_key):
-    """Write relationships to Neo4j using keys strategy."""
-    (df
-     .write
-     .format("org.neo4j.spark.DataSource")
-     .mode("Overwrite")
-     .option("relationship", rel_type)
-     .option("relationship.save.strategy", "keys")
-     .option("relationship.source.labels", f":{source_label}")
-     .option("relationship.source.node.keys", source_key)
-     .option("relationship.target.labels", f":{target_label}")
-     .option("relationship.target.node.keys", target_key)
-     .save())
-    print(f"Wrote {rel_type} relationships")
-```
-
-**Cell 5: Load and Preview Data (Python)**
-```python
-# Read CSV files from Unity Catalog Volume
-aircraft_df = read_csv("nodes_aircraft.csv")
-systems_df = read_csv("nodes_systems.csv")
-components_df = read_csv("nodes_components.csv")
-
-print("=== Data Preview ===")
-print(f"\nAircraft: {aircraft_df.count()} rows")
-display(aircraft_df.limit(5))
-
-print(f"\nSystems: {systems_df.count()} rows")
-display(systems_df.limit(5))
-
-print(f"\nComponents: {components_df.count()} rows")
-display(components_df.limit(5))
-```
-
-**Cell 6: Transform Data (Python)**
-```python
-# Rename ID columns to standard names (remove Neo4j import format)
-aircraft_clean = (aircraft_df
-    .withColumnRenamed(":ID(Aircraft)", "aircraft_id"))
-
-systems_clean = (systems_df
-    .withColumnRenamed(":ID(System)", "system_id"))
-
-components_clean = (components_df
-    .withColumnRenamed(":ID(Component)", "component_id"))
-
-print("Data transformed for Neo4j loading")
-```
-
-**Cell 7: Write Nodes to Neo4j (Python)**
-```python
-print("=== Writing Nodes to Neo4j ===\n")
-
-write_nodes(aircraft_clean, "Aircraft", "aircraft_id")
-write_nodes(systems_clean, "System", "system_id")
-write_nodes(components_clean, "Component", "component_id")
-
-print("\nAll nodes written successfully!")
-```
-
-**Cell 8: Load and Write Relationships (Python)**
-```python
-print("=== Writing Relationships to Neo4j ===\n")
-
-# Read relationship CSVs
-aircraft_system_df = read_csv("rels_aircraft_system.csv")
-system_component_df = read_csv("rels_system_component.csv")
-
-# Rename columns to match node keys
-aircraft_system_clean = (aircraft_system_df
-    .withColumnRenamed(":START_ID(Aircraft)", "aircraft_id")
-    .withColumnRenamed(":END_ID(System)", "system_id"))
-
-system_component_clean = (system_component_df
-    .withColumnRenamed(":START_ID(System)", "system_id")
-    .withColumnRenamed(":END_ID(Component)", "component_id"))
-
-# Write relationships
-write_relationships(
-    aircraft_system_clean, "HAS_SYSTEM",
-    "Aircraft", "aircraft_id",
-    "System", "system_id"
-)
-
-write_relationships(
-    system_component_clean, "HAS_COMPONENT",
-    "System", "system_id",
-    "Component", "component_id"
-)
-
-print("\nAll relationships written successfully!")
-```
-
-**Cell 9: ETL Complete (Python)**
-```python
-print("=" * 50)
-print("ETL COMPLETE!")
-print("=" * 50)
-print(f"\nNodes loaded:")
-print(f"  - Aircraft: {aircraft_clean.count()}")
-print(f"  - System: {systems_clean.count()}")
-print(f"  - Component: {components_clean.count()}")
-print(f"\nRelationships loaded:")
-print(f"  - HAS_SYSTEM: {aircraft_system_clean.count()}")
-print(f"  - HAS_COMPONENT: {system_component_clean.count()}")
-print(f"\nTotal: {aircraft_clean.count() + systems_clean.count() + components_clean.count()} nodes")
-print(f"Total: {aircraft_system_clean.count() + system_component_clean.count()} relationships")
-```
-
-**Cell 10: Verification Queries - Setup (Python)**
-```python
-# Helper to run Cypher queries from Databricks
-def run_cypher(query):
-    """Execute a Cypher query and return results as DataFrame."""
-    return (spark.read
-        .format("org.neo4j.spark.DataSource")
-        .option("query", query)
-        .load())
-```
-
-**Cell 11: Verify Node Counts (Python)**
-```python
-print("=== Verification: Node Counts ===\n")
-result = run_cypher("MATCH (n) RETURN labels(n)[0] AS NodeType, count(*) AS Count ORDER BY NodeType")
-display(result)
-```
-
-**Cell 12: Verify Relationship Counts (Python)**
-```python
-print("=== Verification: Relationship Counts ===\n")
-result = run_cypher("MATCH ()-[r]->() RETURN type(r) AS RelType, count(*) AS Count ORDER BY RelType")
-display(result)
-```
-
-**Cell 13: View Aircraft Hierarchy (Python)**
-```python
-print("=== Sample Query: Aircraft N95040A Hierarchy ===\n")
-query = """
-MATCH (a:Aircraft {tail_number: 'N95040A'})-[:HAS_SYSTEM]->(s:System)
-OPTIONAL MATCH (s)-[:HAS_COMPONENT]->(c:Component)
-RETURN a.tail_number AS Aircraft,
-       s.name AS System,
-       s.type AS SystemType,
-       collect(c.name) AS Components
-ORDER BY s.type, s.name
-"""
-result = run_cypher(query)
-display(result)
-```
-
-**Cell 14: Next Steps (Markdown)**
-```markdown
-## Success!
-
-You have successfully loaded aircraft data into Neo4j!
-
-### What you loaded:
-- **20 Aircraft** (Boeing 737-800, Airbus A320/A321, Embraer E190)
-- **80 Systems** (2 engines, avionics, hydraulics per aircraft)
-- **320 Components** (fans, compressors, turbines, pumps, etc.)
-- **400 Relationships** connecting aircraft to systems to components
-
-### Next: Explore in Neo4j Aura
-
-1. Open your Neo4j Aura console
-2. Go to the Query tab
-3. Try these visualization queries:
-
-**See one aircraft's full hierarchy:**
-```cypher
-MATCH (a:Aircraft {tail_number: 'N95040A'})-[r1:HAS_SYSTEM]->(s:System)-[r2:HAS_COMPONENT]->(c:Component)
-RETURN a, r1, s, r2, c
-```
-
-**Compare manufacturers:**
-```cypher
-MATCH (a:Aircraft)
-RETURN a.manufacturer AS Manufacturer, count(a) AS Count
-```
-
-**Find component distribution:**
-```cypher
-MATCH (c:Component)
-RETURN c.type AS ComponentType, count(c) AS Count
-ORDER BY Count DESC
-```
-```
-
-### 4.3 Set Notebook Permissions
+### 4.5 Set Notebook Permissions
 
 1. Right-click the notebook
 2. Select **Permissions**
