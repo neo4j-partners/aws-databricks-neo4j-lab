@@ -1,15 +1,28 @@
-"""Utilities for data loading, Neo4j operations, and AI services."""
+"""Utilities for data loading, Neo4j operations, and Databricks AI services.
+
+This module provides embedding generation using Databricks Foundation Model APIs
+(hosted models like BGE and GTE) which are pre-deployed and ready to use.
+
+Available Databricks Embedding Models:
+- databricks-bge-large-en: 1024 dimensions, 512 token context
+- databricks-gte-large-en: 1024 dimensions, 8192 token context
+
+These models use OpenAI-compatible API format and are accessed via
+the MLflow deployments client when running in Databricks.
+"""
 
 import asyncio
 from pathlib import Path
+from typing import Any
 
-from azure.identity import AzureCliCredential, DefaultAzureCredential
+import mlflow.deployments
 from dotenv import load_dotenv
 from neo4j import GraphDatabase
-from neo4j_graphrag.embeddings import OpenAIEmbeddings
+from neo4j_graphrag.embeddings.base import Embeddings
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import FixedSizeSplitter
-from neo4j_graphrag.llm import OpenAILLM
-from pydantic import Field, computed_field
+from neo4j_graphrag.llm.base import LLMInterface
+from neo4j_graphrag.llm.types import LLMResponse
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Load configuration from project root
@@ -31,86 +44,150 @@ class Neo4jConfig(BaseSettings):
     password: str = Field(validation_alias="NEO4J_PASSWORD")
 
 
-class AgentConfig(BaseSettings):
-    """Agent configuration loaded from environment variables."""
+class DatabricksConfig(BaseSettings):
+    """Databricks configuration loaded from environment variables.
+
+    For Databricks Foundation Model APIs (hosted models):
+    - databricks-bge-large-en: 1024 dims, 512 token context, normalized
+    - databricks-gte-large-en: 1024 dims, 8192 token context
+    """
 
     model_config = SettingsConfigDict(env_prefix="", extra="ignore")
 
-    project_endpoint: str = Field(validation_alias="AZURE_AI_PROJECT_ENDPOINT")
-    model_name: str = Field(default="gpt-4o-mini", validation_alias="AZURE_AI_MODEL_NAME")
-    embedding_name: str = Field(
-        default="text-embedding-ada-002",
-        validation_alias="AZURE_AI_EMBEDDING_NAME",
+    embedding_model_id: str = Field(
+        default="databricks-bge-large-en",
+        validation_alias="EMBEDDING_MODEL_ID"
+    )
+    llm_model_id: str = Field(
+        default="databricks-meta-llama-3-3-70b-instruct",
+        validation_alias="MODEL_ID"
     )
 
-    @computed_field
-    @property
-    def inference_endpoint(self) -> str:
-        """Get the model inference endpoint from project endpoint."""
-        if "/api/projects/" in self.project_endpoint:
-            base = self.project_endpoint.split("/api/projects/")[0]
-            return f"{base}/models"
-        return self.project_endpoint
-
 
 # =============================================================================
-# Azure Authentication
+# Databricks Embeddings
 # =============================================================================
 
-def _get_azure_token() -> str:
-    """Get Azure token for cognitive services.
+class DatabricksEmbeddings(Embeddings):
+    """Generate embeddings using Databricks Foundation Model APIs.
 
-    Tries AzureCliCredential first (for Dev Containers after 'az login'),
-    then falls back to DefaultAzureCredential for other environments.
+    Databricks provides pre-deployed embedding models as part of the
+    Foundation Model APIs. These are ready to use without deployment.
+
+    Available Models:
+    - databricks-bge-large-en: 1024 dims, 512 token context
+    - databricks-gte-large-en: 1024 dims, 8192 token context
+
+    API Format (OpenAI-Compatible):
+        Input:  {"input": ["text1", "text2"]}
+        Output: {"data": [{"embedding": [0.1, ...]}, ...]}
+
+    Example:
+        >>> embedder = DatabricksEmbeddings(model_id="databricks-bge-large-en")
+        >>> embedding = embedder.embed_query("test text")
+        >>> len(embedding)
+        1024
     """
-    scope = "https://cognitiveservices.azure.com/.default"
 
-    try:
-        credential = AzureCliCredential()
-        token = credential.get_token(scope)
-        return token.token
-    except Exception:
-        pass
+    def __init__(self, model_id: str = "databricks-bge-large-en"):
+        """Initialize the Databricks embeddings provider.
 
-    try:
-        credential = DefaultAzureCredential()
-        token = credential.get_token(scope)
-        return token.token
-    except Exception as e:
-        raise RuntimeError(
-            "Azure authentication failed. Please run:\n"
-            "  1. az login --use-device-code\n"
-            "  2. Restart your Jupyter kernel\n\n"
-            f"Original error: {e}"
-        ) from e
+        Args:
+            model_id: The Databricks Foundation Model endpoint name.
+                      Default: databricks-bge-large-en (1024 dimensions)
+        """
+        self.model_id = model_id
+        self._client = mlflow.deployments.get_deploy_client("databricks")
+
+    def embed_query(self, text: str) -> list[float]:
+        """Generate embedding for a single text string.
+
+        Uses the MLflow deployments client to call the Databricks
+        Foundation Model API with OpenAI-compatible format.
+
+        Args:
+            text: The text to embed
+
+        Returns:
+            List of floats representing the embedding vector (1024 dimensions)
+        """
+        response = self._client.predict(
+            endpoint=self.model_id,
+            inputs={"input": [text]},
+        )
+        return response["data"][0]["embedding"]
 
 
 # =============================================================================
-# AI Services
+# Databricks LLM
 # =============================================================================
 
-def get_embedder() -> OpenAIEmbeddings:
-    """Get embedder using Azure AI's OpenAI-compatible endpoint."""
-    config = AgentConfig()
-    token = _get_azure_token()
+class DatabricksLLM(LLMInterface):
+    """LLM interface using Databricks Foundation Model APIs.
 
-    return OpenAIEmbeddings(
-        model=config.embedding_name,
-        base_url=config.inference_endpoint,
-        api_key=token,
-    )
+    Supports Databricks-hosted LLM endpoints like:
+    - databricks-meta-llama-3-3-70b-instruct
+    - databricks-dbrx-instruct
+    - databricks-mixtral-8x7b-instruct
+
+    Uses MLflow deployments client for API calls.
+    """
+
+    def __init__(self, model_id: str = "databricks-meta-llama-3-3-70b-instruct"):
+        """Initialize the Databricks LLM provider.
+
+        Args:
+            model_id: The Databricks Foundation Model endpoint name.
+        """
+        self.model_id = model_id
+        self._client = mlflow.deployments.get_deploy_client("databricks")
+
+    def invoke(self, input: str) -> LLMResponse:
+        """Generate a response from the LLM.
+
+        Args:
+            input: The prompt text
+
+        Returns:
+            LLMResponse containing the generated text
+        """
+        response = self._client.predict(
+            endpoint=self.model_id,
+            inputs={
+                "messages": [{"role": "user", "content": input}],
+                "max_tokens": 2048,
+            },
+        )
+        content = response["choices"][0]["message"]["content"]
+        return LLMResponse(content=content)
+
+    async def ainvoke(self, input: str) -> LLMResponse:
+        """Async version of invoke (runs synchronously)."""
+        return self.invoke(input)
 
 
-def get_llm() -> OpenAILLM:
-    """Get LLM using Azure AI's OpenAI-compatible endpoint."""
-    config = AgentConfig()
-    token = _get_azure_token()
+# =============================================================================
+# AI Services Factory Functions
+# =============================================================================
 
-    return OpenAILLM(
-        model_name=config.model_name,
-        base_url=config.inference_endpoint,
-        api_key=token,
-    )
+def get_embedder() -> DatabricksEmbeddings:
+    """Get embedder using Databricks Foundation Model APIs.
+
+    Returns:
+        DatabricksEmbeddings configured for BGE-large (1024 dimensions)
+    """
+    config = DatabricksConfig()
+    return DatabricksEmbeddings(model_id=config.embedding_model_id)
+
+
+def get_llm() -> DatabricksLLM:
+    """Get LLM using Databricks Foundation Model APIs.
+
+    Returns:
+        DatabricksLLM configured from environment
+    """
+    config = DatabricksConfig()
+    return DatabricksLLM(model_id=config.llm_model_id)
 
 
 # =============================================================================
@@ -134,8 +211,8 @@ class Neo4jConnection:
         print("Connected to Neo4j successfully!")
         return self
 
-    def clear_graph(self):
-        """Remove all Document and Chunk nodes."""
+    def clear_chunks(self):
+        """Remove all Document and Chunk nodes (preserves aircraft graph from Lab 5)."""
         with self.driver.session() as session:
             result = session.run("""
                 MATCH (n) WHERE n:Document OR n:Chunk
@@ -143,7 +220,22 @@ class Neo4jConnection:
                 RETURN count(n) as deleted
             """)
             count = result.single()["deleted"]
-            print(f"Deleted {count} nodes")
+            print(f"Deleted {count} Document/Chunk nodes")
+        return self
+
+    def get_graph_stats(self):
+        """Show current graph statistics."""
+        with self.driver.session() as session:
+            result = session.run("""
+                MATCH (n)
+                WITH labels(n) as nodeLabels
+                UNWIND nodeLabels as label
+                RETURN label, count(*) as count
+                ORDER BY label
+            """)
+            print("=== Graph Statistics ===")
+            for record in result:
+                print(f"  {record['label']}: {record['count']}")
         return self
 
     def close(self):
@@ -202,3 +294,11 @@ def split_text(text: str, chunk_size: int = 500, chunk_overlap: int = 50) -> lis
     )
     result = asyncio.run(splitter.run(text))
     return [chunk.text for chunk in result.chunks]
+
+
+# =============================================================================
+# Embedding Configuration
+# =============================================================================
+
+# Databricks BGE and GTE models produce 1024-dimensional vectors
+EMBEDDING_DIMENSIONS = 1024
