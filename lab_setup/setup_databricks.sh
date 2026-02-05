@@ -55,15 +55,15 @@ AUTOTERMINATION_MINUTES=30
 NEO4J_SPARK_CONNECTOR="org.neo4j:neo4j-connector-apache-spark_2.13:5.3.10_for_spark_3"
 
 PYPI_PACKAGES=(
-    "neo4j==6.0.2"
+    "neo4j==6.1.0"
     "databricks-agents>=1.2.0"
-    "langgraph==1.0.5"
-    "langchain-openai==1.1.2"
+    "langgraph==1.0.7"
+    "langchain-openai==1.1.7"
     "pydantic==2.12.5"
     "langchain-core>=1.2.0"
     "databricks-langchain>=0.11.0"
     "dspy>=3.0.4"
-    "neo4j-graphrag>=1.10.0"
+    "neo4j-graphrag>=1.13.0"
     "beautifulsoup4>=4.12.0"
     "sentence_transformers"
 )

@@ -50,7 +50,10 @@ Build a supervisor agent that intelligently routes questions:
     - sensors                        - Maintenance events
     - systems                        - Flights & delays
     - aircraft                       - Component hierarchy
+                                       - Removals
 ```
+
+Aircraft, Systems, and Sensors metadata appears in both systems. The high-volume sensor readings live in the lakehouse (optimized for SQL aggregations), while maintenance events, flights, component hierarchy, and removals live in Neo4j (optimized for relationship traversals).
 
 ## Data Model
 
@@ -85,6 +88,7 @@ From Lab 5 (both notebooks) and Lab 6, your graph contains:
 | Flight | 800 | Operations |
 | Delay | ~300 | Delay causes |
 | Airport | 12 | Route network |
+| Removal | ~100 | Component removal tracking |
 
 ## Query Routing Strategy
 
@@ -146,10 +150,18 @@ The supervisor routes questions based on intent:
 
 ### Why Two Data Sources?
 
+The lakehouse has the **readings**, Neo4j has the **relationships**. Together they form the complete digital twin.
+
 | System | Strength | Best For |
 |--------|----------|----------|
 | **Databricks (Genie)** | SQL analytics, aggregations | Time-series queries, statistics |
 | **Neo4j (MCP)** | Graph traversals, pattern matching | Relationships, topology |
+
+**Shared data** — Aircraft, Systems, and Sensors metadata exist in both the lakehouse tables and Neo4j nodes.
+
+**Genie-exclusive** — `sensor_readings` (345,600+ rows). The high-volume time-series telemetry lives only in the lakehouse, where SQL excels at aggregations, trends, and statistical analysis.
+
+**Neo4j-exclusive** — Components, MaintenanceEvents, Flights, Delays, Airports, and Removals, plus the relationships between all entities (`HAS_COMPONENT`, `HAS_EVENT`, `OPERATES_FLIGHT`, `HAS_DELAY`, `HAS_REMOVAL`, etc.). These relationship-rich structures are what make graph queries powerful for topology, maintenance history, and operational analysis.
 
 The multi-agent approach lets users ask questions in natural language without knowing which system to query. The supervisor intelligently routes based on the question's intent.
 

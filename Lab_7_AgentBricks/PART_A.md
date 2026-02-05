@@ -49,19 +49,69 @@ Once the Genie space is created, click **Configure** in the top navigation bar, 
 2. **Description:** "Analyzes aircraft engine sensor telemetry including EGT, vibration, N1 speed, and fuel flow metrics"
 3. **Default warehouse:** Select a **Serverless SQL Warehouse**
 
+### 1.4 Add Sample Questions
+
+Still on the **Settings** tab, scroll down to **Sample questions**. These train the Genie to understand domain-specific language. Click **+ Add** and enter these examples:
+
+**Time-Series Analytics**
+
+```
+What is the average EGT temperature for aircraft N95040A over the last 30 days?
+```
+
+```
+Show daily average vibration readings for Engine 1 on aircraft AC1001
+```
+
+```
+What was the maximum fuel flow recorded in August 2024?
+```
+
+**Fleet Comparisons**
+
+```
+Compare average EGT temperatures between Boeing 737 and Airbus A320 aircraft
+```
+
+```
+Which aircraft has the highest average vibration readings?
+```
+
+```
+Show fuel flow rates by operator
+```
+
+**Anomaly Detection**
+
+```
+Find sensors with readings above their 95th percentile value
+```
+
+```
+Show all EGT readings above 690 degrees Celsius
+```
+
+```
+Which engines have N1 speed readings outside the normal range of 4500-5000 rpm?
+```
+
+**Trend Analysis**
+
+```
+Show the trend of EGT temperatures over the 90-day period for aircraft N95040A
+```
+
+```
+Calculate the 7-day rolling average of vibration for Engine 1 on AC1001
+```
+
 ---
 
 ## Step 2: Add Remaining Data Sources
 
-### 2.1 Select the Warehouse
+Navigate to **Configure** > **Data** to add the remaining tables.
 
-1. In the Genie configuration, click **Select warehouse**
-2. Choose a **Serverless SQL Warehouse** or **Pro SQL Warehouse**
-   - Serverless is recommended for best performance
-
-### 2.2 Add Remaining Unity Catalog Tables
-
-You already added `sensor_readings` during creation. Now add the remaining tables from `aws-databricks-neo4j-lab.lakehouse`:
+You already added `sensor_readings` during creation. Now click **+ Add tables** and select the following from `aws-databricks-neo4j-lab.lakehouse`:
 
 1. **sensors**
    - Sensor metadata (type, unit, location)
@@ -79,67 +129,9 @@ You already added `sensor_readings` during creation. Now add the remaining table
 
 ---
 
-## Step 3: Add Sample Questions
+## Step 3: Add Instructions
 
-Sample questions train the Genie to understand domain-specific language. Click **Add sample questions** and enter these examples:
-
-### Time-Series Analytics
-
-```
-What is the average EGT temperature for aircraft N95040A over the last 30 days?
-```
-
-```
-Show daily average vibration readings for Engine 1 on aircraft AC1001
-```
-
-```
-What was the maximum fuel flow recorded in August 2024?
-```
-
-### Fleet Comparisons
-
-```
-Compare average EGT temperatures between Boeing 737 and Airbus A320 aircraft
-```
-
-```
-Which aircraft has the highest average vibration readings?
-```
-
-```
-Show fuel flow rates by operator
-```
-
-### Anomaly Detection
-
-```
-Find sensors with readings above their 95th percentile value
-```
-
-```
-Show all EGT readings above 690 degrees Celsius
-```
-
-```
-Which engines have N1 speed readings outside the normal range of 4500-5000 rpm?
-```
-
-### Trend Analysis
-
-```
-Show the trend of EGT temperatures over the 90-day period for aircraft N95040A
-```
-
-```
-Calculate the 7-day rolling average of vibration for Engine 1 on AC1001
-```
-
----
-
-## Step 4: Add Instructions
-
-Instructions provide domain knowledge and query conventions. Click **Add instructions** and enter:
+Navigate to **Configure** > **Instructions**. Instructions provide domain knowledge and query conventions. Enter the following:
 
 ```
 # Aircraft Sensor Analytics Domain Knowledge
@@ -188,13 +180,13 @@ Instructions provide domain knowledge and query conventions. Click **Add instruc
 
 ---
 
-## Step 5: Test the Genie
+## Step 4: Test the Genie
 
-### 5.1 Start a Conversation
+### 4.1 Start a Conversation
 
 Click **Start conversation** or go to the chat interface.
 
-### 5.2 Test Basic Queries
+### 4.2 Test Basic Queries
 
 Try these progressively complex queries:
 
@@ -228,9 +220,9 @@ Find the top 5 sensors with the highest average readings for their type
 ```
 Expected: Top sensors with their average values and types
 
-### 5.3 Validate SQL Generation
+### 4.3 View the SQL Generation
 
-For each query, click **View SQL** to verify the generated query is correct:
+For each query, click **View Code** to see the generated query is correct:
 
 Example for "Compare average vibration by aircraft model":
 ```sql
@@ -249,43 +241,13 @@ ORDER BY avg_vibration DESC
 
 ---
 
-## Step 6: Refine Based on Testing
+## Step 6: Save and Note the Genie Space ID
 
-### Common Refinements
-
-1. **If queries miss joins:**
-   Add to instructions: "Always join through sensors -> systems -> aircraft for aircraft-level queries"
-
-2. **If units are missing:**
-   Add to instructions: "Include the unit column from sensors table in all results"
-
-3. **If time filtering is wrong:**
-   Add sample question: "Show readings from July 2024" with expected date range
-
-4. **If sensor types are confused:**
-   Add more examples distinguishing EGT from Vibration queries
-
-### Add More Sample Questions as Needed
-
-Based on your testing, add questions that the Genie struggled with:
-
-```
-Show all vibration readings above 0.4 ips in the last 30 days
-```
-
-```
-What is the standard deviation of EGT readings by aircraft?
-```
-
----
-
-## Step 7: Save and Note the Genie Space ID
-
-### 7.1 Save Configuration
+### 6.1 Save Configuration
 
 Click **Save** to preserve your Genie space configuration.
 
-### 7.2 Record the Genie Space Name
+### 6.2 Record the Genie Space Name
 
 Note the exact name of your Genie space (e.g., `Aircraft Sensor Analyst RK`). You'll need this in Part B when configuring the multi-agent supervisor.
 
@@ -302,63 +264,6 @@ You've created a Genie space that can:
 - Understand domain-specific terminology (EGT, N1Speed, etc.)
 
 ---
-
-## Sample SQL Templates
-
-For reference, here are common query patterns the Genie should generate:
-
-### Average by Sensor Type
-```sql
-SELECT sen.type, AVG(r.value) as avg_value, sen.unit
-FROM sensor_readings r
-JOIN sensors sen ON r.sensor_id = sen.sensor_id
-GROUP BY sen.type, sen.unit
-```
-
-### Daily Trend for Specific Aircraft
-```sql
-SELECT DATE(r.timestamp) as date, AVG(r.value) as avg_value
-FROM sensor_readings r
-JOIN sensors sen ON r.sensor_id = sen.sensor_id
-JOIN systems s ON sen.system_id = s.system_id
-JOIN aircraft a ON s.aircraft_id = a.aircraft_id
-WHERE a.tail_number = 'N95040A'
-  AND sen.type = 'EGT'
-GROUP BY DATE(r.ts)
-ORDER BY date
-```
-
-### Percentile Analysis
-```sql
-WITH percentiles AS (
-    SELECT sen.type, PERCENTILE(r.value, 0.95) as p95
-    FROM sensor_readings r
-    JOIN sensors sen ON r.sensor_id = sen.sensor_id
-    GROUP BY sen.type
-)
-SELECT sen.sensor_id, sen.type, r.timestamp, r.value, p.p95
-FROM sensor_readings r
-JOIN sensors sen ON r.sensor_id = sen.sensor_id
-JOIN percentiles p ON sen.type = p.type
-WHERE r.value > p.p95
-ORDER BY r.value DESC
-LIMIT 100
-```
-
-### Fleet Comparison
-```sql
-SELECT a.model, a.manufacturer,
-       COUNT(DISTINCT a.aircraft_id) as aircraft_count,
-       AVG(r.value) as avg_egt,
-       STDDEV(r.value) as stddev_egt
-FROM sensor_readings r
-JOIN sensors sen ON r.sensor_id = sen.sensor_id
-JOIN systems s ON sen.system_id = s.system_id
-JOIN aircraft a ON s.aircraft_id = a.aircraft_id
-WHERE sen.type = 'EGT'
-GROUP BY a.model, a.manufacturer
-ORDER BY avg_egt DESC
-```
 
 ---
 
