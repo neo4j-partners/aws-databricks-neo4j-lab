@@ -8,18 +8,13 @@ Load aircraft data from Databricks into Neo4j using the Spark Connector.
 
 ## Import Notebook
 
-[![Import to Databricks](https://img.shields.io/badge/Import_Notebook-Databricks-FF3621?style=for-the-badge&logo=databricks&logoColor=white)](https://raw.githubusercontent.com/neo4j-partners/aws-databricks-neo4j-lab/main/Lab_5_Databricks_ETL_Neo4j/setup/aircraft_etl_to_neo4j.py)
-
 **To import this notebook into Databricks:**
 
-1. In your Databricks workspace, select **Import** from any folder's menu
-2. Choose **URL** and paste:
-   ```
-   https://raw.githubusercontent.com/neo4j-partners/aws-databricks-neo4j-lab/main/Lab_5_Databricks_ETL_Neo4j/setup/aircraft_etl_to_neo4j.py
-   ```
-3. Click **Import**
-
-Alternatively, download [`aircraft_etl_to_neo4j.dbc`](setup/aircraft_etl_to_neo4j.dbc) and import as a file.
+1. Download [`01_aircraft_etl_to_neo4j.ipynb`](01_aircraft_etl_to_neo4j.ipynb) from this repository
+2. In your Databricks workspace, navigate to **Workspace** > your personal folder
+3. Right-click and select **Import**
+4. Choose **File** and upload the `.ipynb` file
+5. Click **Import**
 
 ---
 
@@ -57,22 +52,13 @@ Before starting this lab, ensure you have:
 
 ### Part B: Import the Notebook
 
-**Option 1: Import from URL (Recommended)**
-1. In Databricks, navigate to **Workspace** > your personal folder
-2. Right-click and select **Import**
-3. Choose **URL** and paste:
-   ```
-   https://raw.githubusercontent.com/neo4j-partners/aws-databricks-neo4j-lab/main/Lab_5_Databricks_ETL_Neo4j/setup/aircraft_etl_to_neo4j.py
-   ```
-4. Click **Import**
-
-**Option 2: Import from File**
-1. Download [`aircraft_etl_to_neo4j.dbc`](setup/aircraft_etl_to_neo4j.dbc)
+1. Download [`01_aircraft_etl_to_neo4j.ipynb`](01_aircraft_etl_to_neo4j.ipynb) from this repository
 2. In Databricks, navigate to **Workspace** > your personal folder
 3. Right-click and select **Import**
-4. Choose **File** and upload the `.dbc` file
+4. Choose **File** and upload the `.ipynb` file
+5. Click **Import**
 
-After importing, open the notebook (`aircraft_etl_to_neo4j`)
+After importing, open the notebook (`01_aircraft_etl_to_neo4j`)
 
 ### Part C: Configure and Run
 

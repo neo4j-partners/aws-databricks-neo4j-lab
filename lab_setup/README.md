@@ -4,6 +4,20 @@
 
 ---
 
+
+## Pre-Workshop Checklist
+
+Complete these steps before the workshop begins:
+
+- [ ] Create Unity Catalog, Schema, and Volume (Step 1 — UI required)
+- [ ] Run `setup_databricks.sh` to set up compute, upload data, and create tables (Step 2)
+- [ ] Configure Databricks Genie Space (Lab 7)
+- [ ] Provide DBC file to participants (or host for download)
+- [ ] Test the complete workflow
+- [ ] Document connection details for participants
+
+---
+
 ## Prerequisites: Databricks CLI Authentication
 
 Before running any CLI commands, authenticate the Databricks CLI with your user account:
@@ -36,18 +50,6 @@ Then re-run `databricks auth login`.
 
 ---
 
-## Pre-Workshop Checklist
-
-Complete these steps before the workshop begins:
-
-- [ ] Create Unity Catalog, Schema, and Volume (Step 1 — UI required)
-- [ ] Run `setup_databricks.sh` to set up compute, upload data, and create tables (Step 2)
-- [ ] Configure Databricks Genie Space (Lab 7)
-- [ ] Provide DBC file to participants (or host for download)
-- [ ] Test the complete workflow
-- [ ] Document connection details for participants
-
----
 
 ## Why Catalog Creation Is Manual
 
