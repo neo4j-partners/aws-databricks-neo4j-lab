@@ -36,30 +36,30 @@ CREATE_SCHEMA = f"CREATE SCHEMA IF NOT EXISTS `{CATALOG}`.`{LAKEHOUSE_SCHEMA}`"
 
 CREATE_TABLES = [
     f"""CREATE TABLE IF NOT EXISTS `{CATALOG}`.{LAKEHOUSE_SCHEMA}.aircraft
-USING DELTA
-AS SELECT * FROM csv.`{VOLUME_PATH}/nodes_aircraft.csv`
-OPTIONS (header = 'true', inferSchema = 'true')""",
+AS SELECT * FROM read_files(
+    '{VOLUME_PATH}/nodes_aircraft.csv',
+    format => 'csv', header => 'true', inferSchema => 'true')""",
 
     f"""CREATE TABLE IF NOT EXISTS `{CATALOG}`.{LAKEHOUSE_SCHEMA}.systems
-USING DELTA
-AS SELECT * FROM csv.`{VOLUME_PATH}/nodes_systems.csv`
-OPTIONS (header = 'true', inferSchema = 'true')""",
+AS SELECT * FROM read_files(
+    '{VOLUME_PATH}/nodes_systems.csv',
+    format => 'csv', header => 'true', inferSchema => 'true')""",
 
     f"""CREATE TABLE IF NOT EXISTS `{CATALOG}`.{LAKEHOUSE_SCHEMA}.sensors
-USING DELTA
-AS SELECT * FROM csv.`{VOLUME_PATH}/nodes_sensors.csv`
-OPTIONS (header = 'true', inferSchema = 'true')""",
+AS SELECT * FROM read_files(
+    '{VOLUME_PATH}/nodes_sensors.csv',
+    format => 'csv', header => 'true', inferSchema => 'true')""",
 
     f"""CREATE TABLE IF NOT EXISTS `{CATALOG}`.{LAKEHOUSE_SCHEMA}.sensor_readings
-USING DELTA
 PARTITIONED BY (sensor_id)
 AS SELECT
     reading_id,
     sensor_id,
     to_timestamp(ts) as timestamp,
     CAST(value AS DOUBLE) as value
-FROM csv.`{VOLUME_PATH}/nodes_readings.csv`
-OPTIONS (header = 'true', inferSchema = 'true')""",
+FROM read_files(
+    '{VOLUME_PATH}/nodes_readings.csv',
+    format => 'csv', header => 'true', inferSchema => 'true')""",
 ]
 
 COMMENTS = [

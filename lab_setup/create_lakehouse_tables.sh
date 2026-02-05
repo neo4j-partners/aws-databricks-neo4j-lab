@@ -104,19 +104,19 @@ echo ""
 echo "Creating Delta Lake tables..."
 
 execute_sql \
-    "CREATE TABLE IF NOT EXISTS \`${CATALOG}\`.${LAKEHOUSE_SCHEMA}.aircraft USING DELTA AS SELECT * FROM csv.\`${VOLUME_PATH}/nodes_aircraft.csv\` OPTIONS (header = 'true', inferSchema = 'true')" \
+    "CREATE TABLE IF NOT EXISTS \`${CATALOG}\`.${LAKEHOUSE_SCHEMA}.aircraft AS SELECT * FROM read_files('${VOLUME_PATH}/nodes_aircraft.csv', format => 'csv', header => 'true', inferSchema => 'true')" \
     "CREATE TABLE aircraft"
 
 execute_sql \
-    "CREATE TABLE IF NOT EXISTS \`${CATALOG}\`.${LAKEHOUSE_SCHEMA}.systems USING DELTA AS SELECT * FROM csv.\`${VOLUME_PATH}/nodes_systems.csv\` OPTIONS (header = 'true', inferSchema = 'true')" \
+    "CREATE TABLE IF NOT EXISTS \`${CATALOG}\`.${LAKEHOUSE_SCHEMA}.systems AS SELECT * FROM read_files('${VOLUME_PATH}/nodes_systems.csv', format => 'csv', header => 'true', inferSchema => 'true')" \
     "CREATE TABLE systems"
 
 execute_sql \
-    "CREATE TABLE IF NOT EXISTS \`${CATALOG}\`.${LAKEHOUSE_SCHEMA}.sensors USING DELTA AS SELECT * FROM csv.\`${VOLUME_PATH}/nodes_sensors.csv\` OPTIONS (header = 'true', inferSchema = 'true')" \
+    "CREATE TABLE IF NOT EXISTS \`${CATALOG}\`.${LAKEHOUSE_SCHEMA}.sensors AS SELECT * FROM read_files('${VOLUME_PATH}/nodes_sensors.csv', format => 'csv', header => 'true', inferSchema => 'true')" \
     "CREATE TABLE sensors"
 
 execute_sql \
-    "CREATE TABLE IF NOT EXISTS \`${CATALOG}\`.${LAKEHOUSE_SCHEMA}.sensor_readings USING DELTA PARTITIONED BY (sensor_id) AS SELECT reading_id, sensor_id, to_timestamp(ts) as timestamp, CAST(value AS DOUBLE) as value FROM csv.\`${VOLUME_PATH}/nodes_readings.csv\` OPTIONS (header = 'true', inferSchema = 'true')" \
+    "CREATE TABLE IF NOT EXISTS \`${CATALOG}\`.${LAKEHOUSE_SCHEMA}.sensor_readings PARTITIONED BY (sensor_id) AS SELECT reading_id, sensor_id, to_timestamp(ts) as timestamp, CAST(value AS DOUBLE) as value FROM read_files('${VOLUME_PATH}/nodes_readings.csv', format => 'csv', header => 'true', inferSchema => 'true')" \
     "CREATE TABLE sensor_readings"
 
 # --- Add table and column comments for Genie ---
