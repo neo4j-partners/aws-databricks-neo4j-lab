@@ -12,10 +12,8 @@ the MLflow deployments client when running in Databricks.
 """
 
 import asyncio
+import concurrent.futures
 from pathlib import Path
-
-import nest_asyncio
-nest_asyncio.apply()
 
 import mlflow.deployments
 from neo4j import GraphDatabase
@@ -325,7 +323,10 @@ def split_text(text: str, chunk_size: int = 500, chunk_overlap: int = 50) -> lis
         chunk_overlap=chunk_overlap,
         approximate=True
     )
-    result = asyncio.run(splitter.run(text))
+    # Run in a separate thread to avoid "asyncio.run() cannot be called from
+    # a running event loop" in Jupyter/Databricks environments.
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        result = pool.submit(asyncio.run, splitter.run(text)).result()
     return [chunk.text for chunk in result.chunks]
 
 
