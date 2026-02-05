@@ -248,11 +248,22 @@ class Neo4jConnection:
 # Data Loading
 # =============================================================================
 
+# Default Volume path for workshop data
+DEFAULT_VOLUME_PATH = "/Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume"
+
+
 class DataLoader:
-    """Handles loading text data from files."""
+    """Handles loading text data from files (local or Unity Catalog Volume)."""
 
     def __init__(self, file_path: str):
-        """Initialize with path to data file."""
+        """Initialize with path to data file.
+
+        Args:
+            file_path: Path to the file. Can be:
+                - Relative path (loaded from current directory)
+                - Absolute local path
+                - Volume path (e.g., /Volumes/catalog/schema/volume/file.md)
+        """
         self.file_path = Path(file_path)
         self._text = None
 
@@ -268,6 +279,47 @@ class DataLoader:
         return {
             "path": str(self.file_path),
             "name": self.file_path.name,
+            "size": len(self.text)
+        }
+
+
+class VolumeDataLoader:
+    """Handles loading text data from Unity Catalog Volumes.
+
+    Unity Catalog Volumes are accessible as file paths in Databricks:
+    /Volumes/<catalog>/<schema>/<volume>/<file>
+
+    Example:
+        >>> loader = VolumeDataLoader("maintenance_manual.md")
+        >>> text = loader.text
+    """
+
+    def __init__(self, file_name: str, volume_path: str = DEFAULT_VOLUME_PATH):
+        """Initialize with file name and optional Volume path.
+
+        Args:
+            file_name: Name of the file in the Volume (e.g., "maintenance_manual.md")
+            volume_path: Path to the Unity Catalog Volume.
+                        Defaults to /Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume
+        """
+        self.volume_path = Path(volume_path)
+        self.file_name = file_name
+        self.file_path = self.volume_path / file_name
+        self._text = None
+
+    @property
+    def text(self) -> str:
+        """Load and return the text content from the Volume."""
+        if self._text is None:
+            self._text = self.file_path.read_text().strip()
+        return self._text
+
+    def get_metadata(self) -> dict:
+        """Return metadata about the loaded file."""
+        return {
+            "path": str(self.file_path),
+            "name": self.file_name,
+            "volume": str(self.volume_path),
             "size": len(self.text)
         }
 

@@ -8,6 +8,7 @@ Before starting, make sure you have:
 - Completed **Lab 5** (Databricks ETL) to load the aircraft graph (Aircraft, System, Component nodes)
 - Running in a **Databricks notebook environment** (for Foundation Model API access)
 - `CONFIG.txt` populated with Neo4j settings
+- **Maintenance manual uploaded** to the Unity Catalog Volume (see `lab_setup/README.md`)
 
 ## Lab Overview
 
@@ -65,7 +66,12 @@ These models are pre-deployed and ready to use via the MLflow deployments client
 
 ## Maintenance Manual Content
 
-The `maintenance_manual.md` file is a comprehensive A320-200 Maintenance and Troubleshooting Manual including:
+The A320-200 Maintenance and Troubleshooting Manual is loaded from the Unity Catalog Volume at:
+```
+/Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/MAINTENANCE_A320.md
+```
+
+This comprehensive manual includes:
 
 - **Aircraft Overview**: Fleet configuration (5 aircraft), specifications
 - **System Architecture**: Engine (V2500-A1), Avionics, Hydraulics systems
@@ -111,10 +117,14 @@ MODEL_ID=databricks-meta-llama-3-3-70b-instruct
 ## Getting Started
 
 1. Ensure Lab 5 is complete (aircraft topology loaded)
-2. Upload these files to your Databricks workspace
-3. Open `01_data_and_embeddings.ipynb`
-4. Run cells sequentially to load the maintenance manual and create embeddings
-5. Continue to `02_graphrag_retrievers.ipynb` for retrieval strategies
+2. Verify the maintenance manual is uploaded to the Volume:
+   ```
+   /Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/MAINTENANCE_A320.md
+   ```
+3. Upload the notebook files to your Databricks workspace
+4. Open `01_data_and_embeddings.ipynb`
+5. Run cells sequentially to load the maintenance manual and create embeddings
+6. Continue to `02_graphrag_retrievers.ipynb` for retrieval strategies
 
 ## Files
 
@@ -123,8 +133,10 @@ MODEL_ID=databricks-meta-llama-3-3-70b-instruct
 | `01_data_and_embeddings.ipynb` | Data loading and embedding generation |
 | `02_graphrag_retrievers.ipynb` | Retrieval strategies and GraphRAG |
 | `data_utils.py` | Utility functions for Neo4j and Databricks |
-| `maintenance_manual.md` | A320-200 Maintenance and Troubleshooting Manual |
+| `maintenance_manual.md` | Local copy of A320-200 Maintenance Manual (for reference) |
 | `README.md` | This file |
+
+**Note:** The `MAINTENANCE_A320.md` file from `lab_setup/aircraft_digital_twin_data/` must be uploaded to the Unity Catalog Volume before running the notebooks. See `lab_setup/README.md` for upload instructions.
 
 ## Technical Details
 

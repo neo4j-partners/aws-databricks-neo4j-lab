@@ -15,7 +15,8 @@ rm -f "$OUTPUT_FILE"
 cd "$PROJECT_ROOT"
 zip -r "$OUTPUT_FILE" \
     Lab_5_Databricks_ETL_Neo4j/*.ipynb \
-    Lab_6_Semantic_Search/*.ipynb
+    Lab_6_Semantic_Search/*.ipynb \
+    Lab_6_Semantic_Search/data_utils.py
 
 echo "Created: $OUTPUT_FILE"
 echo "Contents:"

@@ -1,288 +1,295 @@
-# Hands-On Lab: Neo4j and Amazon Bedrock
+# Hands-On Lab: Neo4j, AWS, and Databricks
 
-Build Generative AI and GraphRAG Agents with Neo4j and AWS.
+Build AI Agents and Knowledge Graphs with Neo4j, AWS Bedrock, and Databricks.
 
-Neo4j is the [leading graph database](https://db-engines.com/en/ranking/graph+dbms) vendor. We've worked closely with AWS engineering for years. Our products, AuraDB and AuraDS, are offered as managed services available on AWS through the [AWS Marketplace](https://aws.amazon.com/marketplace/seller-profile?id=23ec694a-d2af-4641-b4d3-b7201ab2f5f9).
+This hands-on workshop teaches you how to build production-ready AI agents that combine the power of graph databases with modern cloud platforms. You'll work with a comprehensive Aircraft Digital Twin dataset, learning to load data into Neo4j, query it with natural language, and build multi-agent systems that intelligently route questions to the right data source.
 
 ## Overview
 
-In this hands-on lab, you'll learn about Neo4j, Amazon Bedrock, and the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). The lab is designed for data scientists, data engineers, and AI developers who want to master GraphRAG (Graph Retrieval-Augmented Generation) techniques and build production-ready agentic AI applications.
+**Total Duration:** ~4 hours
 
-In today's landscape, organizations need AI systems that can extract deep insights from unstructured documents, understand complex entity relationships, and build intelligent systems that can autonomously reason over vast information networks. This hands-on lab addresses this need directly by providing mastery in the most powerful pattern available for complex document intelligence: Graph Retrieval-Augmented Generation (GraphRAG).
+Participants start with a guided overview of AWS Bedrock and AgentCore, then work through lab exercises in Databricks and Neo4j Aura for graph exploration. AWS Bedrock and AgentCore provide pre-deployed infrastructure, while Databricks provides the notebook environment and multi-agent orchestration.
 
-You'll work with a real-world dataset of SEC 10-K company filings to learn fundamental GraphRAG patterns. We'll start with a pre-built knowledge graph containing extracted entities from unstructured text. Then you'll implement multiple retrieval strategies: vector similarity search for semantic retrieval, graph-enhanced retrievers that leverage entity relationships, and natural language to Cypher query generation. Finally, you'll build intelligent agents using LangGraph and Strands that can autonomously reason over your knowledge graph to answer complex questions.
+### Dataset
 
-By the end of this lab, you'll have hands-on experience with:
-- Exploring knowledge graphs built from unstructured documents
-- Implementing semantic search with vector embeddings
-- Creating graph-enhanced retrieval patterns for richer context
-- Building no-code AI agents with Neo4j Aura Agents
-- Developing agentic AI systems using the Model Context Protocol
-- Calling Aura Agents programmatically via REST API
-- Deploying GraphRAG applications on AWS infrastructure
+The workshop uses a comprehensive **Aircraft Digital Twin** dataset that models a complete aviation fleet over 90 operational days, including:
 
-These techniques apply to any domain where you need to extract insights from documents, understand entity relationships, and build AI systems that can reason over complex information networks.
+- **20 Aircraft** with tail numbers, models, and operators
+- **80 Systems** (Engines, Avionics, Hydraulics) per aircraft
+- **320 Components** (Turbines, Compressors, Pumps, etc.)
+- **160 Sensors** with monitoring metadata
+- **345,600+ Sensor Readings** (hourly telemetry over 90 days)
+- **800 Flights** with departure/arrival information
+- **300 Maintenance Events** with fault severity and corrective actions
+- **12 Airports** in the route network
 
-## Starting the Lab
+### Key Technologies
 
-To get started, follow the labs in the agenda below in order.
+| Technology | Purpose |
+|------------|---------|
+| **Neo4j Aura** | Graph database for storing aircraft relationships |
+| **AWS Bedrock + AgentCore** | Pre-deployed Neo4j MCP Server and Agent infrastructure |
+| **Databricks** | Notebooks, Unity Catalog, AI/BI Genie, AgentBricks |
+| **Neo4j Spark Connector** | ETL from Databricks to Neo4j |
+| **Model Context Protocol (MCP)** | Standard for connecting AI models to data sources |
 
-**Quick Start Options:**
-- **No-Code Track Only:** Complete Part 1 (Labs 0-2) to explore Neo4j and AI agents without coding
-- **Intro to Agents and GraphRAG:** Complete Parts 1 and 2 (Labs 0-5) to learn GraphRAG fundamentals
-- **Full Workshop:** Complete all three parts for the complete GraphRAG development experience
+### Unity Catalog Configuration
 
-## Prerequisites
+All workshop data is stored in Databricks Unity Catalog:
 
-You'll need a laptop with a web browser. Your browser will need to be able to access the AWS Console and the Neo4j Aura Console. If your laptop has a firewall you can't control, you may want to bring your personal laptop.
-
----
-
-## Agenda
-
-### Part 1 - No-Code Getting Started
-
-*This section requires no coding. You'll use visual tools and pre-built interfaces to explore Neo4j and AI agents.*
-
-* Introductions
-* Lecture - Introduction to Neo4j
-    * What is Neo4j?
-    * How is it deployed and managed on AWS?
-* [Lab 0 - Sign In](Lab_0_Sign_In)
-    * Improving the Labs
-    * Sign into AWS
-* [Lab 1 - Neo4j Aura Setup](Lab_1_Aura_Setup)
-    * Signing up for Neo4j Aura through AWS Marketplace
-    * Restoring the pre-built knowledge graph
-    * Visual exploration with Neo4j Explore
-* [Lab 2 - Aura Agents](Lab_2_Aura_Agents)
-    * Building AI agents using Neo4j Aura Agent (no-code)
-    * Creating Cypher template tools
-    * Adding semantic search and Text2Cypher capabilities
-* Break
+| Resource | Path |
+|----------|------|
+| Catalog | `aws-databricks-neo4j-lab` |
+| Schema | `lab-schema` |
+| Volume | `/Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/` |
 
 ---
 
-### Part 2 - Introduction to Agents and GraphRAG with Neo4j
+## Lab Structure
 
-*This section introduces you to building AI agents with Python and the fundamentals of GraphRAG (Graph Retrieval-Augmented Generation) using the official neo4j-graphrag library.*
+### Phase 1: Foundation Setup (45 min)
 
-**What You'll Learn:**
-- How AI agents use tools to interact with external systems
-- The neo4j-graphrag library architecture and components
-- Multiple retrieval strategies (Vector, VectorCypher, Hybrid, Text2Cypher)
-- Building complete RAG pipelines with the GraphRAG class
+*Get connected to all workshop resources.*
 
-**Key Technologies:**
-- **LangGraph**: Framework for building stateful, multi-step AI agents
-- **neo4j-graphrag**: Neo4j's official Python library for GraphRAG applications
-- **VectorRetriever**: Semantic similarity search using embeddings
-- **VectorCypherRetriever**: Vector search enhanced with graph traversal
-- **GraphRAG**: Orchestration class combining retrieval with LLM generation
+#### Part A: AWS Console Tour
+- Read-only access to view the Neo4j MCP Server deployment in AgentCore
+- Understand the architecture: `AgentCore Agent → AgentCore Gateway → Neo4j MCP Server → Neo4j Aura`
 
-* Lecture - Neo4j and Generative AI
-    * Generating Knowledge Graphs
-    * Retrieval Augmented Generation
-    * GraphRAG Patterns
-* [Lab 4 - Intro to Bedrock and Agents](Lab_4_Intro_to_Bedrock_and_Agents)
-    * Launch SageMaker Studio
-    * Clone the workshop repository
-    * Configure inference profiles for Bedrock
-    * Build a basic LangGraph agent with tool calling
-
-**Important Note:** The pre-built knowledge graph uses OpenAI embeddings (1536 dimensions), which are not compatible with Amazon Titan embeddings (1024 dimensions). AWS Bedrock embedding models do not provide an OpenAI-compatible API. Therefore, in Lab 5 we reset the database and rebuild the vector index using Amazon Titan embeddings. This demonstrates a real-world scenario where you need to match embedding dimensions between your index and query embeddings.
-
-* [Lab 5 - GraphRAG with Neo4j](Lab_5_GraphRAG)
-    * Load data and create embeddings with Amazon Titan
-    * Build vector indexes in Neo4j
-    * Implement VectorRetriever for semantic search
-    * Use VectorCypherRetriever for graph-enhanced context
-    * Build complete GraphRAG pipelines
+#### Part B: Neo4j Aura Credentials
+- [Lab 0 - Sign In](Lab_0_Sign_In) - Access workshop resources
+- [Lab 1 - Neo4j Aura Setup](Lab_1_Aura_Setup) - Save connection credentials
 
 ---
 
-### Part 3 - Advanced Agents and API Integration
+### Phase 2: AWS AgentCore Overview (60 min)
 
-*This section covers advanced topics including programmatic access to Aura Agents and building AI agents that query Neo4j using the Model Context Protocol (MCP).*
+*Explore pre-deployed AI agent infrastructure.*
 
-**What You'll Learn:**
-- Calling Aura Agents via REST API for application integration
-- The Model Context Protocol (MCP) standard for tool integration
-- Building LangGraph agents that can query knowledge graphs
-- Using the Neo4j MCP Server via AgentCore Gateway
+#### Part A: Read-Only Console Tour
+- Walk-through of Bedrock and AgentCore
+- View the pre-deployed Neo4j MCP server (AgentCore Gateway + MCP Server Hosting)
+- View the AgentCore agent deployment that calls the Neo4j MCP server
 
-**Key Technologies:**
-- **Neo4j Aura Agents API**: REST API for invoking your no-code agents programmatically
-- **Model Context Protocol (MCP)**: Open standard for connecting AI models to data sources
-- **Neo4j MCP Server**: Official Neo4j tool server exposing Cypher query capabilities
-- **AgentCore Gateway**: AWS service for hosting and managing MCP servers
-
-* [Lab 6 - Neo4j MCP Agent](Lab_6_Neo4j_MCP_Agent)
-    * Connect to Neo4j via AgentCore Gateway
-    * Build a LangGraph agent with MCP tools
-    * Query the knowledge graph with natural language
-* [Lab 7 - Aura Agents API](Lab_7_Aura_Agents_API)
-    * Call your Lab 2 Aura Agent programmatically
-    * OAuth2 authentication with client credentials
-    * Build a reusable Python client for application integration
-* Questions and Next Steps
+#### Part B: AgentCore Agent Sandbox Testing (No-Code)
+- [Lab 4 - AWS AgentCore](Lab_4_AWS_Agent_Core) - Use the AgentCore Agent Sandbox
+- Interactively test the deployed agent without writing code
+- Send natural language questions about the aircraft data
+- See agent reasoning and Cypher query generation in real-time
 
 ---
 
-## Architecture
+### Phase 3: Databricks ETL to Neo4j (45 min)
+
+*Load data from Databricks into Neo4j using the Spark Connector.*
+
+**Participant Experience:** Pre-configured environment with CSV files in Unity Catalog Volume and ready-to-run notebooks.
+
+#### Part A: Databricks Workspace Access
+- Workspace credentials and cluster access
+- Clone sample notebooks to your workspace
+
+#### Part B: Data Model Mapping
+- Table rows → nodes with labels and properties
+- Foreign keys → relationships
+- Join tables → direct graph connections
+
+#### Part C: Load Data with Spark Connector
+- [Lab 5 - Databricks ETL to Neo4j](Lab_5_Databricks_ETL_Neo4j)
+- Read aircraft data from Unity Catalog Volume
+- Transform to graph structure (nodes + relationships)
+- Write to Neo4j via Spark Connector
+- Validate with Cypher queries
+
+**Data Location:** `/Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/`
+
+---
+
+### Phase 4: Databricks Multi-Agent System (60 min)
+
+*Build a multi-agent supervisor that routes questions to the right data source.*
+
+#### Part A: Create a Genie Space
+- [Lab 6 - Semantic Search](Lab_6_Semantic_Search) - Configure AI/BI Genie
+- Natural language interface for querying structured data in Unity Catalog
+- Configure sample questions and business context
+- Genie converts natural language to SQL automatically
+
+#### Part B: AgentBricks Multi-Agent Supervisor
+- [Lab 7 - AgentBricks](Lab_7_AgentBricks) - Build coordinated multi-agent systems
+- No-code framework supporting up to 10 subagents per supervisor
+- Question routing based on intent analysis
+
+**Agent Architecture:**
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              YOUR AGENTS                                     │
-├───────────────────┬─────────────────────────┬───────────────────────────────┤
-│   Part 1 (No-Code) │     Part 2 (GraphRAG)   │      Part 3 (Advanced)        │
-│  ┌───────────────┐ │  ┌─────────────────────┐ │  ┌─────────────────────────┐  │
-│  │ Aura Agents   │ │  │   neo4j-graphrag    │ │  │   Aura Agents API       │  │
-│  │ • Templates   │ │  │   • VectorRetriever │ │  │   • REST API Access     │  │
-│  │ • Similarity  │ │  │   • VectorCypherR.  │ │  │   • OAuth2 Auth         │  │
-│  │ • Text2Cypher │ │  │   • GraphRAG Class  │ │  │   LangGraph + MCP       │  │
-│  └───────────────┘ │  └─────────────────────┘ │  │   • Neo4j MCP Server    │  │
-│                    │                          │  └─────────────────────────┘  │
-└───────────────────┴─────────────────────────┴───────────────────────────────┘
-                                    │
-                                    ▼
-                    ┌───────────────────────────────┐
-                    │        Neo4j Aura             │
-                    │   SEC 10-K Knowledge Graph    │
-                    │  • Companies & Risk Factors   │
-                    │  • Asset Manager Ownership    │
-                    │  • Vector Embeddings          │
-                    └───────────────────────────────┘
+User Question
+     |
+     v
+Multi-Agent Supervisor
+     |
+     +---> "sensor readings?" ---> Genie Space ---> Unity Catalog
+     |                                              aws-databricks-neo4j-lab.lab-schema
+     |                                              (SQL Analytics)
+     |
+     +---> "relationships?" ---> Neo4j MCP ---> Knowledge Graph
+     |                                          (Cypher Queries)
+     |
+     +---> "both needed?" ---> Sequential calls to both agents
+                               |
+                               v
+                         Synthesized Response
 ```
+
+**Routing Examples:**
+- **Genie Agent:** SQL aggregations, sensor analytics, fleet comparisons
+- **Neo4j Agent:** Relationship queries, maintenance events, flight operations
+
+#### Part C: Deployment
+- Deploy as serving endpoint for application integration
+
+---
+
+### Phase 5: Neo4j Aura Exploration (60 min)
+
+*Visualize and query the knowledge graph directly.*
+
+#### Part A: Data Exploration in Aura
+- Visualize the aircraft digital twin graph
+- Explore hierarchies: Aircraft → Systems → Components → Sensors
+- Trace flight patterns and maintenance events
+- Understand the graph structure powering the AI agents
+
+#### Part B: Build an Aura Agent (No-Code)
+- [Lab 8 - Aura Agents](Lab_8_Aura_Agents) - Create AI-powered graph assistants
+- Add Semantic Search and Cypher Template tools
+- Query the graph with natural language
+- Find aircraft with shared maintenance issues
+
+---
 
 ## Knowledge Graph Data Model
 
-The knowledge graph contains SEC 10-K filings from major technology companies:
-
-- **Companies**: Apple, Microsoft, NVIDIA, and more
-- **Risk Factors**: Extracted risk disclosures from SEC filings
-- **Asset Managers**: Institutional investors and their holdings
-- **Financial Metrics**: Key financial data mentioned in filings
-- **Vector Embeddings**: Pre-computed embeddings for semantic search
-
-Example questions you can answer:
-- "What risk factors do Apple and Microsoft share?"
-- "Which asset managers have the largest tech portfolios?"
-- "What do companies say about AI and machine learning in their filings?"
-
-The workshop uses a hybrid knowledge graph that combines **lexical structure** (documents and chunks) with **semantic knowledge** (entities and relationships extracted by LLM). This architecture enables multiple retrieval strategies.
+The Aircraft Digital Twin graph models the complete operational lifecycle of an aviation fleet.
 
 ### Graph Structure
 
 ```
-                      NEXT_CHUNK
-                 ┌──────────────────┐
-                 │                  │
-                 v                  │
 ┌──────────┐       ┌──────────┐       ┌──────────┐
-│  Chunk   │──────>│  Chunk   │──────>│  Chunk   │
-│          │       │          │       │          │
-│ text     │       │ text     │       │ text     │
-│ embedding│       │ embedding│       │ embedding│
+│ Aircraft │──────>│  System  │──────>│Component │
+│          │ HAS_  │          │ HAS_  │          │
+│ N95040A  │SYSTEM │ Engine 1 │COMPON │ Turbine  │
 └──────────┘       └──────────┘       └──────────┘
      │                  │                  │
-     │ FROM_DOCUMENT    │                  │
+     │ OPERATES_        │ HAS_             │ HAS_
+     │ FLIGHT           │ SENSOR           │ EVENT
      v                  v                  v
-┌─────────────────────────────────────────────────┐
-│                    Document                      │
-│                                                  │
-│  path: "sec-10k-filings/apple-10k.pdf"          │
-└─────────────────────────────────────────────────┘
-
-     ^                  ^                  ^
-     │ FROM_CHUNK       │                  │
-     │                  │                  │
 ┌──────────┐       ┌──────────┐       ┌──────────┐
-│ Company  │       │ Product  │       │RiskFactor│
-│          │       │          │       │          │
-│ Apple    │       │ iPhone   │       │ Supply   │
-│ Inc.     │       │          │       │ Chain    │
+│  Flight  │       │  Sensor  │       │Maintenan │
+│          │       │          │       │ceEvent   │
+│ UA1234   │       │ EGT-001  │       │ Critical │
 └──────────┘       └──────────┘       └──────────┘
-     │                                      ^
-     │ FACES_RISK                           │
-     └──────────────────────────────────────┘
+     │
+     │ DEPARTS_FROM / ARRIVES_AT
+     v
+┌──────────┐
+│ Airport  │
+│          │
+│   ORD    │
+└──────────┘
 ```
 
 ### Node Types
 
 | Node Label | Description | Key Properties |
 |------------|-------------|----------------|
-| `Document` | Source PDF file | `path`, `createdAt` |
-| `Chunk` | Text segment from document | `text`, `index`, `embedding` |
-| `Company` | Extracted company entity | `name`, `ticker` |
-| `Product` | Products/services mentioned | `name` |
-| `RiskFactor` | Business risks identified | `name` |
-| `Executive` | Key personnel | `name`, `title` |
-| `FinancialMetric` | Financial data points | `name`, `value` |
-| `AssetManager` | Institutional investors | `managerName` |
+| `Aircraft` | Fleet inventory | `aircraft_id`, `tail_number`, `model`, `operator` |
+| `System` | Major aircraft systems | `system_id`, `type`, `name` |
+| `Component` | Parts within systems | `component_id`, `type`, `name` |
+| `Sensor` | Monitoring equipment | `sensor_id`, `type`, `unit` |
+| `Flight` | Flight operations | `flight_id`, `flight_number`, `origin`, `destination` |
+| `Airport` | Route network locations | `airport_id`, `iata`, `icao`, `city` |
+| `MaintenanceEvent` | Fault and repair records | `event_id`, `fault`, `severity`, `corrective_action` |
+| `Delay` | Flight delay information | `delay_id`, `cause`, `minutes` |
+| `Removal` | Component removal history | `removal_id`, `reason`, `tsn`, `csn` |
 
 ### Relationship Types
 
 | Relationship | Direction | Description |
 |--------------|-----------|-------------|
-| `FROM_DOCUMENT` | `(Chunk)->(Document)` | Links chunk to source document |
-| `NEXT_CHUNK` | `(Chunk)->(Chunk)` | Sequential chunk ordering |
-| `FROM_CHUNK` | `(Entity)->(Chunk)` | Provenance: where entity was extracted |
-| `FACES_RISK` | `(Company)->(RiskFactor)` | Company faces this risk |
-| `OFFERS` | `(Company)->(Product)` | Company offers this product |
-| `HAS_EXECUTIVE` | `(Company)->(Executive)` | Company has this executive |
-| `REPORTS` | `(Company)->(FinancialMetric)` | Company reports this metric |
-| `OWNS` | `(AssetManager)->(Company)` | Investor owns shares in company |
+| `HAS_SYSTEM` | `(Aircraft)->(System)` | Aircraft contains this system |
+| `HAS_COMPONENT` | `(System)->(Component)` | System contains this component |
+| `HAS_SENSOR` | `(System)->(Sensor)` | System has this sensor |
+| `HAS_EVENT` | `(Component)->(MaintenanceEvent)` | Component had this maintenance event |
+| `OPERATES_FLIGHT` | `(Aircraft)->(Flight)` | Aircraft operated this flight |
+| `DEPARTS_FROM` | `(Flight)->(Airport)` | Flight departs from this airport |
+| `ARRIVES_AT` | `(Flight)->(Airport)` | Flight arrives at this airport |
+| `HAS_DELAY` | `(Flight)->(Delay)` | Flight had this delay |
+| `AFFECTS_SYSTEM` | `(MaintenanceEvent)->(System)` | Event affected this system |
+| `HAS_REMOVAL` | `(Aircraft)->(Removal)` | Aircraft had this component removal |
 
-### Search Indexes
+---
 
-The knowledge graph includes indexes to support different retrieval strategies:
+## Sample Queries
 
-| Index Name | Type | Target | Purpose |
-|------------|------|--------|---------|
-| `chunkEmbeddings` | Vector | `Chunk.embedding` | Semantic similarity search |
-| `chunkText` | Fulltext | `Chunk.text` | Keyword search for hybrid retrieval |
-| `search_entities` | Fulltext | Entity `.name` properties | Entity lookup by name |
-
-### Retrieval Strategies
-
-**1. Vector Search** - Find semantically similar content using embeddings:
+### Aircraft Topology
 ```cypher
-CALL db.index.vector.queryNodes('chunkEmbeddings', 5, $embedding)
-YIELD node, score
-RETURN node.text, score
+// What systems does aircraft N95040A have?
+MATCH (a:Aircraft {tail_number: 'N95040A'})-[:HAS_SYSTEM]->(s:System)
+RETURN a.tail_number, s.name, s.type
 ```
 
-**2. Graph-Enhanced Retrieval** - Combine vector search with graph traversal:
+### Maintenance Analysis
 ```cypher
--- Find chunks, then traverse to related entities
-CALL db.index.vector.queryNodes('chunkEmbeddings', 5, $embedding)
-YIELD node AS chunk, score
-MATCH (company:Company)-[:FROM_CHUNK]->(chunk)
-OPTIONAL MATCH (company)-[:FACES_RISK]->(risk:RiskFactor)
-RETURN chunk.text, company.name, collect(risk.name) AS risks
+// Find aircraft with critical maintenance events
+MATCH (a:Aircraft)-[:HAS_SYSTEM]->(s:System)-[:HAS_COMPONENT]->(c:Component)
+      -[:HAS_EVENT]->(m:MaintenanceEvent {severity: 'Critical'})
+RETURN a.tail_number, s.name, c.name, m.fault, m.reported_at
+ORDER BY m.reported_at DESC
 ```
 
-**3. Hybrid Search** - Combine keyword and semantic search:
+### Flight Operations
 ```cypher
--- Uses both chunkEmbeddings (vector) and chunkText (fulltext) indexes
--- Alpha parameter controls the balance: 1.0 = pure vector, 0.0 = pure keyword
+// Find delayed flights and their causes
+MATCH (a:Aircraft)-[:OPERATES_FLIGHT]->(f:Flight)-[:HAS_DELAY]->(d:Delay)
+RETURN a.tail_number, f.flight_number, d.cause, d.minutes
+ORDER BY d.minutes DESC
+LIMIT 10
 ```
 
-**4. Text2Cypher** - Natural language to Cypher query generation using LLM.
+---
 
-This hybrid architecture enables rich, context-aware retrieval that leverages both the semantic understanding from embeddings and the structural relationships in the knowledge graph.
+## Prerequisites
 
-## Improving the Labs
+- **Laptop** with a modern web browser
+- **Network Access** to AWS Console, Databricks, and Neo4j Aura
+- No local software installation required
 
-We'd appreciate your feedback! Open an issue at [github.com/neo4j-partners/hands-on-lab-neo4j-and-bedrock/issues](https://github.com/neo4j-partners/hands-on-lab-neo4j-and-bedrock/issues).
+---
+
+## Quick Start Options
+
+| Track | Labs | Duration | Description |
+|-------|------|----------|-------------|
+| **Console Tour Only** | Phases 1-2 | 2 hours | Explore AWS and Neo4j consoles without coding |
+| **ETL Focus** | Phases 1-3 | 2.5 hours | Learn Spark Connector and graph data modeling |
+| **Multi-Agent Focus** | Phases 1, 3-4 | 3 hours | Build AI agents with Databricks AgentBricks |
+| **Full Workshop** | All Phases | 4 hours | Complete hands-on experience |
+
+---
 
 ## Resources
 
 - [Neo4j Aura](https://neo4j.com/cloud/aura/)
+- [Neo4j Spark Connector](https://neo4j.com/docs/spark/current/)
 - [Neo4j MCP Server](https://github.com/neo4j/mcp)
-- [neo4j-graphrag Python Library](https://neo4j.com/docs/neo4j-graphrag-python/)
 - [Amazon Bedrock](https://aws.amazon.com/bedrock/)
 - [Amazon Bedrock AgentCore](https://docs.aws.amazon.com/bedrock-agentcore/)
+- [Databricks Agent Bricks](https://docs.databricks.com/en/generative-ai/agent-bricks/)
+- [Databricks Unity Catalog](https://docs.databricks.com/en/data-governance/unity-catalog/)
 - [Model Context Protocol](https://modelcontextprotocol.io/)
-- [LangGraph](https://langchain-ai.github.io/langgraph/)
+
+---
+
+## Feedback
+
+We'd appreciate your feedback! Open an issue at [github.com/neo4j-partners/aws-databricks-neo4j-lab/issues](https://github.com/neo4j-partners/aws-databricks-neo4j-lab/issues).

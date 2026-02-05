@@ -12,6 +12,7 @@ Before starting, ensure you have:
 - Completed **Part A** (Genie space for sensor analytics)
 - Neo4j MCP connection configured in Unity Catalog
 - Neo4j database populated with aircraft graph (from Lab 5)
+- Access to the Unity Catalog: `aws-databricks-neo4j-lab.lab-schema`
 
 ---
 
@@ -19,58 +20,84 @@ Before starting, ensure you have:
 
 ### 1.1 Check Unity Catalog Connections
 
-1. Navigate to **Catalog** > **External connections**
-2. Locate the Neo4j MCP connection (typically named `neo4j_mcp`)
-3. Verify the connection status is **Active**
+1. In the left navigation pane, click **Catalog**
+2. Click **External connections** (or navigate to the **Connections** tab)
+3. Locate the Neo4j MCP connection (typically named `neo4j_mcp`)
+4. Verify the connection status shows as configured
 
-### 1.2 Test MCP Tools (Optional)
+> **Note:** The MCP connection uses Unity Catalog HTTP connections for secure authentication. Users need `USE CONNECTION` permission to access the MCP server tools.
 
-If you have access to test the MCP connection, verify these tools are available:
+### 1.2 Verify MCP Tools Are Available
+
+The Neo4j MCP server provides these tools:
 - `get-schema`: Retrieves the Neo4j graph schema (labels, relationships, properties)
 - `read-cypher`: Executes read-only Cypher queries
+
+You can test these in AI Playground before creating the supervisor:
+1. Navigate to **Playground** in the left navigation
+2. Select a model with **Tools enabled**
+3. Click **Tools** > **+ Add tool** > **MCP Servers**
+4. Select your Neo4j connection
 
 ---
 
 ## Step 2: Create the Multi-Agent Supervisor
 
-### 2.1 Navigate to Agent Builder
+### 2.1 Navigate to Agent Bricks
 
-1. In your Databricks workspace, click **New** > **Agent**
-2. Or navigate to **Machine Learning** > **Agents** and click **Create agent**
+1. In the left navigation pane, click **Agents**
+2. Find the **Multi-Agent Supervisor** tile
+3. Click **Build**
 
-### 2.2 Select Multi-Agent Template
-
-1. Choose **Multi-Agent Supervisor** as the agent type
-2. This template enables routing between multiple sub-agents
-
-### 2.3 Configure Basic Settings
+### 2.2 Configure Basic Settings
 
 1. **Name:** `Aircraft Intelligence Hub [YOUR_INITIALS]`
    - Example: `Aircraft Intelligence Hub RK`
-2. **Description:** "Intelligent coordinator for aircraft analytics combining sensor telemetry data with knowledge graph relationships"
-3. Click **Create**
+2. **Description:**
+   ```
+   Intelligent coordinator for aircraft analytics combining sensor telemetry
+   data from Unity Catalog with knowledge graph relationships from Neo4j.
+   ```
 
 ---
 
-## Step 3: Add the Neo4j Graph Agent
+## Step 3: Prepare Sub-agents and Permissions
 
-### 3.1 Add External MCP Server
+Before adding agents to the supervisor, ensure proper access is configured.
 
-1. In the agent configuration, click **Add agent**
-2. Select **External MCP Server**
-3. Choose the Unity Catalog connection: `neo4j_mcp`
+### 3.1 Genie Space Permissions
 
-### 3.2 Configure Agent Settings
+For the Genie space created in Part A:
+1. Navigate to your Genie space
+2. Share the space with end users who will query the supervisor
+3. Ensure users have access to the underlying data tables in:
+   - Catalog: `aws-databricks-neo4j-lab`
+   - Schema: `lab-schema`
+   - Tables: `sensor_readings`, `sensors`, `systems`, `aircraft`
+
+### 3.2 MCP Server Permissions
+
+For the Neo4j MCP connection:
+1. Navigate to **Catalog** > **Connections**
+2. Select the Neo4j connection
+3. Click **Permissions**
+4. Grant `USE CONNECTION` permission to relevant users/groups
+
+---
+
+## Step 4: Add the Neo4j Graph Agent
+
+### 4.1 Add External MCP Server
+
+1. In the supervisor configuration under **Configure Agents**, click **+ Add**
+2. From the **Type** dropdown, select **External MCP Server**
+3. From the connection dropdown, select your Neo4j connection (e.g., `neo4j_mcp`)
+
+### 4.2 Configure Agent Settings
 
 1. **Agent Name:** `neo4j_graph_agent`
-   - Use lowercase with underscores
-2. **Select Tools:**
-   - [x] `get-schema` - For discovering graph structure
-   - [x] `read-cypher` - For executing Cypher queries
-
-### 3.3 Add Agent Description
-
-Enter a detailed description to help the supervisor route correctly:
+   - The name auto-populates but can be edited
+2. **Description** (critical for routing accuracy):
 
 ```
 Queries the Neo4j knowledge graph to explore aircraft relationships, topology, and operational data.
@@ -83,7 +110,7 @@ BEST FOR:
 - Relationship patterns: "Which airports does ExampleAir fly to?"
 - Graph traversals: "Show the path from aircraft to sensor"
 
-DATA AVAILABLE:
+DATA AVAILABLE (loaded from /Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/):
 - Aircraft (20): Fleet inventory with tail numbers, models, operators
 - Systems (~80): Engines, Avionics, Hydraulics per aircraft
 - Components (~200): Turbines, Compressors, Pumps, etc.
@@ -110,23 +137,27 @@ DO NOT USE FOR:
 
 ---
 
-## Step 4: Add the Genie Space Agent
+## Step 5: Add the Genie Space Agent
 
-### 4.1 Add Genie Space
+### 5.1 Add Genie Space
 
-1. Click **Add agent**
-2. Select **Genie Space**
-3. Choose your Genie space from Part A: `Aircraft Sensor Analyst [YOUR_INITIALS]`
+1. Click **+ Add** to add another agent
+2. From the **Type** dropdown, select **Genie Space**
+3. Select your Genie space from Part A: `Aircraft Sensor Analyst [YOUR_INITIALS]`
 
-### 4.2 Configure Agent Settings
+### 5.2 Configure Agent Settings
 
 1. **Agent Name:** `sensor_data_agent`
-   - Use lowercase with underscores
-
-### 4.3 Add Agent Description
+   - Edit the auto-populated name if needed
+2. **Description:**
 
 ```
-Analyzes aircraft sensor telemetry data using SQL queries over the Unity Catalog lakehouse.
+Analyzes aircraft sensor telemetry data using SQL queries over Unity Catalog tables.
+
+DATA LOCATION:
+- Catalog: aws-databricks-neo4j-lab
+- Schema: lab-schema
+- Tables: sensor_readings, sensors, systems, aircraft
 
 BEST FOR:
 - Time-series analytics: "What is the average EGT over the last 30 days?"
@@ -157,11 +188,11 @@ DO NOT USE FOR:
 
 ---
 
-## Step 5: Configure the Supervisor
+## Step 6: Configure Supervisor Instructions
 
-### 5.1 Set Supervisor Instructions
+### 6.1 Set Supervisor Instructions
 
-Click **Edit supervisor instructions** and enter:
+In the **Instructions** field (optional but recommended), enter:
 
 ```
 # Aircraft Intelligence Hub - Routing Instructions
@@ -170,7 +201,7 @@ You are an intelligent coordinator for aircraft analytics. Your role is to under
 
 ## Available Agents
 
-### sensor_data_agent (Genie Space)
+### sensor_data_agent (Genie Space - Unity Catalog SQL)
 Use for questions about:
 - Sensor readings and telemetry data
 - Time-series analytics (averages, trends, rolling windows)
@@ -179,7 +210,7 @@ Use for questions about:
 - Anomaly detection based on readings
 - Questions containing: EGT, vibration, N1, fuel flow, temperature, readings, averages, trends
 
-### neo4j_graph_agent (Knowledge Graph)
+### neo4j_graph_agent (Neo4j Knowledge Graph - Cypher)
 Use for questions about:
 - Aircraft structure and topology
 - Component relationships and hierarchy
@@ -239,15 +270,23 @@ For questions that need BOTH sources, process sequentially:
 4. If a query cannot be answered by either agent, explain what data would be needed
 ```
 
+### 6.2 Create the Agent
+
+Click **Create Agent** to deploy the supervisor.
+
+> **Note:** Deployment may take several minutes to complete. The status will update when ready.
+
 ---
 
-## Step 6: Test the Multi-Agent System
+## Step 7: Test the Multi-Agent System
 
-### 6.1 Start a Conversation
+### 7.1 Start Testing
 
-Click **Start conversation** or navigate to the chat interface.
+Once deployment completes:
+1. Use the **Test your Agent** panel on the right side of the Build tab
+2. Or click **Open in Playground** for expanded testing with AI Judge features
 
-### 6.2 Test Single-Agent Routing
+### 7.2 Test Single-Agent Routing
 
 **Test 1: Sensor Analytics (should route to sensor_data_agent)**
 ```
@@ -273,7 +312,7 @@ Compare average vibration readings between Boeing and Airbus aircraft
 ```
 Verify: Returns grouped statistics by manufacturer
 
-### 6.3 Test Multi-Agent Queries
+### 7.3 Test Multi-Agent Queries
 
 **Test 5: Combined Query**
 ```
@@ -293,60 +332,68 @@ Expected behavior:
 2. Get maintenance events from neo4j_graph_agent
 3. Combine and present results
 
-### 6.4 Monitor Agent Invocations
+---
 
-Click **View details** or **Monitoring** to see:
-- Which agent was invoked for each query
-- The actual queries/Cypher executed
-- Response times and token usage
+## Step 8: Improve Through Feedback
+
+### 8.1 Add Example Questions
+
+1. Navigate to the **Examples** tab
+2. Click **+ Add** to introduce test questions
+3. Enter questions that represent common user queries
+
+### 8.2 Share with Subject Matter Experts
+
+1. Share the configuration page link with domain experts
+2. Grant experts `CAN_MANAGE` permission on the supervisor
+3. Ensure experts have appropriate access to each subagent
+
+### 8.3 Add Guidelines
+
+1. Select each example question
+2. Add **Guidelines** labels that refine routing behavior
+3. Test again to validate improvements
+4. Click **Update Agent** to save changes
 
 ---
 
-## Step 7: Refine Routing
+## Step 9: Manage Permissions and Deploy
 
-### 7.1 Identify Routing Failures
+### 9.1 Configure Permissions
 
-Common issues to watch for:
-- Sensor questions routed to Neo4j (no readings there)
-- Relationship questions routed to Genie (can't traverse graphs)
-- Ambiguous questions routed incorrectly
+1. Click the kebab menu (three dots) at the top of the agent page
+2. Select **Manage permissions**
+3. Add users, groups, or service principals
+4. Assign permission levels:
+   - **Can Manage:** Full editing and permission control
+   - **Can Query:** Endpoint access only via Playground or API
+5. Click **Add**, then **Save**
 
-### 7.2 Update Agent Descriptions
+### 9.2 Query the Endpoint Programmatically
 
-If routing is incorrect, enhance agent descriptions with:
-- More specific keywords that trigger each agent
-- Additional "BEST FOR" examples
-- Clearer "DO NOT USE FOR" boundaries
+1. Click **See Agent status** or **Open in Playground**
+2. Select **Get code** to retrieve API examples
+3. Choose between **Curl API** or **Python API**
 
-### 7.3 Add Routing Examples to Supervisor
+Example Python usage:
+```python
+import requests
 
-If specific query patterns fail, add explicit routing rules:
+# Get your endpoint URL from the agent status page
+ENDPOINT_URL = "https://<workspace>.databricks.com/serving-endpoints/<agent-name>/invocations"
 
+headers = {
+    "Authorization": f"Bearer {DATABRICKS_TOKEN}",
+    "Content-Type": "application/json"
+}
+
+response = requests.post(
+    ENDPOINT_URL,
+    headers=headers,
+    json={"messages": [{"role": "user", "content": "What systems does AC1001 have?"}]}
+)
+print(response.json())
 ```
-# Additional Routing Patterns
-
-- "EGT" -> sensor_data_agent (always about readings)
-- "maintenance" -> neo4j_graph_agent (always about events)
-- "between X and Y" comparisons -> sensor_data_agent (aggregations)
-- "connected to" -> neo4j_graph_agent (relationships)
-```
-
----
-
-## Step 8: Save and Deploy
-
-### 8.1 Save Configuration
-
-Click **Save** to preserve your multi-agent configuration.
-
-### 8.2 Optional: Deploy as Endpoint
-
-For production use, you can deploy the agent as a REST endpoint:
-
-1. Click **Deploy**
-2. Select endpoint configuration (serverless or provisioned)
-3. Configure authentication
-4. Deploy and note the endpoint URL
 
 ---
 
@@ -368,6 +415,7 @@ User Question
 Multi-Agent Supervisor
      |
      +---> "sensor readings?" ---> Genie Space ---> Unity Catalog
+     |                                              aws-databricks-neo4j-lab.lab-schema
      |                                              (SQL Analytics)
      |
      +---> "relationships?" ---> Neo4j MCP ---> Knowledge Graph
@@ -379,29 +427,46 @@ Multi-Agent Supervisor
                          Synthesized Response
 ```
 
+### Data Sources
+
+| Source | Location | Query Language |
+|--------|----------|----------------|
+| Sensor Telemetry | `aws-databricks-neo4j-lab.lab-schema.sensor_readings` | SQL |
+| Aircraft Metadata | `aws-databricks-neo4j-lab.lab-schema.aircraft` | SQL |
+| Knowledge Graph | Neo4j Aura (via MCP) | Cypher |
+| Graph Data Origin | `/Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/` | - |
+
 ---
 
 ## Troubleshooting
 
 ### "Agent not responding"
-- Check MCP connection status in Unity Catalog
+- Check MCP connection status in **Catalog** > **Connections**
 - Verify Neo4j instance is running
-- Test Genie space independently
+- Test Genie space independently in AI Playground
+- Ensure user has `USE CONNECTION` permission on the MCP connection
 
 ### "Wrong agent selected"
-- Review and enhance agent descriptions
-- Add more specific routing keywords
-- Use explicit routing patterns in supervisor instructions
+- Review and enhance agent descriptions with more specific keywords
+- Add explicit routing patterns in supervisor instructions
+- Use the Examples tab to add labeled training questions
 
 ### "Cypher query failed"
 - Check that Neo4j data was loaded correctly (Lab 5)
 - Verify node labels and relationship types match documentation
 - Review Cypher syntax for errors
+- Test queries directly in Neo4j Aura console first
 
 ### "SQL query failed"
-- Verify table names in Unity Catalog
+- Verify table names in Unity Catalog: `aws-databricks-neo4j-lab.lab-schema`
 - Check column names match documentation
-- Ensure Genie has access to all required tables
+- Ensure Genie space has access to all required tables
+- Test queries directly in SQL Editor first
+
+### "Permission denied"
+- For Genie space: User needs access to the space AND underlying data tables
+- For MCP server: User needs `USE CONNECTION` permission on the Unity Catalog connection
+- For supervisor: User needs `CAN QUERY` permission on the agent endpoint
 
 ---
 
@@ -439,12 +504,21 @@ Show maintenance events for aircraft with the lowest fuel efficiency
 
 Congratulations! You've built a complete multi-agent system for aircraft intelligence. Consider these extensions:
 
-1. **Add Documentation Agent**: Integrate the semantic search from Lab 6 as a third agent for maintenance procedures
+1. **Add Documentation Agent**: Integrate semantic search as a third agent for maintenance procedures
 
-2. **Create Custom Tools**: Build specialized tools for common workflows (e.g., "Generate Maintenance Report")
+2. **Create Unity Catalog Functions**: Build custom Python functions as additional tools
 
 3. **Production Deployment**: Deploy as a REST API for integration with other systems
 
 4. **Add Guardrails**: Configure output validation and safety filters
 
 5. **Enable Feedback**: Set up user feedback collection for continuous improvement
+
+---
+
+## References
+
+- [Multi-Agent Supervisor Documentation](https://docs.databricks.com/aws/en/generative-ai/agent-bricks/multi-agent-supervisor)
+- [External MCP Servers](https://docs.databricks.com/aws/en/generative-ai/mcp/external-mcp)
+- [Agent Bricks Overview](https://docs.databricks.com/aws/en/generative-ai/agent-bricks/)
+- [Unity Catalog Connections](https://docs.databricks.com/en/data-governance/unity-catalog/index.html)
