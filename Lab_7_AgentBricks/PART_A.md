@@ -12,10 +12,10 @@ Before starting, verify that the sensor data tables exist in your Unity Catalog:
 
 ```sql
 -- Run in a SQL warehouse or notebook
-SELECT COUNT(*) FROM aircraft_workshop.aircraft_lab.sensor_readings;
-SELECT COUNT(*) FROM aircraft_workshop.aircraft_lab.sensors;
-SELECT COUNT(*) FROM aircraft_workshop.aircraft_lab.systems;
-SELECT COUNT(*) FROM aircraft_workshop.aircraft_lab.aircraft;
+SELECT COUNT(*) FROM `aws-databricks-neo4j-lab`.lakehouse.sensor_readings;
+SELECT COUNT(*) FROM `aws-databricks-neo4j-lab`.lakehouse.sensors;
+SELECT COUNT(*) FROM `aws-databricks-neo4j-lab`.lakehouse.systems;
+SELECT COUNT(*) FROM `aws-databricks-neo4j-lab`.lakehouse.aircraft;
 ```
 
 Expected counts:
@@ -52,11 +52,11 @@ Expected counts:
 
 ### 2.2 Add Unity Catalog Tables
 
-Click **Add tables** and select the following from `aircraft_workshop.aircraft_lab`:
+Click **Add tables** and select the following from `aws-databricks-neo4j-lab.lakehouse`:
 
 1. **sensor_readings**
    - Primary table with 345,600+ time-series measurements
-   - Columns: `reading_id`, `sensor_id`, `ts`, `value`
+   - Columns: `reading_id`, `sensor_id`, `timestamp`, `value`
 
 2. **sensors**
    - Sensor metadata (type, unit, location)
@@ -156,7 +156,7 @@ Instructions provide domain knowledge and query conventions. Click **Add instruc
 - Total: 160 sensors across the fleet (20 aircraft x 2 engines x 4 sensors)
 
 ## Data Conventions
-- Timestamps are in ISO 8601 format (e.g., 2024-07-01T00:00:00)
+- Timestamps are stored as timestamp type in the `timestamp` column
 - Data period: July 1, 2024 to September 29, 2024 (90 days)
 - Readings are hourly (24 per day per sensor)
 - 2,160 readings per sensor over the 90-day period
@@ -312,7 +312,7 @@ GROUP BY sen.type, sen.unit
 
 ### Daily Trend for Specific Aircraft
 ```sql
-SELECT DATE(r.ts) as date, AVG(r.value) as avg_value
+SELECT DATE(r.timestamp) as date, AVG(r.value) as avg_value
 FROM sensor_readings r
 JOIN sensors sen ON r.sensor_id = sen.sensor_id
 JOIN systems s ON sen.system_id = s.system_id
@@ -331,7 +331,7 @@ WITH percentiles AS (
     JOIN sensors sen ON r.sensor_id = sen.sensor_id
     GROUP BY sen.type
 )
-SELECT sen.sensor_id, sen.type, r.ts, r.value, p.p95
+SELECT sen.sensor_id, sen.type, r.timestamp, r.value, p.p95
 FROM sensor_readings r
 JOIN sensors sen ON r.sensor_id = sen.sensor_id
 JOIN percentiles p ON sen.type = p.type

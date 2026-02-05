@@ -6,8 +6,8 @@ In this lab, you'll add semantic search capabilities to your aircraft knowledge 
 
 Before starting, make sure you have:
 - Completed **Lab 5** (Databricks ETL) to load the aircraft graph (Aircraft, System, Component nodes)
+- Neo4j Aura credentials from Lab 1 (URI, username, password)
 - Running in a **Databricks notebook environment** (for Foundation Model API access)
-- `CONFIG.txt` populated with Neo4j settings
 - **Maintenance manual uploaded** to the Unity Catalog Volume (see `lab_setup/README.md`)
 
 ## Lab Overview
@@ -91,19 +91,15 @@ After completing this lab, you can ask questions like:
 
 ## Configuration
 
-The lab uses settings from `CONFIG.txt` at the project root:
+Each notebook has a **Configuration** cell at the top where you enter your Neo4j credentials:
 
-```
-NEO4J_URI=neo4j+s://xxx.databases.neo4j.io
-NEO4J_USERNAME=neo4j
-NEO4J_PASSWORD=...
-
-# Optional: Override default models
-EMBEDDING_MODEL_ID=databricks-bge-large-en
-MODEL_ID=databricks-meta-llama-3-3-70b-instruct
+```python
+NEO4J_URI = ""  # e.g., "neo4j+s://xxxxxxxx.databases.neo4j.io"
+NEO4J_USERNAME = "neo4j"
+NEO4J_PASSWORD = ""  # Your password from Lab 1
 ```
 
-**Note:** When running in Databricks, the MLflow deployments client automatically handles authentication to the Foundation Model APIs.
+The embedding and LLM models use Databricks Foundation Model APIs which are pre-deployed and require no additional configuration. When running in Databricks, the MLflow deployments client automatically handles authentication.
 
 ## Key Concepts
 
@@ -121,10 +117,11 @@ MODEL_ID=databricks-meta-llama-3-3-70b-instruct
    ```
    /Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/MAINTENANCE_A320.md
    ```
-3. Upload the notebook files to your Databricks workspace
+3. Upload the notebook files and `data_utils.py` to your Databricks workspace
 4. Open `01_data_and_embeddings.ipynb`
-5. Run cells sequentially to load the maintenance manual and create embeddings
-6. Continue to `02_graphrag_retrievers.ipynb` for retrieval strategies
+5. Enter your Neo4j credentials in the Configuration cell
+6. Run cells sequentially to load the maintenance manual and create embeddings
+7. Continue to `02_graphrag_retrievers.ipynb` for retrieval strategies
 
 ## Files
 

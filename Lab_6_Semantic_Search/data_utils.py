@@ -197,12 +197,26 @@ def get_llm() -> DatabricksLLM:
 class Neo4jConnection:
     """Manages Neo4j database connection."""
 
-    def __init__(self):
-        """Initialize and connect to Neo4j using environment configuration."""
-        self.config = Neo4jConfig()
+    def __init__(self, uri: str = None, username: str = None, password: str = None):
+        """Initialize and connect to Neo4j.
+
+        Args:
+            uri: Neo4j URI. If not provided, reads from NEO4J_URI env var / CONFIG.txt.
+            username: Neo4j username. If not provided, reads from NEO4J_USERNAME env var / CONFIG.txt.
+            password: Neo4j password. If not provided, reads from NEO4J_PASSWORD env var / CONFIG.txt.
+        """
+        if uri and username and password:
+            self.uri = uri
+            self.username = username
+            self.password = password
+        else:
+            config = Neo4jConfig()
+            self.uri = uri or config.uri
+            self.username = username or config.username
+            self.password = password or config.password
         self.driver = GraphDatabase.driver(
-            self.config.uri,
-            auth=(self.config.username, self.config.password)
+            self.uri,
+            auth=(self.username, self.password)
         )
 
     def verify(self):

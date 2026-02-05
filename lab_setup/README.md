@@ -136,17 +136,49 @@ To change defaults, edit the configuration variables at the top of `setup_databr
 
 ### Expected data files in volume
 
+The script uploads all `.csv` and `.md` files from `aircraft_digital_twin_data/` (excluding documentation files). This includes data for Labs 5, 6, and 7:
+
 ```
 /Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/
-├── nodes_aircraft.csv         (Lab 5)
-├── nodes_systems.csv          (Lab 5)
-├── nodes_components.csv       (Lab 5)
-├── rels_aircraft_system.csv   (Lab 5)
-├── rels_system_component.csv  (Lab 5)
-├── MAINTENANCE_A320.md        (Lab 6)
-├── nodes_sensors.csv          (Lab 7)
-├── nodes_readings.csv         (Lab 7)
-└── rels_system_sensor.csv     (Lab 7)
+│
+│  Nodes (Lab 5 core)
+├── nodes_aircraft.csv
+├── nodes_systems.csv
+├── nodes_components.csv
+│
+│  Nodes (Lab 5 full dataset - notebook 02)
+├── nodes_airports.csv
+├── nodes_delays.csv
+├── nodes_flights.csv
+├── nodes_maintenance.csv
+├── nodes_removals.csv
+│
+│  Nodes (Lab 7 sensors)
+├── nodes_sensors.csv
+├── nodes_readings.csv          (23 MB, 345,600 rows)
+│
+│  Relationships (Lab 5 core)
+├── rels_aircraft_system.csv
+├── rels_system_component.csv
+│
+│  Relationships (Lab 5 full dataset - notebook 02)
+├── rels_aircraft_flight.csv
+├── rels_aircraft_removal.csv
+├── rels_component_event.csv
+├── rels_component_removal.csv
+├── rels_event_aircraft.csv
+├── rels_event_system.csv
+├── rels_flight_arrival.csv
+├── rels_flight_delay.csv
+├── rels_flight_departure.csv
+│
+│  Relationships (Lab 7)
+├── rels_system_sensor.csv
+│
+│  Maintenance Manuals (Lab 6)
+├── MAINTENANCE_A320.md
+├── MAINTENANCE_A321neo.md
+└── MAINTENANCE_B737.md
 ```
 
 ### Expected lakehouse table row counts
@@ -171,7 +203,7 @@ If you prefer to set up the cluster, libraries, and data through the Databricks 
 
 Databricks Genie provides a natural language interface for querying data.
 
-### 5.1 Create Genie Space
+### 3.1 Create Genie Space
 
 1. Navigate to **Genie** in the left sidebar (under AI/BI)
 2. Click **New** > **Genie space**
@@ -180,7 +212,7 @@ Databricks Genie provides a natural language interface for querying data.
    - **Description:** `Natural language queries for aircraft sensor data`
 4. Click **Create**
 
-### 5.2 Add Tables to Genie Space
+### 3.2 Add Tables to Genie Space
 
 1. In the Genie space, click **Add tables**
 2. Navigate to `aws-databricks-neo4j-lab.lakehouse`
@@ -191,7 +223,7 @@ Databricks Genie provides a natural language interface for querying data.
    - `sensor_readings`
 4. Click **Add**
 
-### 5.3 Configure Table Relationships (Optional but Recommended)
+### 3.3 Configure Table Relationships (Optional but Recommended)
 
 Help Genie understand how tables relate:
 
@@ -201,7 +233,7 @@ Help Genie understand how tables relate:
    - `sensors.system_id` → `systems.:ID(System)`
    - `sensor_readings.sensor_id` → `sensors.:ID(Sensor)`
 
-### 5.4 Add Sample Questions
+### 3.4 Add Sample Questions
 
 Add sample questions to help users understand what they can ask:
 
@@ -214,7 +246,7 @@ Add sample questions to help users understand what they can ask:
    - "Find sensors with readings above 700 degrees"
    - "What are the daily average temperatures by aircraft?"
 
-### 5.5 Test Genie
+### 3.5 Test Genie
 
 Test the Genie space with a sample query:
 
@@ -222,7 +254,7 @@ Test the Genie space with a sample query:
 2. Verify Genie generates appropriate SQL and returns results
 3. Test a few more queries to ensure the space is working
 
-### 5.6 Record Genie Space ID
+### 3.6 Record Genie Space ID
 
 For programmatic access in Lab 7, note the Genie Space ID:
 
@@ -287,8 +319,8 @@ Create a handout or slide with:
   ```
 
 **Genie not generating correct SQL**
-- Ensure table comments are added (Step 4.4)
-- Verify table relationships are configured (Step 5.3)
+- Ensure table comments are added (handled by `create_lakehouse_tables.py`)
+- Verify table relationships are configured (Step 3.3)
 - Add more sample questions to guide the model
 
 **Lakehouse table creation fails**
@@ -302,10 +334,9 @@ Create a handout or slide with:
 
 For the full file inventory with sizes, record counts, and sensor data details, see **[MANUAL_SETUP.md](MANUAL_SETUP.md#file-inventory)**.
 
-Upload these files to the Volume for the complete workshop:
-- **5 CSV files** from `aircraft_digital_twin_data/` (Lab 5)
-- **1 Markdown file** (`MAINTENANCE_A320.md`) from `aircraft_digital_twin_data/` (Lab 6)
-- **3 CSV files** from `aircraft_digital_twin_data/` (Lab 7: sensors, readings, relationships)
+The setup script uploads **25 files** to the Volume:
+- **22 CSV files** from `aircraft_digital_twin_data/` (nodes and relationships for Labs 5 and 7)
+- **3 Markdown files** (maintenance manuals for Lab 6: A320, A321neo, B737)
 
 ---
 

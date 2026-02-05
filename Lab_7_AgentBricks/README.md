@@ -5,7 +5,9 @@ In this lab, you'll build a multi-agent system using Databricks AgentBricks that
 ## Prerequisites
 
 Before starting, make sure you have:
-- Completed **Lab 5** (Databricks ETL) to load aircraft topology into Neo4j
+- Completed **Lab 5** (Databricks ETL) — run **both** notebooks:
+  - `01_aircraft_etl_to_neo4j.ipynb` (core: Aircraft, System, Component)
+  - `02_load_neo4j_full.ipynb` (full dataset: adds Sensors, Flights, Airports, Delays, MaintenanceEvents, Removals — **required** for the Neo4j MCP agent in Part B)
 - Sensor readings data loaded in your Databricks lakehouse (Unity Catalog)
 - Running in a **Databricks workspace** with AgentBricks access
 - Neo4j MCP server connection configured in Unity Catalog
@@ -71,13 +73,13 @@ These tables should already be loaded from Lab 5 setup:
 
 ### Neo4j Knowledge Graph (Relationships)
 
-From Lab 5 and Lab 6, your graph contains:
+From Lab 5 (both notebooks) and Lab 6, your graph contains:
 
 | Node Type | Count | Purpose |
 |-----------|-------|---------|
 | Aircraft | 20 | Fleet inventory |
 | System | ~80 | Component hierarchy |
-| Component | ~200 | Parts and assemblies |
+| Component | 320 | Parts and assemblies |
 | Sensor | 160 | Monitoring equipment |
 | MaintenanceEvent | 300 | Fault tracking |
 | Flight | 800 | Operations |

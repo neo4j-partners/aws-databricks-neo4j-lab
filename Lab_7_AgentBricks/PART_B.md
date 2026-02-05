@@ -11,8 +11,10 @@ In this part, you'll create a multi-agent supervisor that intelligently routes q
 Before starting, ensure you have:
 - Completed **Part A** (Genie space for sensor analytics)
 - Neo4j MCP connection configured in Unity Catalog
-- Neo4j database populated with aircraft graph (from Lab 5)
-- Access to the Unity Catalog: `aws-databricks-neo4j-lab.lab-schema`
+- Neo4j database populated with the **full** aircraft graph from Lab 5 — you must have run **both** notebooks:
+  - `01_aircraft_etl_to_neo4j.ipynb` (core topology)
+  - `02_load_neo4j_full.ipynb` (adds Sensors, Flights, Airports, Delays, MaintenanceEvents, Removals)
+- Access to the Unity Catalog: `aws-databricks-neo4j-lab.lakehouse` (tables) and `aws-databricks-neo4j-lab.lab-schema` (volume)
 
 ---
 
@@ -72,7 +74,7 @@ For the Genie space created in Part A:
 2. Share the space with end users who will query the supervisor
 3. Ensure users have access to the underlying data tables in:
    - Catalog: `aws-databricks-neo4j-lab`
-   - Schema: `lab-schema`
+   - Schema: `lakehouse`
    - Tables: `sensor_readings`, `sensors`, `systems`, `aircraft`
 
 ### 3.2 MCP Server Permissions
@@ -113,7 +115,7 @@ BEST FOR:
 DATA AVAILABLE (loaded from /Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/):
 - Aircraft (20): Fleet inventory with tail numbers, models, operators
 - Systems (~80): Engines, Avionics, Hydraulics per aircraft
-- Components (~200): Turbines, Compressors, Pumps, etc.
+- Components (320): Turbines, Compressors, Pumps, etc.
 - Sensors (160): Monitoring equipment metadata
 - MaintenanceEvents (300): Faults, severity, corrective actions
 - Flights (800): Operations with departure/arrival
@@ -156,7 +158,7 @@ Analyzes aircraft sensor telemetry data using SQL queries over Unity Catalog tab
 
 DATA LOCATION:
 - Catalog: aws-databricks-neo4j-lab
-- Schema: lab-schema
+- Schema: lakehouse
 - Tables: sensor_readings, sensors, systems, aircraft
 
 BEST FOR:
@@ -431,8 +433,8 @@ Multi-Agent Supervisor
 
 | Source | Location | Query Language |
 |--------|----------|----------------|
-| Sensor Telemetry | `aws-databricks-neo4j-lab.lab-schema.sensor_readings` | SQL |
-| Aircraft Metadata | `aws-databricks-neo4j-lab.lab-schema.aircraft` | SQL |
+| Sensor Telemetry | `aws-databricks-neo4j-lab.lakehouse.sensor_readings` | SQL |
+| Aircraft Metadata | `aws-databricks-neo4j-lab.lakehouse.aircraft` | SQL |
 | Knowledge Graph | Neo4j Aura (via MCP) | Cypher |
 | Graph Data Origin | `/Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/` | - |
 
@@ -458,7 +460,7 @@ Multi-Agent Supervisor
 - Test queries directly in Neo4j Aura console first
 
 ### "SQL query failed"
-- Verify table names in Unity Catalog: `aws-databricks-neo4j-lab.lab-schema`
+- Verify table names in Unity Catalog: `aws-databricks-neo4j-lab.lakehouse`
 - Check column names match documentation
 - Ensure Genie space has access to all required tables
 - Test queries directly in SQL Editor first

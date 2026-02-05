@@ -6,14 +6,27 @@ Load aircraft data from Databricks into Neo4j using the Spark Connector.
 
 ---
 
-## Import Notebook
+## Notebooks
 
-**To import this notebook into Databricks:**
+This lab has two notebooks:
 
-1. Download [`01_aircraft_etl_to_neo4j.ipynb`](01_aircraft_etl_to_neo4j.ipynb) from this repository
+| Notebook | Description | Required For |
+|----------|-------------|--------------|
+| [`01_aircraft_etl_to_neo4j.ipynb`](01_aircraft_etl_to_neo4j.ipynb) | Core ETL — loads Aircraft, System, and Component nodes using the Spark Connector | Lab 6 |
+| [`02_load_neo4j_full.ipynb`](02_load_neo4j_full.ipynb) | Full dataset — adds Sensors, Airports, Flights, Delays, Maintenance Events, and Removals using the Python driver | **Lab 7** |
+
+> **Important:** Run **both** notebooks. Notebook 01 loads the core aircraft topology. Notebook 02 loads the complete dataset required by the Neo4j MCP agent in Lab 7.
+
+---
+
+## Import Notebooks
+
+**To import the notebooks into Databricks:**
+
+1. Download both `.ipynb` files from this repository
 2. In your Databricks workspace, navigate to **Workspace** > your personal folder
 3. Right-click and select **Import**
-4. Choose **File** and upload the `.ipynb` file
+4. Choose **File** and upload each `.ipynb` file
 5. Click **Import**
 
 ---
@@ -32,9 +45,9 @@ Before starting this lab, ensure you have:
 
 1. **Log in** to Databricks workspace
 2. **Start/verify** the workshop cluster is running
-3. **Import** the notebook (see [Import Notebook](#import-notebook) above)
-4. **Enter** your Neo4j credentials
-5. **Run All** cells
+3. **Import** both notebooks (see [Import Notebooks](#import-notebooks) above)
+4. **Run notebook 01**: Enter your Neo4j credentials and **Run All** cells
+5. **Run notebook 02**: Enter your Neo4j credentials and **Run All** cells
 6. **Explore** the graph in Neo4j Aura
 
 ---
@@ -50,15 +63,17 @@ Before starting this lab, ensure you have:
    - If stopped, click the cluster name and click **Start**
    - Wait for status to change to Running (may take 2-3 minutes)
 
-### Part B: Import the Notebook
+### Part B: Import the Notebooks
 
-1. Download [`01_aircraft_etl_to_neo4j.ipynb`](01_aircraft_etl_to_neo4j.ipynb) from this repository
+1. Download both notebooks from this repository:
+   - [`01_aircraft_etl_to_neo4j.ipynb`](01_aircraft_etl_to_neo4j.ipynb)
+   - [`02_load_neo4j_full.ipynb`](02_load_neo4j_full.ipynb)
 2. In Databricks, navigate to **Workspace** > your personal folder
 3. Right-click and select **Import**
-4. Choose **File** and upload the `.ipynb` file
+4. Choose **File** and upload each `.ipynb` file
 5. Click **Import**
 
-After importing, open the notebook (`01_aircraft_etl_to_neo4j`)
+After importing, open the first notebook (`01_aircraft_etl_to_neo4j`)
 
 ### Part C: Configure and Run
 
@@ -72,9 +87,9 @@ After importing, open the notebook (`01_aircraft_etl_to_neo4j`)
 3. Click **Run All** (or press Shift+Enter through each cell)
 4. Watch the progress messages as data loads
 
-### Part D: Verify Results
+### Part D: Verify Results (Notebook 01)
 
-After running all cells, verify:
+After running all cells in notebook 01, verify:
 
 | Check | Expected Value |
 |-------|----------------|
@@ -86,7 +101,26 @@ After running all cells, verify:
 
 The verification cells at the end of the notebook will display these counts.
 
-### Part E: Explore in Neo4j Aura
+### Part E: Run the Full Dataset (Notebook 02)
+
+Open `02_load_neo4j_full` and run the complete dataset load:
+
+1. Enter your Neo4j credentials (same as notebook 01)
+2. Set `CLEAR_DATABASE = True` for a clean load (recommended)
+3. Click **Run All**
+
+This loads additional node types and relationships required by Lab 7:
+
+| Node Type | Count | Description |
+|-----------|-------|-------------|
+| Sensor | 160 | Monitoring equipment (EGT, Vibration, N1Speed, FuelFlow) |
+| Airport | 12 | Route network locations |
+| Flight | ~800 | Flight operations |
+| Delay | ~300 | Delay causes and durations |
+| MaintenanceEvent | ~300 | Fault tracking with severity |
+| Removal | ~100 | Component removal history |
+
+### Part F: Explore in Neo4j Aura
 
 1. Open [console.neo4j.io](https://console.neo4j.io) in a new browser tab
 2. Sign in and select your instance
@@ -116,19 +150,36 @@ ORDER BY Count DESC
 
 ## What You Loaded
 
-### Graph Structure
+### Notebook 01: Core Graph Structure
 
 ```
 (Aircraft) -[:HAS_SYSTEM]-> (System) -[:HAS_COMPONENT]-> (Component)
 ```
-
-### Data Summary
 
 | Entity | Count | Description |
 |--------|-------|-------------|
 | Aircraft | 20 | Boeing 737-800, Airbus A320/A321, Embraer E190 |
 | System | 80 | 2 engines + avionics + hydraulics per aircraft |
 | Component | 320 | Fans, compressors, turbines, pumps, etc. |
+
+### Notebook 02: Full Dataset (adds to above)
+
+```
+(Aircraft) -[:HAS_SYSTEM]-> (System) -[:HAS_SENSOR]-> (Sensor)
+(Aircraft) -[:OPERATES_FLIGHT]-> (Flight) -[:DEPARTS_FROM / :ARRIVES_AT]-> (Airport)
+(Flight) -[:HAS_DELAY]-> (Delay)
+(Component) -[:HAS_EVENT]-> (MaintenanceEvent) -[:AFFECTS_SYSTEM / :AFFECTS_AIRCRAFT]-> ...
+(Aircraft) -[:HAS_REMOVAL]-> (Removal) -[:REMOVED_COMPONENT]-> (Component)
+```
+
+| Entity | Count | Description |
+|--------|-------|-------------|
+| Sensor | 160 | EGT, Vibration, N1Speed, FuelFlow per engine |
+| Airport | 12 | Route network |
+| Flight | ~800 | Flight operations |
+| Delay | ~300 | Delay causes |
+| MaintenanceEvent | ~300 | Fault tracking |
+| Removal | ~100 | Component removals |
 
 ### Sample Aircraft
 
@@ -189,7 +240,8 @@ ORDER BY Count DESC
 ## Next Steps
 
 After completing this lab:
-- Continue to **Phase 4** for Databricks Multi-Agent with AgentBricks
+- Continue to **Lab 6** (Semantic Search) to add GraphRAG capabilities over maintenance documentation
+- Continue to **Lab 7** (AgentBricks) to build multi-agent systems with Genie and Neo4j MCP
 - The data you loaded will be queried by AI agents in later labs
 
 ---
