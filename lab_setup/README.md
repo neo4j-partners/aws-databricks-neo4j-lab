@@ -2,6 +2,12 @@
 
 **Purpose:** Instructions for workshop administrators to prepare the Databricks environment before participants arrive.
 
+**Participant Materials:** To create the zip file for participants to upload to Databricks, run:
+
+```bash
+./lab_setup/prepare_material.sh
+```
+
 ---
 
 
