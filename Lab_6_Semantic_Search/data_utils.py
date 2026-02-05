@@ -13,62 +13,28 @@ the MLflow deployments client when running in Databricks.
 
 import asyncio
 from pathlib import Path
-from typing import Any
 
 import mlflow.deployments
-from dotenv import load_dotenv
 from neo4j import GraphDatabase
-from neo4j_graphrag.embeddings.base import Embeddings
+from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import FixedSizeSplitter
 from neo4j_graphrag.llm.base import LLMInterface
 from neo4j_graphrag.llm.types import LLMResponse
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
-
-# Load configuration from project root
-_config_file = Path(__file__).parent.parent / "CONFIG.txt"
-load_dotenv(_config_file)
 
 
 # =============================================================================
-# Configuration Classes
+# Default Model Configuration
 # =============================================================================
 
-class Neo4jConfig(BaseSettings):
-    """Neo4j configuration loaded from environment variables."""
-
-    model_config = SettingsConfigDict(env_prefix="", extra="ignore")
-
-    uri: str = Field(validation_alias="NEO4J_URI")
-    username: str = Field(validation_alias="NEO4J_USERNAME")
-    password: str = Field(validation_alias="NEO4J_PASSWORD")
-
-
-class DatabricksConfig(BaseSettings):
-    """Databricks configuration loaded from environment variables.
-
-    For Databricks Foundation Model APIs (hosted models):
-    - databricks-bge-large-en: 1024 dims, 512 token context, normalized
-    - databricks-gte-large-en: 1024 dims, 8192 token context
-    """
-
-    model_config = SettingsConfigDict(env_prefix="", extra="ignore")
-
-    embedding_model_id: str = Field(
-        default="databricks-bge-large-en",
-        validation_alias="EMBEDDING_MODEL_ID"
-    )
-    llm_model_id: str = Field(
-        default="databricks-meta-llama-3-3-70b-instruct",
-        validation_alias="MODEL_ID"
-    )
+DEFAULT_EMBEDDING_MODEL = "databricks-bge-large-en"
+DEFAULT_LLM_MODEL = "databricks-meta-llama-3-3-70b-instruct"
 
 
 # =============================================================================
 # Databricks Embeddings
 # =============================================================================
 
-class DatabricksEmbeddings(Embeddings):
+class DatabricksEmbeddings(Embedder):
     """Generate embeddings using Databricks Foundation Model APIs.
 
     Databricks provides pre-deployed embedding models as part of the
@@ -170,24 +136,30 @@ class DatabricksLLM(LLMInterface):
 # AI Services Factory Functions
 # =============================================================================
 
-def get_embedder() -> DatabricksEmbeddings:
+def get_embedder(model_id: str = DEFAULT_EMBEDDING_MODEL) -> DatabricksEmbeddings:
     """Get embedder using Databricks Foundation Model APIs.
 
+    Args:
+        model_id: Databricks embedding endpoint name.
+                  Default: databricks-bge-large-en (1024 dimensions)
+
     Returns:
-        DatabricksEmbeddings configured for BGE-large (1024 dimensions)
+        DatabricksEmbeddings configured for the specified model
     """
-    config = DatabricksConfig()
-    return DatabricksEmbeddings(model_id=config.embedding_model_id)
+    return DatabricksEmbeddings(model_id=model_id)
 
 
-def get_llm() -> DatabricksLLM:
+def get_llm(model_id: str = DEFAULT_LLM_MODEL) -> DatabricksLLM:
     """Get LLM using Databricks Foundation Model APIs.
 
+    Args:
+        model_id: Databricks LLM endpoint name.
+                  Default: databricks-meta-llama-3-3-70b-instruct
+
     Returns:
-        DatabricksLLM configured from environment
+        DatabricksLLM configured for the specified model
     """
-    config = DatabricksConfig()
-    return DatabricksLLM(model_id=config.llm_model_id)
+    return DatabricksLLM(model_id=model_id)
 
 
 # =============================================================================
@@ -197,23 +169,17 @@ def get_llm() -> DatabricksLLM:
 class Neo4jConnection:
     """Manages Neo4j database connection."""
 
-    def __init__(self, uri: str = None, username: str = None, password: str = None):
+    def __init__(self, uri: str, username: str, password: str):
         """Initialize and connect to Neo4j.
 
         Args:
-            uri: Neo4j URI. If not provided, reads from NEO4J_URI env var / CONFIG.txt.
-            username: Neo4j username. If not provided, reads from NEO4J_USERNAME env var / CONFIG.txt.
-            password: Neo4j password. If not provided, reads from NEO4J_PASSWORD env var / CONFIG.txt.
+            uri: Neo4j URI (e.g., "neo4j+s://xxxxxxxx.databases.neo4j.io")
+            username: Neo4j username (typically "neo4j")
+            password: Neo4j password
         """
-        if uri and username and password:
-            self.uri = uri
-            self.username = username
-            self.password = password
-        else:
-            config = Neo4jConfig()
-            self.uri = uri or config.uri
-            self.username = username or config.username
-            self.password = password or config.password
+        self.uri = uri
+        self.username = username
+        self.password = password
         self.driver = GraphDatabase.driver(
             self.uri,
             auth=(self.username, self.password)

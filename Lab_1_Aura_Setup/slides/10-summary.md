@@ -18,10 +18,12 @@
 
 ## Don't Forget!
 
-Update `CONFIG.txt` with your Neo4j credentials:
-- `NEO4J_URI`
-- `NEO4J_USERNAME`
-- `NEO4J_PASSWORD`
+Save your Neo4j credentials for later labs:
+- **URI** (e.g., `neo4j+s://xxxxxxxx.databases.neo4j.io`)
+- **Username** (typically `neo4j`)
+- **Password**
+
+You'll enter these directly in each notebook's Configuration cell.
 
 ## Next Up
 

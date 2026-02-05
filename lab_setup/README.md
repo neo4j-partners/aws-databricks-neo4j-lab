@@ -260,7 +260,7 @@ For programmatic access in Lab 7, note the Genie Space ID:
 
 1. Open the Genie space
 2. Copy the ID from the URL: `https://your-workspace.cloud.databricks.com/genie/spaces/{SPACE_ID}`
-3. Provide this to participants or add to `CONFIG.txt`
+3. Provide this to participants (e.g., in a shared document or handout)
 
 ---
 

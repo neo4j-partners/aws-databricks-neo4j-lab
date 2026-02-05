@@ -14,16 +14,15 @@ This is a hands-on workshop teaching GraphRAG (Graph Retrieval-Augmented Generat
 
 ## Key Configuration
 
-All credentials are stored in `CONFIG.txt` at the project root (gitignored). The file uses dotenv format:
+Credentials are entered directly in each notebook's Configuration cell. Each notebook has a section at the top where users set:
 
+```python
+NEO4J_URI = "neo4j+s://xxx.databases.neo4j.io"
+NEO4J_USERNAME = "neo4j"
+NEO4J_PASSWORD = "..."
 ```
-NEO4J_URI=neo4j+s://xxx.databases.neo4j.io
-NEO4J_USERNAME=neo4j
-NEO4J_PASSWORD=...
-MODEL_ID=global.anthropic.claude-sonnet-4-5-20250929-v1:0
-EMBEDDING_MODEL_ID=amazon.titan-embed-text-v2:0
-REGION=us-west-2
-```
+
+Databricks notebooks use Foundation Model APIs (MLflow deployments client) which handle authentication automatically when running in Databricks.
 
 ## Lab Code Patterns
 
@@ -52,9 +51,9 @@ pip install "neo4j-graphrag[bedrock] @ git+https://github.com/neo4j-partners/neo
 ```
 
 Key utility classes in `data_utils.py`:
-- `Neo4jConnection`: Manages driver connection using `Neo4jConfig` (pydantic-settings)
-- `get_embedder()`: Returns `BedrockEmbeddings` configured from environment
-- `get_llm()`: Returns `BedrockLLM` configured from environment
+- `Neo4jConnection`: Manages driver connection (credentials passed explicitly)
+- `get_embedder()`: Returns `DatabricksEmbeddings` using Foundation Model APIs
+- `get_llm()`: Returns `DatabricksLLM` using Foundation Model APIs
 - `split_text()`: Wraps `FixedSizeSplitter` with async handling for Jupyter
 
 Graph structure for chunked documents:
@@ -93,14 +92,14 @@ The SEC 10-K dataset includes:
 
 ## Running Notebooks
 
-The notebooks are designed for AWS SageMaker Studio but work locally with:
-1. Configure `CONFIG.txt` with Neo4j and AWS credentials
+The notebooks are designed for Databricks but can be adapted locally:
+1. Enter Neo4j credentials in each notebook's Configuration cell
 2. Install dependencies per notebook (uses `%pip install`)
-3. Ensure AWS credentials are configured for Bedrock access
+3. Databricks Foundation Model APIs require a Databricks workspace
 
 ## Dependencies
 
 Lab 5 uses `pyproject.toml` at `Lab_5_GraphRAG/src/pyproject.toml`:
 - Python 3.11+
-- neo4j-graphrag[bedrock] (from neo4j-partners fork)
-- python-dotenv, pydantic-settings, nest-asyncio
+- neo4j-graphrag
+- mlflow, nest-asyncio
