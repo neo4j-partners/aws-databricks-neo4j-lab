@@ -40,11 +40,14 @@ After clicking **New Genie space**, the **Connect your data** dialog appears. Se
 
 ### 1.3 Configure Basic Settings
 
-Once the Genie space is created:
+Once the Genie space is created, click **Configure** in the top navigation bar, then select the **Settings** tab:
 
-1. **Name:** `Aircraft Sensor Analyst [YOUR_INITIALS]`
+![Genie space Configure > Settings panel](images/configure_basics_genie.png)
+
+1. **Title:** `Aircraft Sensor Analyst [YOUR_INITIALS]`
    - Example: `Aircraft Sensor Analyst RK`
 2. **Description:** "Analyzes aircraft engine sensor telemetry including EGT, vibration, N1 speed, and fuel flow metrics"
+3. **Default warehouse:** Select a **Serverless SQL Warehouse**
 
 ---
 
