@@ -148,7 +148,6 @@ temp/
 *.bak
 
 # Build artifacts
-*.zip
 *.tar.gz
 
 # Neo4j
