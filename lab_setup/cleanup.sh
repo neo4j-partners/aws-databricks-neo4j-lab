@@ -34,6 +34,15 @@ for schema_full_name in $(echo "${schemas_json}" | jq -r '.[].full_name'); do
         done
     fi
 
+    # Delete tables in this schema
+    tables_json=$(databricks tables list "${CATALOG}" "${schema_name}" --output json 2>&1)
+    if echo "${tables_json}" | jq -e 'type == "array"' &>/dev/null; then
+        for table in $(echo "${tables_json}" | jq -r '.[].name'); do
+            echo "  Deleting table: ${CATALOG}.${schema_name}.${table}"
+            databricks tables delete "${CATALOG}.${schema_name}.${table}"
+        done
+    fi
+
     echo "  Deleting schema: ${schema_full_name}"
     databricks schemas delete "${schema_full_name}"
 done

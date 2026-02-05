@@ -41,9 +41,7 @@ Then re-run `databricks auth login`.
 Complete these steps before the workshop begins:
 
 - [ ] Create Unity Catalog, Schema, and Volume (Step 1 — UI required)
-- [ ] Upload data files with `setup_databricks.sh` (Step 2)
-- [ ] Configure a Dedicated cluster with Neo4j Spark Connector
-- [ ] Create Lakehouse tables with `create_lakehouse_tables.sh` (Step 4)
+- [ ] Run `setup_databricks.sh` to set up compute, upload data, and create tables (Step 2)
 - [ ] Configure Databricks Genie Space (Lab 7)
 - [ ] Provide DBC file to participants (or host for download)
 - [ ] Test the complete workflow
@@ -53,7 +51,7 @@ Complete these steps before the workshop begins:
 
 ## Why Catalog Creation Is Manual
 
-Newer Databricks workspaces use **Default Storage**, which blocks programmatic catalog creation via CLI, REST API, and SQL — all return the same error. Only the UI has the special handling to assign Default Storage to a new catalog. Once the catalog exists, everything else (schema, volume, file uploads) is automated by `setup_databricks.sh`. See [CATALOG_SETUP_COMPLEXITY.md](CATALOG_SETUP_COMPLEXITY.md) for details.
+Newer Databricks workspaces use **Default Storage**, which blocks programmatic catalog creation via CLI, REST API, and SQL — all return the same error. Only the UI has the special handling to assign Default Storage to a new catalog. Once the catalog exists, everything else (schema, volume, compute, data upload, and table creation) is automated by `setup_databricks.sh`. See [CATALOG_SETUP_COMPLEXITY.md](CATALOG_SETUP_COMPLEXITY.md) for details.
 
 ---
 
@@ -129,39 +127,110 @@ After upload, the volume should contain:
 
 ## Step 3: Configure Compute Cluster
 
-### 3.1 Create a Dedicated Cluster
+The Neo4j Spark Connector requires **Dedicated (Single User)** access mode — shared access modes are not supported. See [Neo4j Spark Connector docs](https://neo4j.com/docs/spark/current/databricks/).
 
-The Neo4j Spark Connector requires **Dedicated (Single User)** access mode.
+### Option A: Automated Setup (Recommended)
+
+The `setup_compute.sh` script creates the cluster and installs all libraries in one command.
+
+#### What it does
+
+1. Creates a single-node cluster with Dedicated access mode
+2. Waits for the cluster to reach RUNNING state
+3. Installs the Neo4j Spark Connector (Maven) and all PyPI libraries
+4. Polls until all libraries are installed
+
+#### How to run it
+
+```bash
+./lab_setup/setup_compute.sh [user-email] [cluster-name]
+```
+
+Examples:
+
+```bash
+# Auto-detect user, default name "Small Spark 4.0"
+./lab_setup/setup_compute.sh
+
+# Explicit user
+./lab_setup/setup_compute.sh ryan.knight@neo4j.com
+
+# Explicit user and custom cluster name
+./lab_setup/setup_compute.sh ryan.knight@neo4j.com "Workshop Cluster"
+```
+
+#### Cluster defaults
+
+| Setting | Value |
+|---------|-------|
+| Runtime | 17.3 LTS ML (Spark 4.0.0, Scala 2.13) |
+| Photon | Enabled |
+| Node type | `Standard_D4ds_v5` (16 GB, 4 cores) |
+| Workers | 0 (single node) |
+| Access mode | Dedicated (Single User) |
+| Auto-terminate | 30 minutes |
+
+To change defaults, edit the configuration variables at the top of `setup_compute.sh`.
+
+---
+
+### Option B: Manual Setup (UI)
+
+If you prefer to create the cluster through the Databricks UI:
+
+#### 3.1 Create a Dedicated Cluster
 
 1. Navigate to **Compute**
 2. Click **Create compute**
 3. Configure:
-   - **Name:** `aircraft-workshop-cluster`
-   - **Access mode:** **Single User** (Dedicated)
-   - **Databricks Runtime:** 14.3 LTS or later
-   - **Node type:** Standard (e.g., `m5.xlarge` or equivalent)
-   - **Workers:** 0 (single node is sufficient for this small dataset)
-   - **Auto termination:** 30 minutes (saves cost between sessions)
+   - **Name:** `Small Spark 4.0` (or your preferred name)
+   - **Databricks Runtime:** 17.3 LTS ML (includes Apache Spark 4.0.0, Scala 2.13)
+   - **Photon acceleration:** Enabled
+   - **Node type:** `Standard_D4ds_v5` (16 GB Memory, 4 Cores) or equivalent
+   - **Single node:** Enabled (0 workers)
+   - **Auto termination:** 30 minutes
+4. Expand **Advanced** options:
+   - **Access mode:** Set to **Manual**
+   - **Security mode:** **Dedicated**
+   - **Single user or group:** Your Databricks user email
 
-### 3.2 Install Neo4j Spark Connector Library
+#### 3.2 Install Libraries
+
+After the cluster is created and running, install the following libraries:
 
 1. Click on the cluster name
 2. Go to **Libraries** tab
 3. Click **Install new**
-4. Select **Maven**
-5. Enter coordinates:
-   ```
-   org.neo4j:neo4j-connector-apache-spark_2.12:5.3.2_for_spark_3
-   ```
-   (Adjust version to match your Spark version)
-6. Click **Install**
-7. Wait for status to show "Installed"
 
-### 3.3 Start the Cluster
+**Maven library:**
 
-1. Start the cluster
-2. Wait for status to show "Running"
-3. Verify library shows "Installed" status
+| Type | Coordinates |
+|------|-------------|
+| Maven | `org.neo4j:neo4j-connector-apache-spark_2.13:5.3.10_for_spark_3` |
+
+**PyPI libraries:**
+
+| Package | Type |
+|---------|------|
+| `neo4j==6.0.2` | PyPI |
+| `databricks-agents>=1.2.0` | PyPI |
+| `langgraph==1.0.5` | PyPI |
+| `langchain-openai==1.1.2` | PyPI |
+| `pydantic==2.12.5` | PyPI |
+| `langchain-core>=1.2.0` | PyPI |
+| `databricks-langchain>=0.11.0` | PyPI |
+| `dspy>=3.0.4` | PyPI |
+| `neo4j-graphrag>=1.10.0` | PyPI |
+| `beautifulsoup4>=4.12.0` | PyPI |
+| `sentence_transformers` | PyPI |
+
+Install each library one at a time (or use the bulk install option if available). Wait for all libraries to show **Installed** status before proceeding.
+
+#### 3.3 Verify the Cluster
+
+1. Confirm the cluster state is **Running**
+2. Confirm all libraries show **Installed** status
+3. Confirm access mode shows **Dedicated** in the cluster details
 
 ---
 
@@ -235,9 +304,9 @@ Help Genie understand how tables relate:
 
 1. Click on **Data model** in the Genie space
 2. Define relationships:
-   - `systems.aircraft_id` → `aircraft._id:ID(Aircraft)`
-   - `sensors.system_id` → `systems._id:ID(System)`
-   - `sensor_readings.sensor_id` → `sensors._id:ID(Sensor)`
+   - `systems.aircraft_id` → `aircraft.:ID(Aircraft)`
+   - `sensors.system_id` → `systems.:ID(System)`
+   - `sensor_readings.sensor_id` → `sensors.:ID(Sensor)`
 
 ### 5.4 Add Sample Questions
 

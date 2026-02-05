@@ -64,47 +64,49 @@ def create_tables(spark, catalog, volume_schema, volume, lakehouse_schema):
     volume_path = f"/Volumes/{catalog}/{volume_schema}/{volume}"
     target = f"`{catalog}`.`{lakehouse_schema}`"
 
+    tblprops = "TBLPROPERTIES ('delta.columnMapping.mode' = 'name')"
+
     tables = [
         {
             "name": "aircraft",
             "sql": f"""
                 CREATE TABLE IF NOT EXISTS {target}.aircraft
-                USING DELTA
-                AS SELECT * FROM csv.`{volume_path}/nodes_aircraft.csv`
-                OPTIONS (header = 'true', inferSchema = 'true')
+                {tblprops}
+                AS SELECT * FROM read_files('{volume_path}/nodes_aircraft.csv',
+                    format => 'csv', header => 'true', inferSchema => 'true')
             """,
         },
         {
             "name": "systems",
             "sql": f"""
                 CREATE TABLE IF NOT EXISTS {target}.systems
-                USING DELTA
-                AS SELECT * FROM csv.`{volume_path}/nodes_systems.csv`
-                OPTIONS (header = 'true', inferSchema = 'true')
+                {tblprops}
+                AS SELECT * FROM read_files('{volume_path}/nodes_systems.csv',
+                    format => 'csv', header => 'true', inferSchema => 'true')
             """,
         },
         {
             "name": "sensors",
             "sql": f"""
                 CREATE TABLE IF NOT EXISTS {target}.sensors
-                USING DELTA
-                AS SELECT * FROM csv.`{volume_path}/nodes_sensors.csv`
-                OPTIONS (header = 'true', inferSchema = 'true')
+                {tblprops}
+                AS SELECT * FROM read_files('{volume_path}/nodes_sensors.csv',
+                    format => 'csv', header => 'true', inferSchema => 'true')
             """,
         },
         {
             "name": "sensor_readings",
             "sql": f"""
                 CREATE TABLE IF NOT EXISTS {target}.sensor_readings
-                USING DELTA
+                {tblprops}
                 PARTITIONED BY (sensor_id)
                 AS SELECT
                     reading_id,
                     sensor_id,
                     to_timestamp(ts) as timestamp,
                     CAST(value AS DOUBLE) as value
-                FROM csv.`{volume_path}/nodes_readings.csv`
-                OPTIONS (header = 'true', inferSchema = 'true')
+                FROM read_files('{volume_path}/nodes_readings.csv',
+                    format => 'csv', header => 'true', inferSchema => 'true')
             """,
         },
     ]
@@ -164,18 +166,18 @@ def add_table_comments(spark, catalog, lakehouse_schema):
     comments = [
         # Aircraft table
         f"COMMENT ON TABLE {target}.aircraft IS 'Fleet of aircraft with tail numbers, models, and operators'",
-        f"COMMENT ON COLUMN {target}.aircraft.`_id:ID(Aircraft)` IS 'Unique aircraft identifier'",
+        f"COMMENT ON COLUMN {target}.aircraft.`:ID(Aircraft)` IS 'Unique aircraft identifier'",
         f"COMMENT ON COLUMN {target}.aircraft.tail_number IS 'Aircraft registration/tail number (e.g., N95040A)'",
         f"COMMENT ON COLUMN {target}.aircraft.model IS 'Aircraft model (e.g., B737-800, A320-200)'",
         f"COMMENT ON COLUMN {target}.aircraft.operator IS 'Airline operator name'",
         # Systems table
         f"COMMENT ON TABLE {target}.systems IS 'Aircraft systems including engines, avionics, and hydraulics'",
-        f"COMMENT ON COLUMN {target}.systems.`_id:ID(System)` IS 'Unique system identifier'",
+        f"COMMENT ON COLUMN {target}.systems.`:ID(System)` IS 'Unique system identifier'",
         f"COMMENT ON COLUMN {target}.systems.type IS 'System type (Engine, Avionics, Hydraulics)'",
         f"COMMENT ON COLUMN {target}.systems.name IS 'Human-readable system name'",
         # Sensors table
         f"COMMENT ON TABLE {target}.sensors IS 'Sensors installed on aircraft systems'",
-        f"COMMENT ON COLUMN {target}.sensors.`_id:ID(Sensor)` IS 'Unique sensor identifier'",
+        f"COMMENT ON COLUMN {target}.sensors.`:ID(Sensor)` IS 'Unique sensor identifier'",
         f"COMMENT ON COLUMN {target}.sensors.type IS 'Sensor type: EGT (Exhaust Gas Temperature in Celsius), Vibration (ips), N1Speed (RPM), FuelFlow (kg/s)'",
         f"COMMENT ON COLUMN {target}.sensors.unit IS 'Unit of measurement'",
         # Sensor readings table
