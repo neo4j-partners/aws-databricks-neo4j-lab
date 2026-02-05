@@ -14,13 +14,16 @@ the MLflow deployments client when running in Databricks.
 import asyncio
 import concurrent.futures
 from pathlib import Path
+from typing import Any, List, Optional, Type, Union
 
 import mlflow.deployments
 from neo4j import GraphDatabase
+from pydantic import BaseModel
 from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.experimental.components.text_splitters.fixed_size_splitter import FixedSizeSplitter
-from neo4j_graphrag.llm.base import LLMInterface
+from neo4j_graphrag.llm.base import LLMInterfaceV2
 from neo4j_graphrag.llm.types import LLMResponse
+from neo4j_graphrag.types import LLMMessage
 
 
 # =============================================================================
@@ -89,8 +92,11 @@ class DatabricksEmbeddings(Embedder):
 # Databricks LLM
 # =============================================================================
 
-class DatabricksLLM(LLMInterface):
+class DatabricksLLM(LLMInterfaceV2):
     """LLM interface using Databricks Foundation Model APIs.
+
+    Implements LLMInterfaceV2 for compatibility with GraphRAG and other
+    neo4j-graphrag components.
 
     Supports Databricks-hosted LLM endpoints like:
     - databricks-meta-llama-3-3-70b-instruct
@@ -106,31 +112,45 @@ class DatabricksLLM(LLMInterface):
         Args:
             model_id: The Databricks Foundation Model endpoint name.
         """
+        super().__init__(model_name=model_id)
         self.model_id = model_id
         self._client = mlflow.deployments.get_deploy_client("databricks")
 
-    def invoke(self, input: str) -> LLMResponse:
+    def invoke(
+        self,
+        input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
         """Generate a response from the LLM.
 
         Args:
-            input: The prompt text
+            input: List of messages in LLMMessage format (role + content dicts).
+            response_format: Optional response format (not used by Databricks API).
 
         Returns:
             LLMResponse containing the generated text
         """
+        messages = [{"role": msg["role"], "content": msg["content"]} for msg in input]
+
         response = self._client.predict(
             endpoint=self.model_id,
             inputs={
-                "messages": [{"role": "user", "content": input}],
+                "messages": messages,
                 "max_tokens": 2048,
             },
         )
         content = response["choices"][0]["message"]["content"]
         return LLMResponse(content=content)
 
-    async def ainvoke(self, input: str) -> LLMResponse:
+    async def ainvoke(
+        self,
+        input: List[LLMMessage],
+        response_format: Optional[Union[Type[BaseModel], dict[str, Any]]] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
         """Async version of invoke (runs synchronously)."""
-        return self.invoke(input)
+        return self.invoke(input, response_format=response_format)
 
 
 # =============================================================================

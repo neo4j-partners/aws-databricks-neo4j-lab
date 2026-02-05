@@ -2,27 +2,24 @@
 
 In this part, you'll create a Databricks AI/BI Genie space that enables natural language queries over your aircraft sensor telemetry data. This Genie will become one of the sub-agents in your multi-agent system.
 
-**Estimated Time:** 30 minutes
 
 ---
 
 ## Prerequisites
 
-Before starting, verify that the sensor data tables exist in your Unity Catalog:
+The sensor data tables were created during the Databricks ETL lab (Lab 5). To verify they exist, open the **Catalog Explorer** in the left sidebar and navigate to:
 
-```sql
--- Run in a SQL warehouse or notebook
-SELECT COUNT(*) FROM `aws-databricks-neo4j-lab`.lakehouse.sensor_readings;
-SELECT COUNT(*) FROM `aws-databricks-neo4j-lab`.lakehouse.sensors;
-SELECT COUNT(*) FROM `aws-databricks-neo4j-lab`.lakehouse.systems;
-SELECT COUNT(*) FROM `aws-databricks-neo4j-lab`.lakehouse.aircraft;
-```
+**Catalog Explorer** > `aws-databricks-neo4j-lab` > `lakehouse`
 
-Expected counts:
-- `sensor_readings`: ~345,600 rows
-- `sensors`: 160 rows
-- `systems`: ~80 rows
-- `aircraft`: 20 rows
+You should see four tables:
+- `aircraft` — Fleet inventory and metadata (20 rows)
+- `sensor_readings` — Time-series measurements (~345,600 rows)
+- `sensors` — Sensor metadata (160 rows)
+- `systems` — Aircraft systems (~80 rows)
+
+Click on any table to preview its sample data and confirm it was loaded correctly.
+
+![Catalog Explorer showing lakehouse tables](images/lakehouse_sensor_readings.png)
 
 ---
 
@@ -33,16 +30,25 @@ Expected counts:
 1. In your Databricks workspace, click **New** > **Genie space**
 2. Or navigate to **AI/BI** in the left sidebar and click **New Genie space**
 
-### 1.2 Configure Basic Settings
+### 1.2 Connect Your Data
+
+After clicking **New Genie space**, the **Connect your data** dialog appears. Select `sensor_readings` from `aws-databricks-neo4j-lab.lakehouse`.
+
+![Connect your data dialog](images/genie_connect_data.png)
+
+> **Tip:** If you don't see the table under **Recent**, click **All** or use the search bar to find `aws-databricks-neo4j-lab`.
+
+### 1.3 Configure Basic Settings
+
+Once the Genie space is created:
 
 1. **Name:** `Aircraft Sensor Analyst [YOUR_INITIALS]`
    - Example: `Aircraft Sensor Analyst RK`
 2. **Description:** "Analyzes aircraft engine sensor telemetry including EGT, vibration, N1 speed, and fuel flow metrics"
-3. Click **Create**
 
 ---
 
-## Step 2: Add Data Sources
+## Step 2: Add Remaining Data Sources
 
 ### 2.1 Select the Warehouse
 
@@ -50,23 +56,19 @@ Expected counts:
 2. Choose a **Serverless SQL Warehouse** or **Pro SQL Warehouse**
    - Serverless is recommended for best performance
 
-### 2.2 Add Unity Catalog Tables
+### 2.2 Add Remaining Unity Catalog Tables
 
-Click **Add tables** and select the following from `aws-databricks-neo4j-lab.lakehouse`:
+You already added `sensor_readings` during creation. Now add the remaining tables from `aws-databricks-neo4j-lab.lakehouse`:
 
-1. **sensor_readings**
-   - Primary table with 345,600+ time-series measurements
-   - Columns: `reading_id`, `sensor_id`, `timestamp`, `value`
-
-2. **sensors**
+1. **sensors**
    - Sensor metadata (type, unit, location)
    - Columns: `sensor_id`, `system_id`, `type`, `name`, `unit`
 
-3. **systems**
+2. **systems**
    - Aircraft systems (engines, avionics, hydraulics)
    - Columns: `system_id`, `aircraft_id`, `type`, `name`
 
-4. **aircraft**
+3. **aircraft**
    - Fleet inventory and metadata
    - Columns: `aircraft_id`, `tail_number`, `icao24`, `model`, `manufacturer`, `operator`
 
