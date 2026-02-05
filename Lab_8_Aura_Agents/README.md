@@ -1,13 +1,125 @@
-# Lab 2: Aura Agents
+# Lab 8: Neo4j Aura Exploration & Aura Agents
 
-In this lab, you will build an AI-powered agent using Neo4j Aura Agent. The agent will help users analyze SEC 10-K filings by combining semantic search, graph traversal, and natural language queries - all without writing any code.
+In this lab, you'll explore the aircraft digital twin knowledge graph directly in Neo4j Aura, then build an AI-powered agent using Aura Agents — all without writing any code.
 
 ## Prerequisites
 
-- Completed **Lab 0** (Sign In)
-- Completed **Lab 1** (Neo4j Aura setup with backup restored)
+- Completed **Lab 5** (Databricks ETL) — both notebooks to load the full aircraft graph
+- Completed **Lab 6** (Semantic Search) — to add Document/Chunk nodes with embeddings
+- Neo4j Aura credentials from Lab 1 (URI, username, password)
 
-The pre-built backup you restored in Lab 1 already contains the complete knowledge graph with embeddings, so you can start building agents immediately.
+---
+
+## Part A: Data Exploration in Aura
+
+Open [console.neo4j.io](https://console.neo4j.io), sign in, select your instance, and click **Query** to open the query interface. Use the queries below to explore the aircraft digital twin graph you built in Labs 5 and 6.
+
+### Aircraft Topology
+
+Expand a single aircraft into its systems, components, and sensors to see the full hierarchy:
+
+```cypher
+// Visualize one aircraft's full hierarchy
+MATCH (a:Aircraft {tail_number: 'N95040A'})-[r1:HAS_SYSTEM]->(s:System)-[r2:HAS_COMPONENT]->(c:Component)
+RETURN a, r1, s, r2, c
+```
+
+```cypher
+// View sensors attached to an aircraft's systems
+MATCH (a:Aircraft {tail_number: 'N95040A'})-[:HAS_SYSTEM]->(s:System)-[:HAS_SENSOR]->(sen:Sensor)
+RETURN a.tail_number, s.name AS system, sen.type AS sensor_type, sen.unit
+```
+
+### Flight Operations
+
+Trace an aircraft's flight routes across the airport network, including delays and their causes:
+
+```cypher
+// Trace flights and delays for an aircraft
+MATCH (a:Aircraft {tail_number: 'N95040A'})-[:OPERATES_FLIGHT]->(f:Flight)
+OPTIONAL MATCH (f)-[:HAS_DELAY]->(d:Delay)
+OPTIONAL MATCH (f)-[:DEPARTS_FROM]->(dep:Airport)
+OPTIONAL MATCH (f)-[:ARRIVES_AT]->(arr:Airport)
+RETURN a, f, d, dep, arr
+```
+
+```cypher
+// Top 10 longest delays and their causes
+MATCH (a:Aircraft)-[:OPERATES_FLIGHT]->(f:Flight)-[:HAS_DELAY]->(d:Delay)
+RETURN a.tail_number, f.flight_number, d.cause, d.minutes
+ORDER BY d.minutes DESC
+LIMIT 10
+```
+
+### Maintenance History
+
+Find components with critical maintenance events and see which systems they affect:
+
+```cypher
+// Find components with critical maintenance events
+MATCH (c:Component)-[:HAS_EVENT]->(m:MaintenanceEvent {severity: 'Critical'})
+RETURN c.name AS component, m.fault AS fault, m.corrective_action AS action
+ORDER BY m.reported_at DESC LIMIT 10
+```
+
+```cypher
+// Full path from aircraft to maintenance event
+MATCH (a:Aircraft)-[:HAS_SYSTEM]->(s:System)-[:HAS_COMPONENT]->(c:Component)
+      -[:HAS_EVENT]->(m:MaintenanceEvent {severity: 'Critical'})
+RETURN a.tail_number, s.name AS system, c.name AS component, m.fault, m.reported_at
+ORDER BY m.reported_at DESC
+```
+
+### Component Removals
+
+Investigate removal records with time-since-new (TSN) and cycles-since-new (CSN) data:
+
+```cypher
+// View component removals with usage data
+MATCH (a:Aircraft)-[:HAS_REMOVAL]->(r:Removal)
+RETURN a.tail_number, r.reason, r.tsn AS time_since_new, r.csn AS cycles_since_new
+ORDER BY r.tsn DESC LIMIT 10
+```
+
+### Cross-Entity Patterns
+
+Discover which aircraft share the same maintenance faults, or which airports see the most delayed flights:
+
+```cypher
+// Aircraft that share the same fault type
+MATCH (a1:Aircraft)-[:HAS_SYSTEM]->()-[:HAS_COMPONENT]->()-[:HAS_EVENT]->(m1:MaintenanceEvent),
+      (a2:Aircraft)-[:HAS_SYSTEM]->()-[:HAS_COMPONENT]->()-[:HAS_EVENT]->(m2:MaintenanceEvent)
+WHERE a1 <> a2 AND m1.fault = m2.fault
+RETURN DISTINCT a1.tail_number, a2.tail_number, m1.fault
+LIMIT 20
+```
+
+```cypher
+// Airports with the most delayed arrivals
+MATCH (f:Flight)-[:HAS_DELAY]->(d:Delay), (f)-[:ARRIVES_AT]->(apt:Airport)
+RETURN apt.iata AS airport, apt.city, count(d) AS delay_count, round(avg(d.minutes), 1) AS avg_delay_minutes
+ORDER BY delay_count DESC
+```
+
+### Fleet Overview
+
+```cypher
+// Fleet summary by manufacturer
+MATCH (a:Aircraft)
+RETURN a.manufacturer AS manufacturer, a.model AS model, count(a) AS count
+ORDER BY count DESC
+```
+
+```cypher
+// Graph statistics — count all node types
+CALL db.labels() YIELD label
+CALL db.stats.retrieve("GRAPH COUNTS") YIELD nodeCount
+RETURN label, nodeCount
+```
+
+---
+
+## Part B: Build an Aura Agent (No-Code)
 
 ## Step 1: Create the SEC Filings Agent
 
