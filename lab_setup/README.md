@@ -102,7 +102,7 @@ If a cluster with the same name already exists, the script reuses it (starting i
 ### How to run it
 
 ```bash
-./lab_setup/setup_databricks.sh [catalog.schema.volume] [user-email] [cluster-name]
+./lab_setup/setup_databricks.sh [--cluster-only] [catalog.schema.volume] [user-email] [cluster-name]
 ```
 
 All arguments are optional:
@@ -110,6 +110,9 @@ All arguments are optional:
 ```bash
 # All defaults (catalog=aws-databricks-neo4j-lab, auto-detect user, cluster="Small Spark 4.0")
 ./lab_setup/setup_databricks.sh
+
+# Cluster + libraries only (skip data upload and table creation)
+./lab_setup/setup_databricks.sh --cluster-only
 
 # Explicit volume
 ./lab_setup/setup_databricks.sh aws-databricks-neo4j-lab.lab-schema.lab-volume
@@ -120,6 +123,8 @@ All arguments are optional:
 # Explicit volume + user + cluster name
 ./lab_setup/setup_databricks.sh test_catalog.test_schema.test_volume ryan.knight@neo4j.com "My Workshop"
 ```
+
+The `--cluster-only` flag creates the cluster and installs libraries, then exits — skipping data upload and lakehouse table creation. Useful when you only need a running cluster with the right libraries (e.g., for Lab 6 which doesn't use lakehouse tables).
 
 ### Cluster defaults
 

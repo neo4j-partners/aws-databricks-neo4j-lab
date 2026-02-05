@@ -45,6 +45,14 @@ All workshop data is stored in Databricks Unity Catalog:
 
 ---
 
+## Setup Notes
+
+If you are **attending a workshop**, the Databricks environment (cluster, libraries, data, and tables) has already been configured for you — skip straight to the labs.
+
+If you are **running this on your own** or are a **lab administrator** preparing the environment for participants, see the [Lab Admin Setup Guide](lab_setup/README.md) for instructions on creating the cluster, installing libraries, uploading data, and configuring Databricks Genie.
+
+---
+
 ## Lab Structure
 
 ### Phase 1: Foundation Setup (45 min)

@@ -9,16 +9,21 @@
 # See: https://neo4j.com/docs/spark/current/databricks/
 #
 # Usage:
-#   ./setup_databricks.sh [catalog.schema.volume] [user-email] [cluster-name]
+#   ./setup_databricks.sh [--cluster-only] [catalog.schema.volume] [user-email] [cluster-name]
 #
-# All arguments are optional:
+# Options:
+#   --cluster-only         Only create cluster and install libraries (skip data upload and tables)
+#
+# All positional arguments are optional:
 #   catalog.schema.volume  Target volume (default: aws-databricks-neo4j-lab.lab-schema.lab-volume)
 #   user-email             Cluster owner (default: auto-detected from CLI auth)
 #   cluster-name           Cluster to create or reuse (default: "Small Spark 4.0")
 #
 # Examples:
 #   ./setup_databricks.sh                                                              # all defaults
+#   ./setup_databricks.sh --cluster-only                                               # cluster + libs only
 #   ./setup_databricks.sh aws-databricks-neo4j-lab.lab-schema.lab-volume               # explicit volume
+#   ./setup_databricks.sh --cluster-only "" ryan.knight@neo4j.com "My Workshop"        # cluster only with user
 #   ./setup_databricks.sh test_catalog.test_schema.test_volume ryan.knight@neo4j.com   # volume + user
 #   ./setup_databricks.sh test_catalog.test_schema.test_volume ryan.knight@neo4j.com "My Workshop"
 
@@ -29,13 +34,21 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # ──────────────────────────────────────────────
 # Parse arguments
 # ──────────────────────────────────────────────
+CLUSTER_ONLY=false
+if [ "${1:-}" = "--cluster-only" ]; then
+    CLUSTER_ONLY=true
+    shift
+fi
+
 VOLUME_FULL="${1:-aws-databricks-neo4j-lab.lab-schema.lab-volume}"
 IFS='.' read -r CATALOG VOLUME_SCHEMA VOLUME <<< "${VOLUME_FULL}"
 
-if [ -z "${CATALOG}" ] || [ -z "${VOLUME_SCHEMA}" ] || [ -z "${VOLUME}" ]; then
-    echo "Error: Volume must be in format catalog.schema.volume"
-    echo "Example: ./setup_databricks.sh test_catalog.test_schema.test_volume"
-    exit 1
+if [ "${CLUSTER_ONLY}" = false ]; then
+    if [ -z "${CATALOG}" ] || [ -z "${VOLUME_SCHEMA}" ] || [ -z "${VOLUME}" ]; then
+        echo "Error: Volume must be in format catalog.schema.volume"
+        echo "Example: ./setup_databricks.sh test_catalog.test_schema.test_volume"
+        exit 1
+    fi
 fi
 
 USER_ARG="${2:-}"
@@ -55,10 +68,10 @@ AUTOTERMINATION_MINUTES=30
 NEO4J_SPARK_CONNECTOR="org.neo4j:neo4j-connector-apache-spark_2.13:5.3.10_for_spark_3"
 
 PYPI_PACKAGES=(
-    "neo4j==6.1.0"
+    "neo4j==6.0.2"
     "databricks-agents>=1.2.0"
-    "langgraph==1.0.7"
-    "langchain-openai==1.1.7"
+    "langgraph==1.0.5"
+    "langchain-openai==1.1.2"
     "pydantic==2.12.5"
     "langchain-core>=1.2.0"
     "databricks-langchain>=0.11.0"
@@ -95,14 +108,16 @@ if ! command -v jq &> /dev/null; then
     exit 1
 fi
 
-if [ ! -d "${DATA_DIR}" ]; then
-    echo "Error: Data directory not found: ${DATA_DIR}"
-    exit 1
-fi
+if [ "${CLUSTER_ONLY}" = false ]; then
+    if [ ! -d "${DATA_DIR}" ]; then
+        echo "Error: Data directory not found: ${DATA_DIR}"
+        exit 1
+    fi
 
-if [ ! -f "${PY_SCRIPT}" ]; then
-    echo "Error: Python script not found: ${PY_SCRIPT}"
-    exit 1
+    if [ ! -f "${PY_SCRIPT}" ]; then
+        echo "Error: Python script not found: ${PY_SCRIPT}"
+        exit 1
+    fi
 fi
 
 # ──────────────────────────────────────────────
@@ -123,7 +138,11 @@ fi
 echo "=========================================="
 echo "Databricks Environment Setup"
 echo "=========================================="
-echo "Volume:   ${CATALOG}.${VOLUME_SCHEMA}.${VOLUME}"
+if [ "${CLUSTER_ONLY}" = true ]; then
+    echo "Mode:     Cluster + libraries only"
+else
+    echo "Volume:   ${CATALOG}.${VOLUME_SCHEMA}.${VOLUME}"
+fi
 echo "Cluster:  ${CLUSTER_NAME}"
 echo "Runtime:  ${SPARK_VERSION} + ${RUNTIME_ENGINE}"
 echo "Node:     ${NODE_TYPE} (single node)"
@@ -328,6 +347,30 @@ if [ "${FINAL_FAILED}" -gt 0 ]; then
     echo "Check details with:"
     echo "  databricks libraries cluster-status ${CLUSTER_ID}"
     echo ""
+fi
+
+if [ "${CLUSTER_ONLY}" = true ]; then
+    # ──────────────────────────────────────────────
+    # 8. Final summary (cluster-only mode)
+    # ──────────────────────────────────────────────
+    echo ""
+    echo "=========================================="
+    echo "Cluster Setup Complete"
+    echo "=========================================="
+    echo "Cluster ID:   ${CLUSTER_ID}"
+    echo "Cluster Name: ${CLUSTER_NAME}"
+    echo "User:         ${SINGLE_USER}"
+    echo "Access Mode:  Dedicated (Single User)"
+    echo ""
+    echo "Skipped: data upload and lakehouse table creation (--cluster-only)"
+    echo ""
+    echo "To check status later:"
+    echo "  databricks clusters get ${CLUSTER_ID}"
+    echo "  databricks libraries cluster-status ${CLUSTER_ID}"
+    echo ""
+    echo "To run the full setup later:"
+    echo "  $0 ${VOLUME_FULL} ${SINGLE_USER} \"${CLUSTER_NAME}\""
+    exit 0
 fi
 
 # ──────────────────────────────────────────────
