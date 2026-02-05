@@ -193,29 +193,27 @@ class Neo4jConnection:
 
     def clear_chunks(self):
         """Remove all Document and Chunk nodes (preserves aircraft graph from Lab 5)."""
-        with self.driver.session() as session:
-            result = session.run("""
-                MATCH (n) WHERE n:Document OR n:Chunk
-                DETACH DELETE n
-                RETURN count(n) as deleted
-            """)
-            count = result.single()["deleted"]
-            print(f"Deleted {count} Document/Chunk nodes")
+        records, _, _ = self.driver.execute_query("""
+            MATCH (n) WHERE n:Document OR n:Chunk
+            DETACH DELETE n
+            RETURN count(n) as deleted
+        """)
+        count = records[0]["deleted"]
+        print(f"Deleted {count} Document/Chunk nodes")
         return self
 
     def get_graph_stats(self):
         """Show current graph statistics."""
-        with self.driver.session() as session:
-            result = session.run("""
-                MATCH (n)
-                WITH labels(n) as nodeLabels
-                UNWIND nodeLabels as label
-                RETURN label, count(*) as count
-                ORDER BY label
-            """)
-            print("=== Graph Statistics ===")
-            for record in result:
-                print(f"  {record['label']}: {record['count']}")
+        records, _, _ = self.driver.execute_query("""
+            MATCH (n)
+            WITH labels(n) as nodeLabels
+            UNWIND nodeLabels as label
+            RETURN label, count(*) as count
+            ORDER BY label
+        """)
+        print("=== Graph Statistics ===")
+        for record in records:
+            print(f"  {record['label']}: {record['count']}")
         return self
 
     def close(self):
