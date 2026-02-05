@@ -5,13 +5,14 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-OUTPUT_FILE="${SCRIPT_DIR}/databricks_labs.zip"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+OUTPUT_FILE="${PROJECT_ROOT}/databricks_labs.zip"
 
 # Remove existing zip if present
 rm -f "$OUTPUT_FILE"
 
 # Create zip with just the notebooks, preserving folder structure
-cd "$SCRIPT_DIR"
+cd "$PROJECT_ROOT"
 zip -r "$OUTPUT_FILE" \
     Lab_5_Databricks_ETL_Neo4j/*.ipynb \
     Lab_6_Semantic_Search/*.ipynb

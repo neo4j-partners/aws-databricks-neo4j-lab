@@ -26,17 +26,17 @@ If a catalog doesn't exist for the workshop:
 
 1. Navigate to **Data** > **Catalogs** in the Databricks workspace
 2. Click **Create Catalog**
-3. Name it `aircraft_workshop` (or similar)
+3. Name it `aws-databricks-neo4j-lab` (or similar)
 4. Select the appropriate metastore
 5. Click **Create**
 
 ### 1.2 Create a Schema
 
 1. Within the catalog, click **Create Schema**
-2. Name it `aircraft_lab`
+2. Name it `lab-schema`
 3. Click **Create**
 
-**Resulting path:** `aircraft_workshop.aircraft_lab`
+**Resulting path:** `aws-databricks-neo4j-lab.lab-schema`
 
 ---
 
@@ -49,11 +49,11 @@ Volumes store files that can be accessed from notebooks.
 1. Navigate to the schema created above
 2. Click **Create** > **Volume**
 3. Configure:
-   - **Name:** `aircraft_data`
+   - **Name:** `lab-volume`
    - **Volume type:** Managed
 4. Click **Create**
 
-**Resulting path:** `/Volumes/aircraft_workshop/aircraft_lab/aircraft_data/`
+**Resulting path:** `/Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/`
 
 ### 2.2 Upload CSV Files
 
@@ -78,18 +78,18 @@ Upload the following files from `aircraft_digital_twin_data/`:
 
 **Option B: Databricks CLI**
 ```bash
-databricks fs cp ./nodes_aircraft.csv /Volumes/aircraft_workshop/aircraft_lab/aircraft_data/
-databricks fs cp ./nodes_systems.csv /Volumes/aircraft_workshop/aircraft_lab/aircraft_data/
-databricks fs cp ./nodes_components.csv /Volumes/aircraft_workshop/aircraft_lab/aircraft_data/
-databricks fs cp ./rels_aircraft_system.csv /Volumes/aircraft_workshop/aircraft_lab/aircraft_data/
-databricks fs cp ./rels_system_component.csv /Volumes/aircraft_workshop/aircraft_lab/aircraft_data/
+databricks fs cp ./nodes_aircraft.csv /Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/
+databricks fs cp ./nodes_systems.csv /Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/
+databricks fs cp ./nodes_components.csv /Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/
+databricks fs cp ./rels_aircraft_system.csv /Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/
+databricks fs cp ./rels_system_component.csv /Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/
 ```
 
 ### 2.3 Verify Upload
 
 Run in a notebook cell:
 ```python
-display(dbutils.fs.ls("/Volumes/aircraft_workshop/aircraft_lab/aircraft_data/"))
+display(dbutils.fs.ls("/Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/"))
 ```
 
 Expected output shows 5 CSV files.
@@ -146,7 +146,7 @@ Create a handout or slide with:
 | Databricks Workspace URL | `https://your-workspace.cloud.databricks.com` |
 | Cluster Name | `aircraft-workshop-cluster` |
 | Notebook DBC File | `aircraft_etl_to_neo4j.dbc` (provide download link) |
-| Data Volume Path | `/Volumes/aircraft_workshop/aircraft_lab/aircraft_data/` |
+| Data Volume Path | `/Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/` |
 
 ### Quick Start Instructions
 

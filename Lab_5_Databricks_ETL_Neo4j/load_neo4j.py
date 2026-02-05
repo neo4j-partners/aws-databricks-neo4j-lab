@@ -34,7 +34,7 @@ SCOPE_NAME = "neo4j-creds"
 
 # Path to CSV files in Unity Catalog Volume
 # Update this to match your volume path
-DATA_VOLUME_PATH = "/Volumes/main/default/aircraft_data"
+DATA_VOLUME_PATH = "/Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume"
 
 # Batch size for transaction handling
 BATCH_SIZE = 1000
