@@ -86,29 +86,53 @@ Create the catalog, schema, and volume through the Databricks UI.
 
 ---
 
-## Step 2: Upload Data Files
+## Step 2: Automated Setup
 
-The `setup_databricks.sh` script uploads all required CSV and Markdown files to the volume in one command.
+The `setup_databricks.sh` script handles everything after catalog creation in one command:
 
-### What it does
+1. Creates (or reuses) a Dedicated compute cluster
+2. Installs the Neo4j Spark Connector and all PyPI libraries
+3. Uploads CSV and Markdown data files to the volume
+4. Creates Delta Lake tables for Databricks Genie (Lab 7)
 
-Uploads all `.csv` and `.md` files from `aircraft_digital_twin_data/` to the specified Databricks volume, skipping documentation files. It then lists the volume contents to verify the upload.
+If a cluster with the same name already exists, the script reuses it (starting it if terminated) instead of creating a new one.
 
 ### How to run it
 
 ```bash
-./lab_setup/setup_databricks.sh <catalog>.<schema>.<volume>
+./lab_setup/setup_databricks.sh [catalog.schema.volume] [user-email] [cluster-name]
 ```
 
-For the default naming convention:
+All arguments are optional:
 
 ```bash
+# All defaults (catalog=aws-databricks-neo4j-lab, auto-detect user, cluster="Small Spark 4.0")
+./lab_setup/setup_databricks.sh
+
+# Explicit volume
 ./lab_setup/setup_databricks.sh aws-databricks-neo4j-lab.lab-schema.lab-volume
+
+# Explicit volume + user
+./lab_setup/setup_databricks.sh test_catalog.test_schema.test_volume ryan.knight@neo4j.com
+
+# Explicit volume + user + cluster name
+./lab_setup/setup_databricks.sh test_catalog.test_schema.test_volume ryan.knight@neo4j.com "My Workshop"
 ```
 
-### Expected output
+### Cluster defaults
 
-After upload, the volume should contain:
+| Setting | Value |
+|---------|-------|
+| Runtime | 17.3 LTS ML (Spark 4.0.0, Scala 2.13) |
+| Photon | Enabled |
+| Node type | `Standard_D4ds_v5` (16 GB, 4 cores) |
+| Workers | 0 (single node) |
+| Access mode | Dedicated (Single User) |
+| Auto-terminate | 30 minutes |
+
+To change defaults, edit the configuration variables at the top of `setup_databricks.sh`.
+
+### Expected data files in volume
 
 ```
 /Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/
@@ -123,145 +147,7 @@ After upload, the volume should contain:
 └── rels_system_sensor.csv     (Lab 7)
 ```
 
----
-
-## Step 3: Configure Compute Cluster
-
-The Neo4j Spark Connector requires **Dedicated (Single User)** access mode — shared access modes are not supported. See [Neo4j Spark Connector docs](https://neo4j.com/docs/spark/current/databricks/).
-
-### Option A: Automated Setup (Recommended)
-
-The `setup_compute.sh` script creates the cluster and installs all libraries in one command.
-
-#### What it does
-
-1. Creates a single-node cluster with Dedicated access mode
-2. Waits for the cluster to reach RUNNING state
-3. Installs the Neo4j Spark Connector (Maven) and all PyPI libraries
-4. Polls until all libraries are installed
-
-#### How to run it
-
-```bash
-./lab_setup/setup_compute.sh [user-email] [cluster-name]
-```
-
-Examples:
-
-```bash
-# Auto-detect user, default name "Small Spark 4.0"
-./lab_setup/setup_compute.sh
-
-# Explicit user
-./lab_setup/setup_compute.sh ryan.knight@neo4j.com
-
-# Explicit user and custom cluster name
-./lab_setup/setup_compute.sh ryan.knight@neo4j.com "Workshop Cluster"
-```
-
-#### Cluster defaults
-
-| Setting | Value |
-|---------|-------|
-| Runtime | 17.3 LTS ML (Spark 4.0.0, Scala 2.13) |
-| Photon | Enabled |
-| Node type | `Standard_D4ds_v5` (16 GB, 4 cores) |
-| Workers | 0 (single node) |
-| Access mode | Dedicated (Single User) |
-| Auto-terminate | 30 minutes |
-
-To change defaults, edit the configuration variables at the top of `setup_compute.sh`.
-
----
-
-### Option B: Manual Setup (UI)
-
-If you prefer to create the cluster through the Databricks UI:
-
-#### 3.1 Create a Dedicated Cluster
-
-1. Navigate to **Compute**
-2. Click **Create compute**
-3. Configure:
-   - **Name:** `Small Spark 4.0` (or your preferred name)
-   - **Databricks Runtime:** 17.3 LTS ML (includes Apache Spark 4.0.0, Scala 2.13)
-   - **Photon acceleration:** Enabled
-   - **Node type:** `Standard_D4ds_v5` (16 GB Memory, 4 Cores) or equivalent
-   - **Single node:** Enabled (0 workers)
-   - **Auto termination:** 30 minutes
-4. Expand **Advanced** options:
-   - **Access mode:** Set to **Manual**
-   - **Security mode:** **Dedicated**
-   - **Single user or group:** Your Databricks user email
-
-#### 3.2 Install Libraries
-
-After the cluster is created and running, install the following libraries:
-
-1. Click on the cluster name
-2. Go to **Libraries** tab
-3. Click **Install new**
-
-**Maven library:**
-
-| Type | Coordinates |
-|------|-------------|
-| Maven | `org.neo4j:neo4j-connector-apache-spark_2.13:5.3.10_for_spark_3` |
-
-**PyPI libraries:**
-
-| Package | Type |
-|---------|------|
-| `neo4j==6.0.2` | PyPI |
-| `databricks-agents>=1.2.0` | PyPI |
-| `langgraph==1.0.5` | PyPI |
-| `langchain-openai==1.1.2` | PyPI |
-| `pydantic==2.12.5` | PyPI |
-| `langchain-core>=1.2.0` | PyPI |
-| `databricks-langchain>=0.11.0` | PyPI |
-| `dspy>=3.0.4` | PyPI |
-| `neo4j-graphrag>=1.10.0` | PyPI |
-| `beautifulsoup4>=4.12.0` | PyPI |
-| `sentence_transformers` | PyPI |
-
-Install each library one at a time (or use the bulk install option if available). Wait for all libraries to show **Installed** status before proceeding.
-
-#### 3.3 Verify the Cluster
-
-1. Confirm the cluster state is **Running**
-2. Confirm all libraries show **Installed** status
-3. Confirm access mode shows **Dedicated** in the cluster details
-
----
-
-## Step 4: Create Lakehouse Tables (Lab 7)
-
-Lab 7 uses Databricks Genie for natural language queries against sensor data stored in Delta Lake tables.
-
-The `create_lakehouse_tables.sh` script automates this entire step. It uses the Databricks CLI to execute SQL via the [Statement Execution API](https://docs.databricks.com/aws/en/dev-tools/sql-execution-tutorial) against your SQL Warehouse.
-
-### What it does
-
-1. Creates the `lakehouse` schema in your catalog
-2. Creates four Delta Lake tables from the CSV files in the volume (`aircraft`, `systems`, `sensors`, `sensor_readings`)
-3. Adds table and column comments (improves Genie's natural language understanding)
-4. Verifies row counts
-
-**Requires:** A SQL Warehouse in the workspace (it auto-discovers the first available one).
-
-### How to run it
-
-```bash
-./lab_setup/create_lakehouse_tables.sh [catalog]
-```
-
-For the default catalog:
-
-```bash
-./lab_setup/create_lakehouse_tables.sh aws-databricks-neo4j-lab
-```
-
-### Expected row counts
+### Expected lakehouse table row counts
 
 | Table | Rows |
 |-------|------|
@@ -270,11 +156,16 @@ For the default catalog:
 | sensors | 160 |
 | sensor_readings | 345,600 |
 
-> **Alternative:** For a Python-based approach using `databricks-sdk`, see [PYTHON_SDK_ALTERNATIVE.md](PYTHON_SDK_ALTERNATIVE.md).
 
 ---
 
-## Step 5: Configure Databricks Genie Space (Lab 7)
+### Manual Setup (UI Alternative)
+
+If you prefer to set up the cluster, libraries, and data through the Databricks UI instead of using `setup_databricks.sh`, see the complete step-by-step guide in **[MANUAL_SETUP.md](MANUAL_SETUP.md)**.
+
+---
+
+## Step 3: Configure Databricks Genie Space (Lab 7)
 
 Databricks Genie provides a natural language interface for querying data.
 
@@ -339,7 +230,7 @@ For programmatic access in Lab 7, note the Genie Space ID:
 
 ---
 
-## Step 6: Prepare Participant Instructions
+## Step 4: Prepare Participant Instructions
 
 Create a handout or slide with:
 
@@ -407,49 +298,7 @@ Create a handout or slide with:
 
 ## File Inventory
 
-### Lab 5 - Aircraft Digital Twin Data
-
-The `aircraft_digital_twin_data/` directory contains:
-
-| File | Size | Records | Required for Lab |
-|------|------|---------|------------------|
-| `nodes_aircraft.csv` | 1 KB | 20 | Lab 5, Lab 7 |
-| `nodes_systems.csv` | 3 KB | 80 | Lab 5, Lab 7 |
-| `nodes_components.csv` | 12 KB | 320 | Lab 5 |
-| `rels_aircraft_system.csv` | 2 KB | 80 | Lab 5 |
-| `rels_system_component.csv` | 10 KB | 320 | Lab 5 |
-| `nodes_sensors.csv` | 9 KB | 160 | Lab 7 |
-| `nodes_readings.csv` | 23 MB | 345,600 | Lab 7 |
-| `rels_system_sensor.csv` | 6 KB | 160 | Lab 7 |
-| Other files | Various | Various | No |
-
-### Lab 6 - Maintenance Manual
-
-The `aircraft_digital_twin_data/` directory also contains:
-
-| File | Size | Description | Required for Lab 6 |
-|------|------|-------------|-------------------|
-| `MAINTENANCE_A320.md` | ~30 KB | A320-200 Maintenance and Troubleshooting Manual | Yes |
-
-**Note:** The maintenance manual is the A320-200 manual that covers the aircraft loaded in Lab 5. It includes specifications, troubleshooting procedures, fault codes, and scheduled maintenance tasks.
-
-### Lab 7 - Sensor Data Details
-
-The sensor data covers **90 days** of hourly readings (July 1 - September 29, 2024):
-
-| Sensor Type | Unit | Description | Typical Range |
-|-------------|------|-------------|---------------|
-| EGT | °C | Exhaust Gas Temperature | 600-750 |
-| Vibration | ips | Engine vibration | 0.1-2.0 |
-| N1Speed | RPM | Engine fan speed | 2000-3500 |
-| FuelFlow | kg/s | Fuel consumption rate | 0.5-2.0 |
-
-**Data characteristics:**
-- 160 sensors across 20 aircraft (4 sensors per engine, 2 engines per aircraft)
-- 2,160 readings per sensor (90 days × 24 hours)
-- Includes realistic degradation trends and anomalies
-
-### Summary
+For the full file inventory with sizes, record counts, and sensor data details, see **[MANUAL_SETUP.md](MANUAL_SETUP.md#file-inventory)**.
 
 Upload these files to the Volume for the complete workshop:
 - **5 CSV files** from `aircraft_digital_twin_data/` (Lab 5)

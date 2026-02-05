@@ -228,16 +228,25 @@ if [ ${ELAPSED} -ge ${MAX_WAIT} ]; then
 fi
 
 # ──────────────────────────────────────────────
-# 5. Install libraries
+# 5. Install libraries (skip if already installed)
 # ──────────────────────────────────────────────
 echo ""
-echo "Installing libraries..."
+echo "Checking library status..."
 
-# Build the libraries JSON array
-LIBRARIES_JSON="["
+STATUS_JSON=$(databricks libraries cluster-status "${CLUSTER_ID}" --output json 2>/dev/null || echo "[]")
+ALREADY_INSTALLED=$(echo "${STATUS_JSON}" | jq 'length')
+ALREADY_PENDING=$(echo "${STATUS_JSON}" | jq '[.[] | select(.status != "INSTALLED")] | length')
 
-# Maven library (Neo4j Spark Connector)
-LIBRARIES_JSON+=$(cat <<EOF
+if [ "${ALREADY_INSTALLED}" -gt 0 ] && [ "${ALREADY_PENDING}" -eq 0 ]; then
+    echo "  ${ALREADY_INSTALLED} libraries already installed — skipping installation."
+else
+    echo "Installing libraries..."
+
+    # Build the libraries JSON array
+    LIBRARIES_JSON="["
+
+    # Maven library (Neo4j Spark Connector)
+    LIBRARIES_JSON+=$(cat <<EOF
   {
     "maven": {
       "coordinates": "${NEO4J_SPARK_CONNECTOR}"
@@ -246,10 +255,10 @@ LIBRARIES_JSON+=$(cat <<EOF
 EOF
 )
 
-# PyPI libraries
-for pkg in "${PYPI_PACKAGES[@]}"; do
-    LIBRARIES_JSON+=","
-    LIBRARIES_JSON+=$(cat <<EOF
+    # PyPI libraries
+    for pkg in "${PYPI_PACKAGES[@]}"; do
+        LIBRARIES_JSON+=","
+        LIBRARIES_JSON+=$(cat <<EOF
   {
     "pypi": {
       "package": "${pkg}"
@@ -257,11 +266,11 @@ for pkg in "${PYPI_PACKAGES[@]}"; do
   }
 EOF
 )
-done
+    done
 
-LIBRARIES_JSON+="]"
+    LIBRARIES_JSON+="]"
 
-INSTALL_JSON=$(cat <<EOF
+    INSTALL_JSON=$(cat <<EOF
 {
   "cluster_id": "${CLUSTER_ID}",
   "libraries": ${LIBRARIES_JSON}
@@ -269,36 +278,37 @@ INSTALL_JSON=$(cat <<EOF
 EOF
 )
 
-databricks libraries install --json "${INSTALL_JSON}"
+    databricks libraries install --json "${INSTALL_JSON}"
 
-echo "Library installation started (installs asynchronously)."
-echo ""
+    echo "Library installation started (installs asynchronously)."
+    echo ""
 
-# ──────────────────────────────────────────────
-# 6. Poll library status until all are installed
-# ──────────────────────────────────────────────
-echo "Waiting for libraries to install..."
+    # ──────────────────────────────────────────────
+    # 6. Poll library status until all are installed
+    # ──────────────────────────────────────────────
+    echo "Waiting for libraries to install..."
 
-LIB_MAX_WAIT=600
-LIB_ELAPSED=0
+    LIB_MAX_WAIT=600
+    LIB_ELAPSED=0
 
-while [ ${LIB_ELAPSED} -lt ${LIB_MAX_WAIT} ]; do
-    sleep ${INTERVAL}
-    LIB_ELAPSED=$((LIB_ELAPSED + INTERVAL))
+    while [ ${LIB_ELAPSED} -lt ${LIB_MAX_WAIT} ]; do
+        sleep ${INTERVAL}
+        LIB_ELAPSED=$((LIB_ELAPSED + INTERVAL))
 
-    STATUS_JSON=$(databricks libraries cluster-status "${CLUSTER_ID}" --output json)
+        STATUS_JSON=$(databricks libraries cluster-status "${CLUSTER_ID}" --output json)
 
-    TOTAL=$(echo "${STATUS_JSON}" | jq '.library_statuses | length')
-    INSTALLED=$(echo "${STATUS_JSON}" | jq '[.library_statuses[] | select(.status == "INSTALLED")] | length')
-    PENDING=$(echo "${STATUS_JSON}" | jq '[.library_statuses[] | select(.status == "PENDING" or .status == "RESOLVING" or .status == "INSTALLING")] | length')
-    FAILED=$(echo "${STATUS_JSON}" | jq '[.library_statuses[] | select(.status == "FAILED")] | length')
+        TOTAL=$(echo "${STATUS_JSON}" | jq 'length')
+        INSTALLED=$(echo "${STATUS_JSON}" | jq '[.[] | select(.status == "INSTALLED")] | length')
+        PENDING=$(echo "${STATUS_JSON}" | jq '[.[] | select(.status == "PENDING" or .status == "RESOLVING" or .status == "INSTALLING")] | length')
+        FAILED=$(echo "${STATUS_JSON}" | jq '[.[] | select(.status == "FAILED")] | length')
 
-    echo "  ${INSTALLED}/${TOTAL} installed, ${PENDING} pending, ${FAILED} failed (${LIB_ELAPSED}s)"
+        echo "  ${INSTALLED}/${TOTAL} installed, ${PENDING} pending, ${FAILED} failed (${LIB_ELAPSED}s)"
 
-    if [ "${PENDING}" -eq 0 ]; then
-        break
-    fi
-done
+        if [ "${PENDING}" -eq 0 ]; then
+            break
+        fi
+    done
+fi
 
 # ──────────────────────────────────────────────
 # 7. Report library status
@@ -307,10 +317,10 @@ echo ""
 echo "Library status:"
 
 databricks libraries cluster-status "${CLUSTER_ID}" --output json \
-    | jq -r '.library_statuses[] | "\(.status)\t\(.library | to_entries[0] | .value | if .coordinates then .coordinates elif .package then .package else . end)"'
+    | jq -r '.[] | "\(.status)\t\(.library | to_entries[0] | .value | if .coordinates then .coordinates elif .package then .package else . end)"'
 
 FINAL_FAILED=$(databricks libraries cluster-status "${CLUSTER_ID}" --output json \
-    | jq '[.library_statuses[] | select(.status == "FAILED")] | length')
+    | jq '[.[] | select(.status == "FAILED")] | length')
 
 echo ""
 if [ "${FINAL_FAILED}" -gt 0 ]; then

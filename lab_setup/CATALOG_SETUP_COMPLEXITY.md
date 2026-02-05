@@ -25,7 +25,7 @@ Databricks explicitly blocks programmatic catalog creation against the managed D
 2. Name it `aws-databricks-neo4j-lab`
 3. Click **Create**
 
-Once the catalog exists, `setup_databricks.sh` handles everything else (schema, volume, file uploads) programmatically.
+Once the catalog exists, `setup_databricks.sh` handles everything else (compute cluster, libraries, data upload, and lakehouse tables) programmatically.
 
 ---
 
@@ -105,7 +105,7 @@ databricks catalogs create "aws-databricks-neo4j-lab" \
 
 ## Recommendation
 
-Create the catalog once via the UI. It only needs to happen once per workshop environment. The `setup_databricks.sh` script checks for the catalog and gives a clear error if it's missing. Everything after catalog creation (schema, volume, file uploads) is fully automated.
+Create the catalog once via the UI. It only needs to happen once per workshop environment. The `setup_databricks.sh` script handles everything after catalog creation (compute, libraries, data upload, lakehouse tables) in a single command.
 
 ---
 
