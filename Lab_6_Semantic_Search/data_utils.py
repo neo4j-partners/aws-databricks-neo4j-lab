@@ -14,6 +14,9 @@ the MLflow deployments client when running in Databricks.
 import asyncio
 from pathlib import Path
 
+import nest_asyncio
+nest_asyncio.apply()
+
 import mlflow.deployments
 from neo4j import GraphDatabase
 from neo4j_graphrag.embeddings.base import Embedder
