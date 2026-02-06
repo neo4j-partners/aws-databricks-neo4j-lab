@@ -19,6 +19,33 @@ from .utils import poll_until
 console = Console()
 
 
+def ensure_instance_profile_registered(
+    client: WorkspaceClient,
+    instance_profile_arn: str,
+    iam_role_arn: str | None = None,
+) -> None:
+    """Check if an instance profile is registered in the workspace, and register it if not.
+
+    Args:
+        client: Databricks workspace client.
+        instance_profile_arn: The ARN of the instance profile.
+        iam_role_arn: Optional IAM role ARN backing the instance profile.
+    """
+    registered = {ip.instance_profile_arn for ip in client.instance_profiles.list()}
+
+    if instance_profile_arn in registered:
+        console.print(f"  Instance profile already registered: {instance_profile_arn}")
+        return
+
+    console.print(f"  Registering instance profile: {instance_profile_arn}")
+    client.instance_profiles.add(
+        instance_profile_arn=instance_profile_arn,
+        iam_role_arn=iam_role_arn,
+        skip_validation=True,
+    )
+    console.print("  Registered successfully.")
+
+
 def find_cluster(client: WorkspaceClient, cluster_name: str) -> tuple[str | None, State | None]:
     """Find an existing cluster by name.
 
@@ -149,6 +176,10 @@ def get_or_create_cluster(
     Returns:
         The cluster ID.
     """
+    # Ensure the instance profile is registered before creating/starting a cluster
+    if config.instance_profile_arn and config.cloud_provider != "azure":
+        ensure_instance_profile_registered(client, config.instance_profile_arn)
+
     console.print(f"Looking for existing cluster \"{config.name}\"...")
 
     cluster_id, state = find_cluster(client, config.name)

@@ -152,6 +152,8 @@ fi
 #   - Fleet and launch template management
 #   - Security group management
 #   - Spot instance support (including service-linked role for Spot)
+#   - iam:PassRole for the instance profile role (required to attach
+#     instance profiles to EC2 instances launched by Databricks)
 #
 # A common pitfall is having only the EC2/EBS actions without the VPC
 # actions, which causes credential validation failure with:
@@ -264,6 +266,12 @@ AWS_PROFILE="${AWS_PROFILE_NAME}" aws iam put-role-policy \
           "iam:AWSServiceName": "spot.amazonaws.com"
         }
       }
+    },
+    {
+      "Sid": "PassInstanceProfileRole",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "${INSTANCE_PROFILE_ROLE_ARN}"
     },
     {
       "Sid": "SelfAssume",
