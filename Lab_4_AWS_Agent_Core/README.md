@@ -241,6 +241,314 @@ Try queries that span both domains or are ambiguous to see how the router handle
 
 ---
 
+## Part C: Deep Dive -- How the Agent Orchestration Works
+
+This section walks through the orchestrator source code in [`setup/`](setup/) to show exactly how the multi-agent system is built.
+
+### The LangGraph StateGraph
+
+The orchestrator is a [LangGraph](https://langchain-ai.github.io/langgraph/) `StateGraph` -- a directed graph where each node is a function and edges define the execution flow. The state that flows through the graph carries the conversation messages and a routing decision:
+
+```python
+from langgraph.graph import StateGraph, START, END
+
+class OrchestratorState(TypedDict):
+    messages: Annotated[list[BaseMessage], add_messages]
+    next_agent: str  # "maintenance" or "operations"
+```
+
+The graph is assembled with three nodes and conditional routing:
+
+```python
+graph = StateGraph(OrchestratorState)
+
+# Three nodes: one router, two specialists
+graph.add_node("router", create_router_node(llm))
+graph.add_node("maintenance", create_maintenance_node(llm, tools))
+graph.add_node("operations", create_operations_node(llm, tools))
+
+# Every query starts at the router
+graph.add_edge(START, "router")
+
+# Router decides which specialist handles the query
+graph.add_conditional_edges(
+    "router",
+    route_to_agent,  # reads state["next_agent"]
+    {"maintenance": "maintenance", "operations": "operations"}
+)
+
+# Both specialists go to END after responding
+graph.add_edge("maintenance", END)
+graph.add_edge("operations", END)
+```
+
+This produces the following execution graph:
+
+```
+            START
+              │
+              ▼
+          ┌────────┐
+          │ Router │  ← Classifies query domain
+          └───┬────┘
+              │
+     ┌────────┴────────┐
+     │ next_agent=?     │
+     ▼                  ▼
+┌────────────┐   ┌────────────┐
+│Maintenance │   │ Operations │  ← ReAct agents with MCP tools
+│   Agent    │   │   Agent    │
+└─────┬──────┘   └─────┬──────┘
+      │                │
+      └───────┬────────┘
+              ▼
+             END
+```
+
+### Router Node: Query Classification
+
+The router is a lightweight LLM call that classifies each question into one of two domains. It uses keyword hints to guide the classification:
+
+```python
+ROUTER_PROMPT = """You are a query router for an aviation fleet management system.
+
+Analyze the user's question and determine which specialist should handle it.
+
+MAINTENANCE keywords: maintenance, fault, failure, component, system,
+    reliability, sensor, reading, repair, hydraulic, engine, avionics,
+    critical, severity
+OPERATIONS keywords: flight, delay, route, airport, operator, schedule,
+    departure, arrival, on-time, airline, carrier
+
+Respond with ONLY one word: either "maintenance" or "operations"
+
+If the query is ambiguous or general (like "schema" or "count"),
+respond with "operations"."""
+```
+
+The router extracts the latest user message, sends it to Claude with this system prompt, and sets `state["next_agent"]` to the single-word response. The conditional edge function then routes accordingly:
+
+```python
+def route_to_agent(state: OrchestratorState) -> Literal["maintenance", "operations"]:
+    return state["next_agent"]
+```
+
+**Why keyword-based routing?** This approach is fast (a single, short LLM call with `temperature=0`), deterministic, and inexpensive. The router does not need tools or multi-step reasoning -- it only needs to read the question and pick a domain.
+
+### Specialist Agents: The ReAct Pattern
+
+Each specialist is a [ReAct](https://arxiv.org/abs/2210.03629) (Reasoning + Acting) agent created with LangGraph's `create_react_agent`. ReAct agents work in a loop:
+
+```
+┌──────────────────────────────────────────────────┐
+│                 ReAct Agent Loop                  │
+│                                                  │
+│  1. REASON  ─── Think about what to do next      │
+│       │                                          │
+│       ▼                                          │
+│  2. ACT     ─── Call an MCP tool (Cypher query)  │
+│       │                                          │
+│       ▼                                          │
+│  3. OBSERVE ─── Read the tool results            │
+│       │                                          │
+│       ▼                                          │
+│  4. DECIDE  ─── Need more info? Loop back to 1   │
+│       │         Have enough? Generate response    │
+│       ▼                                          │
+│  5. RESPOND ─── Natural language answer           │
+└──────────────────────────────────────────────────┘
+```
+
+The agents are created by wrapping an LLM with domain-specific system prompts and the shared MCP tools:
+
+```python
+from langgraph.prebuilt import create_react_agent
+
+# Both agents get the SAME MCP tools but DIFFERENT system prompts
+maintenance_agent = create_react_agent(llm, tools, prompt=MAINTENANCE_SYSTEM_PROMPT)
+operations_agent  = create_react_agent(llm, tools, prompt=OPERATIONS_SYSTEM_PROMPT)
+```
+
+Each system prompt gives the agent:
+1. **Domain expertise** -- what it specializes in
+2. **Graph schema** -- the node types, relationships, and properties it should query
+3. **Query guidelines** -- how to formulate good Cypher queries
+4. **Example Cypher patterns** -- templates for common query shapes
+5. **LIMIT enforcement** -- always bound result sets to avoid overwhelming responses
+
+### Graph Schemas by Domain
+
+Each specialist agent is given knowledge of the graph schema relevant to its domain.
+
+**Maintenance Agent -- Aircraft Health Schema:**
+
+```
+(:Aircraft) -[:HAS_SYSTEM]-> (:System) -[:HAS_COMPONENT]-> (:Component)
+                                                                │
+                                                    [:HAS_SENSOR]
+                                                                │
+                                                                ▼
+                                                          (:Sensor)
+                                                                │
+                                                    [:HAS_READING]
+                                                                │
+                                                                ▼
+                                                          (:Reading)
+
+(:MaintenanceEvent) -[:AFFECTED]-> (:Component)
+(:MaintenanceEvent) -[:PERFORMED_ON]-> (:Aircraft)
+```
+
+| Node | Key Properties |
+|------|---------------|
+| `Aircraft` | tailNumber, model |
+| `System` | name (Engine, Hydraulic, Electrical, Avionics) |
+| `Component` | name, type |
+| `Sensor` | name, type |
+| `Reading` | value, timestamp, unit |
+| `MaintenanceEvent` | faultCode, severity, description |
+
+**Operations Agent -- Flight Operations Schema:**
+
+```
+(:Delay) -[:DELAYED]-> (:Flight) -[:DEPARTED_FROM]-> (:Airport)
+                            │
+                            ├── [:ARRIVED_AT] ──> (:Airport)
+                            ├── [:OPERATED_BY] ──> (:Operator)
+                            └── [:ASSIGNED_TO] ──> (:Aircraft)
+```
+
+| Node | Key Properties |
+|------|---------------|
+| `Flight` | flightNumber, scheduledDeparture, scheduledDuration |
+| `Delay` | cause, duration |
+| `Airport` | code (IATA), name |
+| `Operator` | name |
+| `Aircraft` | tailNumber, model |
+
+### MCP Tool Discovery
+
+Tools are **not hardcoded** in the agent. At startup, the orchestrator dynamically discovers available tools from the Neo4j MCP Server via the AgentCore Gateway:
+
+```python
+from langchain_mcp_adapters.client import MultiServerMCPClient
+
+mcp_client = MultiServerMCPClient({
+    "neo4j": {        # single MCP server connection
+        "transport": "streamable_http",
+        "url": gateway_url,
+        "headers": {"Authorization": f"Bearer {access_token}"},
+    }
+})
+tools = await mcp_client.get_tools()
+# Returns: [neo4j-mcp-server-target___get-schema, neo4j-mcp-server-target___read-cypher]
+```
+
+The `langchain-mcp-adapters` library converts MCP tool definitions into LangChain-compatible tools that ReAct agents can invoke. The Gateway prefixes each tool name with the target (e.g., `neo4j-mcp-server-target___read-cypher`).
+
+> **Note:** There is only **one** MCP server in this architecture -- the Neo4j MCP Server. The class is called `MultiServerMCPClient` because the library supports connecting to multiple MCP servers, but here only one (`"neo4j"`) is configured. Both specialist agents share the same two tools (`get-schema` and `read-cypher`); what differentiates them is their system prompts, not their tools.
+
+### Example: End-to-End Query Trace
+
+Here is what happens when you ask: **"Which components have the highest failure rates?"**
+
+```
+Step 1 ─ ROUTER
+  Input:  "Which components have the highest failure rates?"
+  LLM:    Sees keywords "components", "failure" → responds "maintenance"
+  Output: state["next_agent"] = "maintenance"
+
+Step 2 ─ MAINTENANCE AGENT (ReAct loop)
+
+  Iteration 1 — Reason + Act:
+    Thought: I need to query the graph for components with the most
+             maintenance events. Let me first check the schema.
+    Action:  Call tool `neo4j-mcp-server-target___get-schema`
+    Result:  Returns node labels, relationship types, and properties
+
+  Iteration 2 — Reason + Act:
+    Thought: Now I know the schema. I'll query for components with
+             the most associated MaintenanceEvents, grouped by name.
+    Action:  Call tool `neo4j-mcp-server-target___read-cypher`
+    Input:   {
+               "query": "MATCH (m:MaintenanceEvent)-[:AFFECTED]->(c:Component)
+                         RETURN c.name, count(m) AS failures
+                         ORDER BY failures DESC LIMIT 10"
+             }
+    Result:  [{"c.name": "Hydraulic Pump", "failures": 47},
+              {"c.name": "APU Starter", "failures": 34},
+              {"c.name": "Landing Gear Actuator", "failures": 28}, ...]
+
+  Iteration 3 — Respond:
+    Thought: I have the data. Let me present the findings clearly.
+    Output:  "The components with the highest failure rates are:
+              1. Hydraulic Pump — 47 failures
+              2. APU Starter — 34 failures
+              3. Landing Gear Actuator — 28 failures
+              ..."
+
+Step 3 ─ END
+  The final AIMessage is returned to the user.
+```
+
+### Example: Operations Query Trace
+
+For **"Which routes have the most delays?"**:
+
+```
+Step 1 ─ ROUTER
+  Input:  "Which routes have the most delays?"
+  LLM:    Sees keywords "routes", "delays" → responds "operations"
+  Output: state["next_agent"] = "operations"
+
+Step 2 ─ OPERATIONS AGENT (ReAct loop)
+
+  Iteration 1 — Act:
+    Action:  Call tool `neo4j-mcp-server-target___read-cypher`
+    Input:   {
+               "query": "MATCH (d:Delay)-[:DELAYED]->(f:Flight)-[:DEPARTED_FROM]->(origin:Airport)
+                         MATCH (f)-[:ARRIVED_AT]->(dest:Airport)
+                         RETURN origin.code + ' -> ' + dest.code AS route,
+                                count(d) AS delays,
+                                avg(d.duration) AS avgDelayMinutes
+                         ORDER BY delays DESC LIMIT 10"
+             }
+    Result:  [{"route": "JFK -> LAX", "delays": 23, "avgDelayMinutes": 42.5},
+              {"route": "ORD -> ATL", "delays": 19, "avgDelayMinutes": 38.1}, ...]
+
+  Iteration 2 — Respond:
+    Output:  "The routes with the most delays are:
+              1. JFK → LAX — 23 delays (avg 42.5 min)
+              2. ORD → ATL — 19 delays (avg 38.1 min)
+              ..."
+
+Step 3 ─ END
+```
+
+### Session Memory
+
+The orchestrator uses LangGraph's `MemorySaver` checkpointer to maintain conversation context within a session:
+
+```python
+memory = MemorySaver()
+compiled = graph.compile(checkpointer=memory)
+
+# Each invocation passes a session-scoped thread_id
+config = {"configurable": {"thread_id": session_id}}
+result = await graph.ainvoke(
+    {"messages": [HumanMessage(content=prompt)], "next_agent": ""},
+    config=config,
+)
+```
+
+This means follow-up questions within the same session carry context. For example:
+- **You**: "Which components have the most failures?"
+- **Agent**: _(lists top 10 components)_
+- **You**: "Tell me more about the hydraulic pump issues"
+- **Agent**: _(understands "hydraulic pump" refers to the #1 result from the previous answer)_
+
+---
+
 ## Summary
 
 In this lab, you explored:
