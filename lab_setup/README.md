@@ -29,7 +29,7 @@ Complete these steps before the workshop begins:
 Before running any CLI commands, authenticate the Databricks CLI with your user account:
 
 ```bash
-databricks auth login --host https://your-workspace.cloud.databricks.com
+databricks auth login --host <your-workspace-url>
 ```
 
 This opens a browser for OAuth login. After authenticating, verify you are logged in as your user (not a service principal):
@@ -38,7 +38,19 @@ This opens a browser for OAuth login. After authenticating, verify you are logge
 databricks current-user me
 ```
 
-You should see your email address in the output. If you see a UUID instead, your CLI is configured with a service principal. Check for overriding environment variables:
+You should see your email address in the output.
+
+### Using a Named Profile
+
+If you have multiple Databricks profiles configured, set `DATABRICKS_PROFILE` in `.env` (see Step 2.1), or export for ad-hoc CLI commands:
+
+```bash
+export DATABRICKS_CONFIG_PROFILE=<your-profile-name>
+```
+
+### Troubleshooting Authentication
+
+If you see a UUID instead of your email, your CLI may be configured with a service principal. Check for overriding environment variables:
 
 ```bash
 env | grep -i DATABRICKS
@@ -92,9 +104,45 @@ Create the catalog, schema, and volume through the Databricks UI.
 
 **Resulting path:** `/Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/`
 
+### 1.4 Verify Creation (CLI)
+
+Confirm the catalog, schema, and volume exist with one command:
+
+```bash
+databricks volumes read aws-databricks-neo4j-lab.lab-schema.lab-volume
+```
+
+This returns volume metadata if successful, or an error if any component is missing.
+
 ---
 
 ## Step 2: Automated Setup
+
+### 2.1 Configure Environment
+
+Copy the example environment file and configure for your cloud:
+
+```bash
+cp lab_setup/.env.example lab_setup/.env
+```
+
+Edit `.env` and set at minimum:
+
+```bash
+# Cloud provider: "aws" or "azure"
+CLOUD_PROVIDER="aws"
+
+# Databricks CLI profile (optional - uses default if empty)
+DATABRICKS_PROFILE=""
+```
+
+The script auto-selects the appropriate node type based on `CLOUD_PROVIDER`:
+- **AWS:** `m5.xlarge` (16 GB, 4 cores)
+- **Azure:** `Standard_D4ds_v5` (16 GB, 4 cores)
+
+You can override with a specific `NODE_TYPE` if needed.
+
+### 2.2 Run Setup Script
 
 The `setup_databricks.sh` script handles everything after catalog creation in one command:
 
@@ -137,13 +185,14 @@ The `--cluster-only` flag creates the cluster and installs libraries, then exits
 | Setting | Value |
 |---------|-------|
 | Runtime | 17.3 LTS ML (Spark 4.0.0, Scala 2.13) |
-| Photon | Enabled |
-| Node type | `Standard_D4ds_v5` (16 GB, 4 cores) |
+| Photon | Disabled (workshop data is small; Photon only benefits >100GB workloads) |
+| Node type (AWS) | `m5.xlarge` (16 GB, 4 cores) |
+| Node type (Azure) | `Standard_D4ds_v5` (16 GB, 4 cores) |
 | Workers | 0 (single node) |
 | Access mode | Dedicated (Single User) |
 | Auto-terminate | 30 minutes |
 
-To change defaults, edit the configuration variables at the top of `setup_databricks.sh`.
+To change defaults, edit `.env` or the configuration variables at the top of `setup_databricks.sh`.
 
 ### Expected data files in volume
 

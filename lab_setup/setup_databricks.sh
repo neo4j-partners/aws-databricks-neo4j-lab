@@ -32,6 +32,20 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # ──────────────────────────────────────────────
+# Load .env configuration (if exists)
+# ──────────────────────────────────────────────
+if [ -f "${SCRIPT_DIR}/.env" ]; then
+    # shellcheck source=/dev/null
+    source "${SCRIPT_DIR}/.env"
+    echo "Loaded configuration from .env"
+fi
+
+# Set Databricks CLI profile if configured
+if [ -n "${DATABRICKS_PROFILE:-}" ]; then
+    export DATABRICKS_CONFIG_PROFILE="${DATABRICKS_PROFILE}"
+fi
+
+# ──────────────────────────────────────────────
 # Parse arguments
 # ──────────────────────────────────────────────
 CLUSTER_ONLY=false
@@ -55,12 +69,26 @@ USER_ARG="${2:-}"
 CLUSTER_NAME="${3:-Small Spark 4.0}"
 
 # ──────────────────────────────────────────────
-# Cluster configuration
+# Cluster configuration (can be overridden by .env)
 # ──────────────────────────────────────────────
-SPARK_VERSION="17.3.x-cpu-ml-scala2.13"   # 17.3 LTS ML (Spark 4.0.0, Scala 2.13)
-NODE_TYPE="Standard_D4ds_v5"               # 16 GB Memory, 4 Cores (Azure)
-RUNTIME_ENGINE="PHOTON"                    # Photon acceleration
-AUTOTERMINATION_MINUTES=30
+SPARK_VERSION="${SPARK_VERSION:-17.3.x-cpu-ml-scala2.13}"   # 17.3 LTS ML (Spark 4.0.0, Scala 2.13)
+AUTOTERMINATION_MINUTES="${AUTOTERMINATION_MINUTES:-30}"
+
+# Photon disabled by default: workshop dataset is ~25MB, Photon benefits only large
+# workloads (>100GB). Photon also charges 2x DBUs and requires specific instance types
+# (i3, i3en). For this small ETL workshop, standard runtime is faster to provision
+# and more cost-effective. Set RUNTIME_ENGINE="PHOTON" in .env to enable.
+RUNTIME_ENGINE="${RUNTIME_ENGINE:-STANDARD}"
+
+# Auto-select node type based on cloud provider
+CLOUD_PROVIDER="${CLOUD_PROVIDER:-aws}"
+if [ -n "${NODE_TYPE:-}" ]; then
+    : # Use NODE_TYPE from .env
+elif [ "${CLOUD_PROVIDER}" = "azure" ]; then
+    NODE_TYPE="Standard_D4ds_v5"   # 16 GB Memory, 4 Cores (Azure)
+else
+    NODE_TYPE="m5.xlarge"          # 16 GB Memory, 4 Cores (AWS)
+fi
 
 # ──────────────────────────────────────────────
 # Libraries
@@ -173,27 +201,43 @@ if [ -n "${EXISTING_ID}" ]; then
 else
     echo "  Not found — creating new cluster..."
 
-    CLUSTER_JSON=$(cat <<EOF
-{
-  "cluster_name": "${CLUSTER_NAME}",
-  "spark_version": "${SPARK_VERSION}",
-  "node_type_id": "${NODE_TYPE}",
-  "driver_node_type_id": "${NODE_TYPE}",
-  "num_workers": 0,
-  "data_security_mode": "SINGLE_USER",
-  "single_user_name": "${SINGLE_USER}",
-  "runtime_engine": "${RUNTIME_ENGINE}",
-  "autotermination_minutes": ${AUTOTERMINATION_MINUTES},
-  "spark_conf": {
-    "spark.databricks.cluster.profile": "singleNode",
-    "spark.master": "local[*]"
-  },
-  "custom_tags": {
-    "ResourceClass": "SingleNode"
-  }
-}
-EOF
-)
+    # Build base cluster JSON
+    CLUSTER_JSON=$(jq -n \
+        --arg name "${CLUSTER_NAME}" \
+        --arg spark "${SPARK_VERSION}" \
+        --arg node "${NODE_TYPE}" \
+        --arg user "${SINGLE_USER}" \
+        --arg engine "${RUNTIME_ENGINE}" \
+        --argjson timeout "${AUTOTERMINATION_MINUTES}" \
+        '{
+            cluster_name: $name,
+            spark_version: $spark,
+            node_type_id: $node,
+            driver_node_type_id: $node,
+            num_workers: 0,
+            data_security_mode: "SINGLE_USER",
+            single_user_name: $user,
+            runtime_engine: $engine,
+            autotermination_minutes: $timeout,
+            spark_conf: {
+                "spark.databricks.cluster.profile": "singleNode",
+                "spark.master": "local[*]"
+            },
+            custom_tags: {
+                ResourceClass: "SingleNode"
+            }
+        }')
+
+    # Add AWS-specific EBS volume (required for m5/m6i/r5/r6i - no local NVMe)
+    if [ "${CLOUD_PROVIDER}" != "azure" ]; then
+        CLUSTER_JSON=$(echo "${CLUSTER_JSON}" | jq '. + {
+            aws_attributes: {
+                ebs_volume_type: "GENERAL_PURPOSE_SSD",
+                ebs_volume_count: 1,
+                ebs_volume_size: 100
+            }
+        }')
+    fi
 
     CREATE_RESPONSE=$(databricks clusters create --json "${CLUSTER_JSON}")
     CLUSTER_ID=$(echo "${CREATE_RESPONSE}" | jq -r '.cluster_id')

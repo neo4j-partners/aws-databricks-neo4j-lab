@@ -1,0 +1,182 @@
+"""Configuration management for Databricks setup.
+
+Loads configuration from environment variables, .env files, and CLI arguments.
+"""
+
+import os
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+
+@dataclass
+class ClusterConfig:
+    """Cluster configuration settings."""
+
+    name: str = "Small Spark 4.0"
+    spark_version: str = "17.3.x-cpu-ml-scala2.13"  # 17.3 LTS ML (Spark 4.0.0)
+    autotermination_minutes: int = 30
+    runtime_engine: str = "STANDARD"  # or "PHOTON"
+    node_type: str | None = None  # Auto-detected from cloud provider
+    cloud_provider: str = "aws"
+
+    def get_node_type(self) -> str:
+        """Get node type, auto-detecting based on cloud provider if not set."""
+        if self.node_type:
+            return self.node_type
+        if self.cloud_provider == "azure":
+            return "Standard_D4ds_v5"  # 16 GB Memory, 4 Cores
+        return "m5.xlarge"  # AWS default: 16 GB Memory, 4 Cores
+
+
+@dataclass
+class LibraryConfig:
+    """Library installation configuration."""
+
+    neo4j_spark_connector: str = "org.neo4j:neo4j-connector-apache-spark_2.13:5.3.10_for_spark_3"
+    pypi_packages: list[str] = field(default_factory=lambda: [
+        "neo4j==6.0.2",
+        "databricks-agents>=1.2.0",
+        "langgraph==1.0.5",
+        "langchain-openai==1.1.2",
+        "pydantic==2.12.5",
+        "langchain-core>=1.2.0",
+        "databricks-langchain>=0.11.0",
+        "dspy>=3.0.4",
+        "neo4j-graphrag>=1.13.0",
+        "beautifulsoup4>=4.12.0",
+        "sentence_transformers",
+    ])
+
+
+@dataclass
+class VolumeConfig:
+    """Unity Catalog volume configuration."""
+
+    catalog: str = "aws-databricks-neo4j-lab"
+    schema: str = "lab-schema"
+    volume: str = "lab-volume"
+    lakehouse_schema: str = "lakehouse"
+
+    @classmethod
+    def from_string(cls, volume_spec: str) -> "VolumeConfig":
+        """Parse 'catalog.schema.volume' format."""
+        parts = volume_spec.split(".")
+        if len(parts) != 3:
+            raise ValueError(
+                f"Volume must be in format 'catalog.schema.volume', got: {volume_spec}"
+            )
+        return cls(catalog=parts[0], schema=parts[1], volume=parts[2])
+
+    @property
+    def full_path(self) -> str:
+        """Return the full volume path for display."""
+        return f"{self.catalog}.{self.schema}.{self.volume}"
+
+    @property
+    def dbfs_path(self) -> str:
+        """Return the DBFS path for the volume."""
+        return f"dbfs:/Volumes/{self.catalog}/{self.schema}/{self.volume}"
+
+    @property
+    def volumes_path(self) -> str:
+        """Return the /Volumes path (for Spark SQL)."""
+        return f"/Volumes/{self.catalog}/{self.schema}/{self.volume}"
+
+
+@dataclass
+class DataConfig:
+    """Data file configuration."""
+
+    data_dir: Path = field(default_factory=lambda: Path(__file__).parent.parent.parent.parent / "aircraft_digital_twin_data")
+    lakehouse_script: Path = field(default_factory=lambda: Path(__file__).parent.parent.parent.parent / "create_lakehouse_tables.py")
+    excluded_files: tuple[str, ...] = ("README_LARGE_DATASET.md", "ARCHITECTURE.md")
+
+    def get_upload_files(self) -> list[Path]:
+        """Get list of files to upload (CSVs and MDs, excluding specified files)."""
+        files = []
+        for pattern in ("*.csv", "*.md"):
+            for f in self.data_dir.glob(pattern):
+                if f.name not in self.excluded_files:
+                    files.append(f)
+        return sorted(files)
+
+
+@dataclass
+class WarehouseConfig:
+    """SQL Warehouse configuration for serverless mode."""
+
+    name: str = "Starter Warehouse"
+    timeout_seconds: int = 600
+
+    @classmethod
+    def from_env(cls) -> "WarehouseConfig":
+        """Load warehouse config from environment."""
+        config = cls()
+        if val := os.getenv("WAREHOUSE_NAME"):
+            config.name = val
+        if val := os.getenv("WAREHOUSE_TIMEOUT"):
+            config.timeout_seconds = int(val)
+        return config
+
+
+@dataclass
+class Config:
+    """Main configuration container."""
+
+    cluster: ClusterConfig = field(default_factory=ClusterConfig)
+    library: LibraryConfig = field(default_factory=LibraryConfig)
+    volume: VolumeConfig = field(default_factory=VolumeConfig)
+    data: DataConfig = field(default_factory=DataConfig)
+    warehouse: WarehouseConfig = field(default_factory=WarehouseConfig)
+    user_email: str | None = None
+    databricks_profile: str | None = None
+    use_serverless: bool = False
+
+    @classmethod
+    def load(cls, env_file: Path | None = None) -> "Config":
+        """Load configuration from environment and optional .env file."""
+        # Load .env file if specified or from default location
+        if env_file and env_file.exists():
+            load_dotenv(env_file)
+        else:
+            default_env = Path(__file__).parent.parent.parent.parent / ".env"
+            if default_env.exists():
+                load_dotenv(default_env)
+
+        config = cls()
+
+        # Serverless mode
+        if val := os.getenv("USE_SERVERLESS"):
+            config.use_serverless = val.lower() in ("true", "1", "yes")
+
+        # Warehouse settings
+        config.warehouse = WarehouseConfig.from_env()
+
+        # Cluster settings from environment
+        if val := os.getenv("SPARK_VERSION"):
+            config.cluster.spark_version = val
+        if val := os.getenv("AUTOTERMINATION_MINUTES"):
+            config.cluster.autotermination_minutes = int(val)
+        if val := os.getenv("RUNTIME_ENGINE"):
+            config.cluster.runtime_engine = val
+        if val := os.getenv("NODE_TYPE"):
+            config.cluster.node_type = val
+        if val := os.getenv("CLOUD_PROVIDER"):
+            config.cluster.cloud_provider = val.lower()
+
+        # Databricks profile
+        if val := os.getenv("DATABRICKS_PROFILE"):
+            config.databricks_profile = val
+
+        return config
+
+
+def get_script_dir() -> Path:
+    """Get the directory containing the lab_setup scripts.
+
+    Returns the lab_setup directory (parent of auto_scripts).
+    """
+    # auto_scripts/src/databricks_setup/config.py -> lab_setup
+    return Path(__file__).resolve().parent.parent.parent.parent
