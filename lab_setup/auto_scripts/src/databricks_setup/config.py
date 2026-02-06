@@ -19,6 +19,7 @@ class ClusterConfig:
     autotermination_minutes: int = 30
     runtime_engine: str = "STANDARD"  # or "PHOTON"
     node_type: str | None = None  # Auto-detected from cloud provider
+    instance_profile_arn: str | None = None  # AWS instance profile for cluster nodes
     cloud_provider: str = "aws"
 
     def get_node_type(self) -> str:
@@ -135,15 +136,11 @@ class Config:
     use_serverless: bool = False
 
     @classmethod
-    def load(cls, env_file: Path | None = None) -> "Config":
-        """Load configuration from environment and optional .env file."""
-        # Load .env file if specified or from default location
-        if env_file and env_file.exists():
-            load_dotenv(env_file)
-        else:
-            default_env = Path(__file__).parent.parent.parent.parent / ".env"
-            if default_env.exists():
-                load_dotenv(default_env)
+    def load(cls) -> "Config":
+        """Load configuration from environment and .env file."""
+        default_env = Path(__file__).parent.parent.parent.parent / ".env"
+        if default_env.exists():
+            load_dotenv(default_env)
 
         config = cls()
 
@@ -155,6 +152,8 @@ class Config:
         config.warehouse = WarehouseConfig.from_env()
 
         # Cluster settings from environment
+        if val := os.getenv("CLUSTER_NAME"):
+            config.cluster.name = val
         if val := os.getenv("SPARK_VERSION"):
             config.cluster.spark_version = val
         if val := os.getenv("AUTOTERMINATION_MINUTES"):
@@ -163,8 +162,14 @@ class Config:
             config.cluster.runtime_engine = val
         if val := os.getenv("NODE_TYPE"):
             config.cluster.node_type = val
+        if val := os.getenv("INSTANCE_PROFILE_ARN"):
+            config.cluster.instance_profile_arn = val
         if val := os.getenv("CLOUD_PROVIDER"):
             config.cluster.cloud_provider = val.lower()
+
+        # User settings
+        if val := os.getenv("USER_EMAIL"):
+            config.user_email = val
 
         # Databricks profile
         if val := os.getenv("DATABRICKS_PROFILE"):

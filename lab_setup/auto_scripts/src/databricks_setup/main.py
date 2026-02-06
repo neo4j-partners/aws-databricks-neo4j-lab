@@ -4,7 +4,6 @@ Provides CLI interface for setting up Databricks clusters, libraries,
 data files, and lakehouse tables for the Neo4j workshop.
 """
 
-from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -41,20 +40,6 @@ def setup(
             help="Target volume in format 'catalog.schema.volume'",
         ),
     ] = "aws-databricks-neo4j-lab.lab-schema.lab-volume",
-    user_email: Annotated[
-        str | None,
-        typer.Option(
-            "--user", "-u",
-            help="Cluster owner email (auto-detected if not provided)",
-        ),
-    ] = None,
-    cluster_name: Annotated[
-        str,
-        typer.Option(
-            "--cluster", "-c",
-            help="Cluster name to create or reuse",
-        ),
-    ] = "Small Spark 4.0",
     cluster_only: Annotated[
         bool,
         typer.Option(
@@ -62,13 +47,6 @@ def setup(
             help="Only create cluster and install libraries (skip data upload and tables)",
         ),
     ] = False,
-    env_file: Annotated[
-        Path | None,
-        typer.Option(
-            "--env-file", "-e",
-            help="Path to .env file with configuration overrides",
-        ),
-    ] = None,
     profile: Annotated[
         str | None,
         typer.Option(
@@ -82,6 +60,7 @@ def setup(
     Creates (or reuses) a compute cluster, installs libraries, uploads data files,
     and creates lakehouse tables.
 
+    Configuration is loaded from lab_setup/.env (CLUSTER_NAME, USER_EMAIL, etc.).
     The Neo4j Spark Connector requires Dedicated (Single User) access mode.
 
     Examples:
@@ -94,17 +73,11 @@ def setup(
 
         # Explicit volume
         databricks-setup my-catalog.my-schema.my-volume
-
-        # With specific user and cluster
-        databricks-setup --user user@example.com --cluster "My Workshop"
     """
     try:
         _run_setup(
             volume=volume,
-            user_email=user_email,
-            cluster_name=cluster_name,
             cluster_only=cluster_only,
-            env_file=env_file,
             profile=profile,
         )
     except Exception as e:
@@ -114,17 +87,13 @@ def setup(
 
 def _run_setup(
     volume: str,
-    user_email: str | None,
-    cluster_name: str,
     cluster_only: bool,
-    env_file: Path | None,
     profile: str | None,
 ) -> None:
     """Internal implementation of setup command."""
 
     # Load configuration
-    config = Config.load(env_file)
-    config.cluster.name = cluster_name
+    config = Config.load()
 
     # Parse volume specification
     if not cluster_only:
@@ -138,9 +107,7 @@ def _run_setup(
 
     # Resolve user email (only needed for cluster mode)
     if not config.use_serverless:
-        if user_email:
-            config.user_email = user_email
-        else:
+        if not config.user_email:
             console.print("Detecting current Databricks user...")
             config.user_email = get_current_user(client)
 
@@ -253,7 +220,7 @@ def _print_cluster_only_summary(
     console.print(f"  databricks clusters get {cluster_id}")
     console.print()
     console.print("To run the full setup later:")
-    console.print(f"  databricks-setup {volume} --user {config.user_email} --cluster \"{config.cluster.name}\"")
+    console.print(f"  databricks-setup {volume}")
 
 
 def _print_final_summary(

@@ -35,10 +35,8 @@ uv run databricks-setup
 # Cluster + libraries only (skip data upload and tables)
 uv run databricks-setup --cluster-only
 
-# Specify volume, user, and cluster name
-uv run databricks-setup my-catalog.my-schema.my-volume \
-  --user user@example.com \
-  --cluster "My Workshop Cluster"
+# Explicit volume
+uv run databricks-setup my-catalog.my-schema.my-volume
 
 # Use a specific Databricks CLI profile
 uv run databricks-setup --profile my-workspace
@@ -49,11 +47,8 @@ uv run databricks-setup --profile my-workspace
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
 | `VOLUME` | | Target volume (`catalog.schema.volume`) | `aws-databricks-neo4j-lab.lab-schema.lab-volume` |
-| `--user` | `-u` | Cluster owner email | Auto-detected |
-| `--cluster` | `-c` | Cluster name to create/reuse | `Small Spark 4.0` |
 | `--cluster-only` | | Skip data upload and table creation | `false` |
-| `--env-file` | `-e` | Path to `.env` configuration file | `../lab_setup/.env` |
-| `--profile` | `-p` | Databricks CLI profile | Default profile |
+| `--profile` | `-p` | Databricks CLI profile | From `DATABRICKS_PROFILE` env var |
 
 ## Configuration
 
@@ -64,7 +59,7 @@ cd lab_setup
 cp .env.example .env
 ```
 
-### Serverless Mode (Recommended)
+### Serverless Mode
 
 Use a SQL Warehouse instead of creating a cluster. This is faster and more cost-effective:
 
@@ -88,6 +83,8 @@ Create a dedicated Spark cluster (required for Neo4j Spark Connector):
 USE_SERVERLESS=false
 
 # Cluster settings
+CLUSTER_NAME=Small Spark 4.0
+USER_EMAIL=user@example.com   # auto-detected if empty
 SPARK_VERSION=17.3.x-cpu-ml-scala2.13
 AUTOTERMINATION_MINUTES=30
 RUNTIME_ENGINE=STANDARD  # or PHOTON
@@ -103,6 +100,8 @@ CLOUD_PROVIDER=aws       # or azure
 | `WAREHOUSE_NAME` | SQL Warehouse name (serverless mode) | `Starter Warehouse` |
 | `WAREHOUSE_TIMEOUT` | SQL statement timeout (seconds) | `600` |
 | `DATABRICKS_PROFILE` | CLI profile from ~/.databrickscfg | Default |
+| `CLUSTER_NAME` | Cluster name to create or reuse | `Small Spark 4.0` |
+| `USER_EMAIL` | Cluster owner email | Auto-detected |
 | `SPARK_VERSION` | Databricks Runtime version | `17.3.x-cpu-ml-scala2.13` |
 | `AUTOTERMINATION_MINUTES` | Cluster auto-shutdown | `30` |
 | `RUNTIME_ENGINE` | `STANDARD` or `PHOTON` | `STANDARD` |

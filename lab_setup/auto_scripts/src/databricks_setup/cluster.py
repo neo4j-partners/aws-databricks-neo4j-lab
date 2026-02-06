@@ -57,13 +57,14 @@ def create_cluster(
 
     custom_tags = {"ResourceClass": "SingleNode"}
 
-    # AWS-specific EBS volume configuration (required for m5/m6i/r5/r6i - no local NVMe)
+    # AWS-specific configuration (EBS volumes + instance profile)
     aws_attributes = None
     if config.cloud_provider != "azure":
         aws_attributes = AwsAttributes(
             ebs_volume_type=EbsVolumeType.GENERAL_PURPOSE_SSD,
             ebs_volume_count=1,
             ebs_volume_size=100,
+            instance_profile_arn=config.instance_profile_arn,
         )
 
     runtime = RuntimeEngine.PHOTON if config.runtime_engine == "PHOTON" else RuntimeEngine.STANDARD
