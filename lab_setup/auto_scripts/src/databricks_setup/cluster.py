@@ -6,6 +6,7 @@ Handles cluster creation, starting, and waiting for ready state.
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service.compute import (
     AwsAttributes,
+    AwsAvailability,
     DataSecurityMode,
     EbsVolumeType,
     RuntimeEngine,
@@ -88,6 +89,8 @@ def create_cluster(
     aws_attributes = None
     if config.cloud_provider != "azure":
         aws_attributes = AwsAttributes(
+            availability=AwsAvailability.ON_DEMAND,
+            first_on_demand=1,
             ebs_volume_type=EbsVolumeType.GENERAL_PURPOSE_SSD,
             ebs_volume_count=1,
             ebs_volume_size=100,
