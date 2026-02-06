@@ -53,6 +53,12 @@ dmypy.json
 # Jupyter Notebook
 .ipynb_checkpoints/
 
+# Ruff linter
+.ruff_cache/
+
+# Claude Code
+.claude/
+
 # =============================================================================
 # IDEs and Editors
 # =============================================================================
@@ -154,3 +160,6 @@ temp/
 plugins/
 data/
 import/
+
+# Large generated data files (keep small CSVs, ignore generated large ones)
+*_large.csv
