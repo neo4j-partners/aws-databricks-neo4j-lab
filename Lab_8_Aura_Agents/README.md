@@ -112,16 +112,17 @@ ORDER BY count DESC
 
 ```cypher
 // Graph statistics — count all node types
-CALL db.labels() YIELD label
-CALL db.stats.retrieve("GRAPH COUNTS") YIELD nodeCount
-RETURN label, nodeCount
+MATCH (n)
+WITH labels(n)[0] AS label
+RETURN label, count(*) AS nodeCount
+ORDER BY nodeCount DESC
 ```
 
 ---
 
 ## Part B: Build an Aura Agent (No-Code)
 
-## Step 1: Create the SEC Filings Agent
+## Step 1: Create the Aircraft Agent
 
 1. Go to [console.neo4j.io](https://console.neo4j.io)
 2. Select **Agents** in the left-hand menu
@@ -131,23 +132,24 @@ RETURN label, nodeCount
 
 ## Step 2: Configure Agent Details
 
-Configure your new agent with the following settings. It is critical that you give your agent a unique name so that it does not conflict with other users' agents in the shared environment. If you have an error try another unique name by adding your initials or a number.:
+Configure your new agent with the following settings. It is critical that you give your agent a unique name so that it does not conflict with other users' agents in the shared environment. If you have an error try another unique name by adding your initials or a number:
 
-**Unique Agent Name:** `ryans-sec-filings-analyst`
+**Unique Agent Name:** `ryans-aircraft-analyst`
 
-**Description:** An AI-powered financial analyst that helps users explore SEC 10-K filings, analyze company risk factors, investigate asset manager ownership patterns, and discover relationships across the knowledge graph.
+**Description:** An AI-powered aircraft analyst that helps users explore the Aircraft Digital Twin knowledge graph, analyze maintenance events, investigate component failures, and discover relationships across aircraft topology, flight operations, and maintenance history.
 
 **Prompt Instructions:**
 ```
-You are an expert financial analyst assistant specializing in SEC 10-K filings analysis.
+You are an expert aircraft maintenance and operations analyst.
 You help users understand:
-- Company risk factors and how they compare across companies
-- Asset manager ownership patterns and portfolio compositions
-- Financial metrics and products mentioned in company filings
-- Relationships between companies, their documents, and extracted entities
+- Aircraft topology: systems, components, and sensors per aircraft
+- Maintenance events: faults, severity levels, and corrective actions
+- Flight operations: routes, delays, and operator performance
+- Component removals: reasons, time-since-new, and cycles-since-new data
+- Cross-entity patterns: shared faults across aircraft, delay-prone airports
 
-Always provide specific examples from the knowledge graph when answering questions.
-Ground your responses in the actual data from SEC filings.
+Always provide specific data from the knowledge graph when answering questions.
+Include tail numbers, system names, and fault details when relevant.
 ```
 
 **Target Instance:** Select your Neo4j Aura instance created in Lab 1.
@@ -160,84 +162,86 @@ Ground your responses in the actual data from SEC filings.
 
 Click **Add Tool** and select **Cypher Template** for each of the following tools:
 
-### Tool 1: Get Company Overview
+### Tool 1: Get Aircraft Overview
 
-**Tool Name:** `get_company_overview`
+**Tool Name:** `get_aircraft_overview`
 
-**Description:** Get comprehensive overview of a company including their SEC filing, risk factors, and major institutional owners.
+**Description:** Get comprehensive overview of an aircraft including its systems, recent maintenance events, and flight count.
 
-**Parameters:** `company_name` (string) - The company name to look up (e.g., "APPLE INC", "NVIDIA CORPORATION")
+**Parameters:** `tail_number` (string) - The aircraft tail number to look up (e.g., "N95040A", "N30268B")
 
 **Cypher Query:**
 ```cypher
-MATCH (c:Company {name: $company_name})
-OPTIONAL MATCH (c)-[:FILED]->(d:Document)
-OPTIONAL MATCH (c)-[:FACES_RISK]->(r:RiskFactor)
-OPTIONAL MATCH (am:AssetManager)-[:OWNS]->(c)
-WITH c, d,
-     collect(DISTINCT r.name)[0..10] AS risks,
-     collect(DISTINCT am.managerName)[0..10] AS owners
+MATCH (a:Aircraft {tail_number: $tail_number})
+OPTIONAL MATCH (a)-[:HAS_SYSTEM]->(s:System)
+OPTIONAL MATCH (s)-[:HAS_COMPONENT]->(c:Component)-[:HAS_EVENT]->(m:MaintenanceEvent)
+OPTIONAL MATCH (a)-[:OPERATES_FLIGHT]->(f:Flight)
+WITH a,
+     collect(DISTINCT s.name) AS systems,
+     collect(DISTINCT {fault: m.fault, severity: m.severity, component: c.name})[0..10] AS recent_events,
+     count(DISTINCT f) AS flight_count
 RETURN
-    c.name AS company,
-    c.ticker AS ticker,
-    d.path AS filing_path,
-    risks AS top_risk_factors,
-    owners AS major_asset_managers
+    a.tail_number AS tail_number,
+    a.model AS model,
+    a.manufacturer AS manufacturer,
+    a.operator AS operator,
+    systems,
+    flight_count,
+    recent_events AS maintenance_events
 ```
 
-![Add Cypher Template Tool](images/add_cypher_template_tool.png)
+### Tool 2: Find Aircraft with Shared Faults
 
-### Tool 2: Find Shared Risks Between Companies
+**Tool Name:** `find_shared_faults`
 
-**Tool Name:** `find_shared_risks`
-
-**Description:** Find risk factors that two companies have in common from their SEC filings.
+**Description:** Find maintenance faults that two aircraft have in common, helping identify fleet-wide issues.
 
 **Parameters:**
-- `company1` (string) - First company name
-- `company2` (string) - Second company name
+- `tail1` (string) - First aircraft tail number
+- `tail2` (string) - Second aircraft tail number
 
 **Cypher Query:**
 ```cypher
-MATCH (c1:Company)-[:FACES_RISK]->(r:RiskFactor)<-[:FACES_RISK]-(c2:Company)
-WHERE c1.name = $company1 AND c2.name = $company2
-WITH c1, c2, collect(DISTINCT r.name) AS shared_risks
+MATCH (a1:Aircraft {tail_number: $tail1})-[:HAS_SYSTEM]->()-[:HAS_COMPONENT]->()-[:HAS_EVENT]->(m1:MaintenanceEvent),
+      (a2:Aircraft {tail_number: $tail2})-[:HAS_SYSTEM]->()-[:HAS_COMPONENT]->()-[:HAS_EVENT]->(m2:MaintenanceEvent)
+WHERE m1.fault = m2.fault
+WITH a1, a2, collect(DISTINCT m1.fault) AS shared_faults
 RETURN
-    c1.name AS company_1,
-    c2.name AS company_2,
-    shared_risks,
-    size(shared_risks) AS num_shared_risks
+    a1.tail_number AS aircraft_1,
+    a2.tail_number AS aircraft_2,
+    shared_faults,
+    size(shared_faults) AS num_shared_faults
 ```
 
-![Find Shared Risks Tool](images/agent_tool_shared_risk.png)
+### Tool 3: Get Maintenance Summary
 
-## Step 4: Add Similarity Search Tool
+**Tool Name:** `get_maintenance_summary`
 
-Click **Add Tool** and select **Similarity Search** to configure a semantic search tool using the existing vector index:
+**Description:** Get a summary of maintenance events for a specific aircraft, grouped by severity.
 
-**Tool Name:** `search_filing_content`
+**Parameters:** `tail_number` (string) - The aircraft tail number (e.g., "N95040A")
 
-**Description:** Search SEC filing content semantically to find relevant passages about specific topics, risks, or business information.
+**Cypher Query:**
+```cypher
+MATCH (a:Aircraft {tail_number: $tail_number})-[:HAS_SYSTEM]->(s:System)
+      -[:HAS_COMPONENT]->(c:Component)-[:HAS_EVENT]->(m:MaintenanceEvent)
+RETURN
+    m.severity AS severity,
+    count(m) AS event_count,
+    collect(DISTINCT m.fault)[0..5] AS sample_faults,
+    collect(DISTINCT c.name)[0..5] AS affected_components
+ORDER BY event_count DESC
+```
 
-**Configuration:**
-- **Embedding provider:** `openai`
-- **Embedding model:** `text-embedding-ada-002`
-- **Vector Index:** `chunkEmbeddings`
-- **Top K:** 5
-
-![Similarity Search Tool](images/similiarity_search_tool.png)
-
-## Step 5: Add Text2Cypher Tool
+## Step 4: Add Text2Cypher Tool
 
 Click **Add Tool** and select **Text2Cypher** to enable natural language to Cypher translation:
 
-**Tool Name:** `query_database`
+**Tool Name:** `query_aircraft_graph`
 
-**Description:** Query the SEC 10-K filings knowledge graph using natural language. This tool translates user questions into Cypher queries to retrieve precise data about companies, their risk factors from SEC filings, institutional ownership by asset managers, financial metrics, products mentioned in filings, and the relationships between these entities. Use this for ad-hoc questions that require flexible data exploration beyond the pre-defined Cypher templates.
+**Description:** Query the Aircraft Digital Twin knowledge graph using natural language. This tool translates user questions into Cypher queries to retrieve data about aircraft, their systems and components, maintenance events and fault history, flight operations and delays, airports, sensor metadata, and component removals. Use this for ad-hoc questions that require flexible data exploration beyond the pre-defined Cypher templates.
 
-![Text2Cypher Tool](images/text2cypher_tool.png)
-
-## Step 6: Test the Agent
+## Step 5: Test the Agent
 
 Test your agent with the sample questions below. After each test, observe:
 1. Which tool the agent selected and why
@@ -247,42 +251,42 @@ Test your agent with the sample questions below. After each test, observe:
 
 ### Cypher Template Questions
 
-Try asking: **"Tell me about Apple's SEC filing and their major investors"**
+Try asking: **"Tell me about aircraft N95040A"**
 
-The agent recognizes this matches the `get_company_overview` template and executes the pre-defined Cypher query with "APPLE INC" as the parameter.
-
-![Apple Query Agent](images/apple_query_agent.png)
-
-We can see the agent's reasoning for selecting the `get_company_overview` tool and how it synthesized the response into a readable format:
-
-![Apple Agent Reasoning](images/apple_agent_reasoning.png)
+The agent recognizes this matches the `get_aircraft_overview` template and executes the pre-defined Cypher query with "N95040A" as the parameter. You'll see the aircraft's model, operator, systems, flight count, and recent maintenance events.
 
 Other Cypher template questions to try:
-- "What risks do Apple and Microsoft share?" - Uses the `find_shared_risks` template to compare risk factors between two companies.
-
-### Semantic Search Questions
-
-Try asking: **"What do the filings say about AI and machine learning?"**
-
-The agent uses the similarity search tool to find semantically relevant passages from SEC filings, then synthesizes insights from Microsoft and NVIDIA's discussions of AI.
-
-![AI/ML Agent Response](images/ai_ml_agent_response.png)
-
-Other semantic search questions to try:
-- "Find content about supply chain risks" - Searches for passages discussing supply chain challenges and dependencies.
-- "What do companies say about climate change?" - Finds relevant environmental risk disclosures across filings.
+- "What faults do aircraft N95040A and N30268B share?" — Uses `find_shared_faults` to compare maintenance history between two aircraft.
+- "Show the maintenance summary for N54980C" — Uses `get_maintenance_summary` to show events grouped by severity.
 
 ### Text2Cypher Questions
 
-Try asking: **"Which company has the most risk factors?"**
+Try asking: **"Which aircraft has the most critical maintenance events?"**
 
-The agent translates this natural language question into a Cypher query that counts risk factors per company and returns the highest.
-
-![Company Risk Factors](images/company_risk_factors.png)
+The agent translates this natural language question into a Cypher query that counts critical-severity maintenance events per aircraft and returns the highest.
 
 Other Text2Cypher questions to try:
-- "How many products does NVIDIA mention?" - Generates a query to count Product nodes linked to NVIDIA.
-- "What executives are mentioned by Apple?" - Creates a query to find Executive nodes associated with Apple.
+- "What are the top causes of flight delays?" — Generates a query to aggregate delay causes.
+- "Which airports have the most delayed arrivals?" — Creates a query joining Flights, Delays, and Airports.
+- "Show all components in the hydraulics system" — Traverses the System → Component hierarchy.
+- "Find flights operated by ExampleAir" — Queries flight operations by operator.
+
+## Step 6: (Optional) Add Similarity Search Tool
+
+> **Note:** Similarity Search requires an embedding provider that matches the embeddings stored in your vector index. If you created embeddings in Lab 6 using Databricks Foundation Model APIs (BGE-large, 1024 dimensions), you'll need a compatible embedding provider configured in Aura. If you have an OpenAI API key available, you can re-embed the chunks with OpenAI and use the similarity search tool. Otherwise, skip this step — the Cypher Template and Text2Cypher tools provide comprehensive access to the graph.
+
+If you have a compatible embedding provider:
+
+1. Click **Add Tool** and select **Similarity Search**
+2. **Tool Name:** `search_maintenance_docs`
+3. **Description:** Search aircraft maintenance documentation semantically to find relevant procedures, troubleshooting steps, and specifications.
+4. Configure the embedding provider and select the `maintenanceChunkEmbeddings` vector index
+5. Set **Top K** to 5
+
+Sample questions for similarity search:
+- "How do I troubleshoot engine vibration?"
+- "What are the EGT limits during takeoff?"
+- "What causes hydraulic pressure loss?"
 
 ## Step 7: (Optional) Deploy to API
 
@@ -293,65 +297,68 @@ Deploy your agent to a production endpoint:
 
 ## Summary
 
-You have now built an Aura Agent that combines three powerful retrieval patterns:
+You have built an Aura Agent that provides no-code access to the Aircraft Digital Twin knowledge graph using powerful retrieval patterns:
 
 | Tool Type | Purpose | Best For |
 |-----------|---------|----------|
-| **Cypher Templates** | Controlled, precise queries | Specific lookups, comparisons |
-| **Similarity Search** | Semantic retrieval | Finding relevant content by meaning |
-| **Text2Cypher** | Flexible natural language | Ad-hoc questions about the data |
+| **Cypher Templates** | Controlled, precise queries | Aircraft overviews, shared faults, maintenance summaries |
+| **Text2Cypher** | Flexible natural language | Ad-hoc questions about topology, flights, delays, removals |
+| **Similarity Search** | Semantic retrieval (optional) | Finding maintenance procedures by meaning |
 
-These same patterns are implemented programmatically in Lab 5 (GraphRAG) and Lab 6 (MCP) using Python.
+These same retrieval patterns are implemented programmatically in Lab 6 (Semantic Search / GraphRAG) using Python, and the graph is queried by AI agents in Lab 4 (AgentCore) and Lab 7 (AgentBricks).
 
 ## Next Steps
 
-**This completes Part 1 - No-Code Getting Started.**
+Congratulations — you've completed the workshop! You can now:
+- Extend the agent with additional Cypher template tools (see examples below)
+- Deploy the agent as a production API endpoint
+- Explore the [Neo4j Aura Agents documentation](https://neo4j.com/docs/aura/aurads/aura-agents/) for advanced features
 
-To continue with the coding labs, proceed to **Part 2 - Introduction to Agents and GraphRAG with Neo4j**:
+## Additional Cypher Template Tools
 
-[Lab 4 - Intro to Bedrock and Agents](../Lab_4_Intro_to_Bedrock_and_Agents) - Set up your development environment in Amazon SageMaker and learn how AI agents work with LangGraph.
+These tools can be added to extend your agent's capabilities:
 
-## Future Tools
+### Get Component Removal History
 
-These additional Cypher template tools can be added to extend the agent's capabilities:
+**Tool Name:** `get_removal_history`
 
-### Get Asset Manager Portfolio
+**Description:** Get component removal history for an aircraft, including reasons and usage data.
 
-**Tool Name:** `get_manager_portfolio`
-
-**Description:** Get all companies owned by a specific asset manager and their associated risk factors.
-
-**Parameters:** `manager_name` (string) - The asset manager name (e.g., "BlackRock Inc.", "Berkshire Hathaway Inc")
+**Parameters:** `tail_number` (string) - The aircraft tail number (e.g., "N95040A")
 
 **Cypher Query:**
 ```cypher
-MATCH (am:AssetManager {managerName: $manager_name})-[o:OWNS]->(c:Company)
-OPTIONAL MATCH (c)-[:FACES_RISK]->(r:RiskFactor)
-WITH am, c, o, collect(DISTINCT r.name)[0..5] AS company_risks
+MATCH (a:Aircraft {tail_number: $tail_number})-[:HAS_REMOVAL]->(r:Removal)
+OPTIONAL MATCH (r)-[:REMOVED_COMPONENT]->(c:Component)
 RETURN
-    am.managerName AS asset_manager,
-    collect({
-        company: c.name,
-        ticker: c.ticker,
-        position_status: o.position_status,
-        key_risks: company_risks
-    }) AS portfolio
+    a.tail_number AS aircraft,
+    c.name AS component,
+    r.reason AS removal_reason,
+    r.removal_date AS date,
+    r.tsn AS time_since_new,
+    r.csn AS cycles_since_new
+ORDER BY r.removal_date DESC
+LIMIT 20
 ```
 
-### List All Companies
+### Fleet Summary
 
-**Tool Name:** `list_companies`
+**Tool Name:** `fleet_summary`
 
-**Description:** List all companies in the knowledge graph with their risk factor counts.
+**Description:** Get a summary of the entire fleet by manufacturer and model.
 
 **Parameters:** None
 
 **Cypher Query:**
 ```cypher
-MATCH (c:Company)
-OPTIONAL MATCH (c)-[:FACES_RISK]->(r:RiskFactor)
-WITH c, count(r) AS risk_count
-RETURN c.name AS company, c.ticker AS ticker, risk_count
-ORDER BY risk_count DESC
-LIMIT 20
+MATCH (a:Aircraft)
+OPTIONAL MATCH (a)-[:OPERATES_FLIGHT]->(f:Flight)
+WITH a, count(f) AS flights
+RETURN
+    a.manufacturer AS manufacturer,
+    a.model AS model,
+    a.operator AS operator,
+    count(a) AS aircraft_count,
+    sum(flights) AS total_flights
+ORDER BY aircraft_count DESC
 ```

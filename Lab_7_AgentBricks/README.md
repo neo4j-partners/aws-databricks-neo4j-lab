@@ -88,7 +88,7 @@ From Lab 5 (both notebooks) and Lab 6, your graph contains:
 | Flight | 800 | Operations |
 | Delay | ~300 | Delay causes |
 | Airport | 12 | Route network |
-| Removal | ~100 | Component removal tracking |
+| Removal | ~60 | Component removal tracking |
 
 ## Query Routing Strategy
 
@@ -173,7 +173,9 @@ The multi-agent approach lets users ask questions in natural language without kn
 
 ## Next Steps
 
-After completing this lab, you can:
+Continue to [Lab 8 - Aura Agents](../Lab_8_Aura_Agents) to build a no-code conversational agent using the Neo4j Aura Agents console.
+
+After completing the workshop, you can:
 - Add more sub-agents (e.g., documentation search from Lab 6)
 - Create custom tools for specific maintenance workflows
 - Deploy the agent as a production service

@@ -14,7 +14,7 @@ Enter your email, the event code from the information sheet, and the validation 
 Once the entered information is validated, you will receive your own AWS and Neo4j accounts. Please refrain from sharing this account information with fellow attendees, as it is specifically assigned to you. Remember to save this information, as you will need it until the end of the lab. These accounts will be terminated by the end of the day.
 
 ## Improving the Labs
-As you work through these labs, we'd really appreciate your feedback. One way to help us improve is to open an issue by going [here](https://github.com/neo4j-partners/hands-on-lab-neo4j-and-bedrock/issues). Outright bugs, usability suggestions, and general comments are all appreciated. Pull requests are great too!
+As you work through these labs, we'd really appreciate your feedback. One way to help us improve is to open an issue by going [here](https://github.com/neo4j-partners/aws-databricks-neo4j-lab/issues). Outright bugs, usability suggestions, and general comments are all appreciated. Pull requests are great too!
 
 ## Sign into AWS
 We're going to sign into a new AWS account.  You may already have other AWS accounts.  If you use Chrome, you might consider using incognito mode for these exercises.  That's not mandatory though and other browsers work fine too.
@@ -40,5 +40,5 @@ At this point you can click through to dismiss any help dialogs. In the next lab
 
 ## Next Steps
 
-Continue to [Lab 1 - Aura Setup](../Lab_1_Aura_Setup) to create your Neo4j Aura database and load the SEC filings knowledge graph.
+Continue to [Lab 1 - Aura Setup](../Lab_1_Aura_Setup) to create your Neo4j Aura database and load the knowledge graph.
 

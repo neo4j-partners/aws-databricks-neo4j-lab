@@ -2,13 +2,12 @@
 
 ## What You Built
 
-A no-code Aura Agent combining three retrieval patterns:
+A no-code Aura Agent combining retrieval patterns:
 
 | Pattern | Tool | Best For |
 |---------|------|----------|
-| Structured queries | Cypher Templates | Precise lookups |
-| Semantic search | Similarity Search | Topic exploration |
-| Flexible queries | Text2Cypher | Ad-hoc questions |
+| Structured queries | Cypher Templates | Aircraft overviews, shared faults |
+| Flexible queries | Text2Cypher | Ad-hoc questions about the graph |
 
 ## Key Takeaways
 
@@ -17,11 +16,12 @@ A no-code Aura Agent combining three retrieval patterns:
 - **Multiple patterns** combine for comprehensive answers
 - **Agent reasoning** shows how decisions are made
 
-## What's Next
+## Workshop Complete!
 
-**Lab 4: Intro to Bedrock and Agents**
-
-Learn how agents work under the hood using Amazon Bedrock and LangGraph - the same concepts implemented programmatically.
+You've built AI agents across three platforms:
+- **AgentCore** (Lab 4) - Pre-deployed multi-agent orchestrator
+- **AgentBricks** (Lab 7) - Multi-agent supervisor with Genie + Neo4j MCP
+- **Aura Agents** (Lab 8) - No-code conversational interface
 
 ---
 

@@ -5,9 +5,10 @@
 Your knowledge graph is powerful, but querying it requires Cypher:
 
 ```cypher
-MATCH (c:Company)-[:FACES_RISK]->(r:RiskFactor)
-WHERE c.name = 'APPLE INC'
-RETURN r.name
+MATCH (a:Aircraft)-[:HAS_SYSTEM]->(s:System)
+      -[:HAS_COMPONENT]->(c:Component)-[:HAS_EVENT]->(m:MaintenanceEvent)
+WHERE a.tail_number = 'N95040A' AND m.severity = 'Critical'
+RETURN c.name, m.fault
 ```
 
 **Most users can't write this.**
@@ -15,8 +16,8 @@ RETURN r.name
 ## Users Don't Know Retriever Types
 
 You have different retrieval patterns:
-- Vector search for semantic content
-- Text2Cypher for precise facts
+- Cypher templates for precise lookups
+- Text2Cypher for flexible queries
 - Graph traversal for relationships
 
 **Users just want to ask questions.**

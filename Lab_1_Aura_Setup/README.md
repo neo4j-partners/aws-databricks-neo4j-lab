@@ -64,7 +64,7 @@ After your Aura instance is running, restore the pre-built knowledge graph:
 ### Step 1: Download the Backup File
 
 1. Download the backup file from GitHub:
-   - **Download link:** [finance_data.backup](https://github.com/neo4j-partners/hands-on-lab-neo4j-and-bedrock/raw/refs/heads/main/Lab_1_Aura_Setup/data/finance_data.backup)
+   - **Download link:** [finance_data.backup](https://github.com/neo4j-partners/aws-databricks-neo4j-lab/raw/refs/heads/main/Lab_1_Aura_Setup/data/finance_data.backup)
 2. Save the file to a location you can easily find (e.g., your Downloads folder)
 
 ### Step 2: Upload to Aura
@@ -79,13 +79,15 @@ After your Aura instance is running, restore the pre-built knowledge graph:
 
    ![Upload backup dialog with drag and drop area](images/restore_drag.png)
 
-5. Wait for the restore to complete - your instance will restart with the SEC 10-K filings knowledge graph
+5. Wait for the restore to complete - your instance will restart with a pre-built knowledge graph
 
-The backup contains:
-- SEC 10-K filing documents from major companies (Apple, Microsoft, NVIDIA, etc.)
+The backup contains a SEC 10-K filings knowledge graph with:
+- Filing documents from major companies (Apple, Microsoft, NVIDIA, etc.)
 - Extracted entities: Companies, Risk Factors, Products, Executives, Financial Metrics
 - Asset manager ownership data
 - Text chunks with vector embeddings for semantic search
+
+> **Note:** This knowledge graph is used for exploration in Part 3 below. In later labs (Labs 5-6), you'll clear this database and build an Aircraft Digital Twin graph from scratch using Databricks.
 
 ## Part 3: Explore the Knowledge Graph
 
@@ -160,4 +162,4 @@ The graph now displays nodes sized according to their degree centrality scores. 
 
 ## Next Steps
 
-After completing this lab, continue to [Lab 2 - Aura Agents](../Lab_2_Aura_Agents) to build an AI-powered agent using the Neo4j Aura Agent no-code platform.
+After completing this lab, continue to [Lab 4 - AWS AgentCore](../Lab_4_AWS_Agent_Core) to explore pre-deployed AI agent infrastructure and test the AgentCore Agent Sandbox.

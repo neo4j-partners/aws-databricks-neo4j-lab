@@ -2,30 +2,29 @@
 
 ## Step 3: Add Cypher Template Tools
 
-**Tool 1: get_company_overview**
+**Tool 1: get_aircraft_overview**
 ```cypher
-MATCH (c:Company {name: $company_name})
-OPTIONAL MATCH (c)-[:FACES_RISK]->(r:RiskFactor)
-OPTIONAL MATCH (am:AssetManager)-[:OWNS]->(c)
-RETURN c.name, collect(DISTINCT r.name)[0..10] AS risks,
-       collect(DISTINCT am.managerName)[0..10] AS owners
+MATCH (a:Aircraft {tail_number: $tail_number})
+OPTIONAL MATCH (a)-[:HAS_SYSTEM]->(s:System)
+OPTIONAL MATCH (s)-[:HAS_COMPONENT]->(c:Component)-[:HAS_EVENT]->(m:MaintenanceEvent)
+RETURN a.tail_number, a.model, a.operator,
+       collect(DISTINCT s.name) AS systems,
+       collect(DISTINCT {fault: m.fault, severity: m.severity})[0..10] AS events
 ```
 
-**Tool 2: find_shared_risks**
+**Tool 2: find_shared_faults**
 ```cypher
-MATCH (c1:Company)-[:FACES_RISK]->(r)<-[:FACES_RISK]-(c2:Company)
-WHERE c1.name = $company1 AND c2.name = $company2
-RETURN collect(DISTINCT r.name) AS shared_risks
+MATCH (a1:Aircraft {tail_number: $tail1})-[:HAS_SYSTEM]->()-[:HAS_COMPONENT]->()
+      -[:HAS_EVENT]->(m1:MaintenanceEvent),
+      (a2:Aircraft {tail_number: $tail2})-[:HAS_SYSTEM]->()-[:HAS_COMPONENT]->()
+      -[:HAS_EVENT]->(m2:MaintenanceEvent)
+WHERE m1.fault = m2.fault
+RETURN collect(DISTINCT m1.fault) AS shared_faults
 ```
 
-## Step 4: Add Similarity Search
+## Step 4: Add Text2Cypher
 
-- Index: `chunkEmbeddings`
-- Model: `text-embedding-ada-002`
-
-## Step 5: Add Text2Cypher
-
-For flexible, ad-hoc queries.
+For flexible, ad-hoc queries about aircraft, flights, delays, and more.
 
 ---
 

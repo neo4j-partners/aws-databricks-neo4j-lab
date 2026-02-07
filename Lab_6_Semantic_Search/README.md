@@ -131,7 +131,6 @@ The embedding and LLM models use Databricks Foundation Model APIs which are pre-
 | `04_graphrag_retrievers.ipynb` | Retrieval strategies and GraphRAG |
 | `05_hybrid_retrievers.ipynb` | Hybrid search combining vector + keyword retrieval |
 | `data_utils.py` | Utility functions for Neo4j and Databricks |
-| `maintenance_manual.md` | Local copy of A320-200 Maintenance Manual (for reference) |
 | `README.md` | This file |
 
 **Note:** The `MAINTENANCE_A320.md` file from `lab_setup/aircraft_digital_twin_data/` must be uploaded to the Unity Catalog Volume before running the notebooks. See `lab_setup/README.md` for upload instructions.
@@ -155,3 +154,7 @@ embedding = response["data"][0]["embedding"]  # 1024-dim vector
 Databricks Foundation Models use OpenAI-compatible format:
 - **Input**: `{"input": ["text1", "text2"]}`
 - **Output**: `{"data": [{"embedding": [0.1, ...]}, ...]}`
+
+## Next Steps
+
+Continue to [Lab 7 - AgentBricks](../Lab_7_AgentBricks) to build a multi-agent system combining Genie Space analytics with Neo4j MCP in Databricks.

@@ -241,13 +241,13 @@ ORDER BY avg_vibration DESC
 
 ---
 
-## Step 6: Save and Note the Genie Space ID
+## Step 5: Save and Note the Genie Space ID
 
-### 6.1 Save Configuration
+### 5.1 Save Configuration
 
 Click **Save** to preserve your Genie space configuration.
 
-### 6.2 Record the Genie Space Name
+### 5.2 Record the Genie Space Name
 
 Note the exact name of your Genie space (e.g., `Aircraft Sensor Analyst RK`). You'll need this in Part B when configuring the multi-agent supervisor.
 

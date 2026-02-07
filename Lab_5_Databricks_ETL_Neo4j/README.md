@@ -118,7 +118,7 @@ This loads additional node types and relationships required by Lab 7:
 | Flight | ~800 | Flight operations |
 | Delay | ~300 | Delay causes and durations |
 | MaintenanceEvent | ~300 | Fault tracking with severity |
-| Removal | ~100 | Component removal history |
+| Removal | ~60 | Component removal history |
 
 ### Part F: Explore in Neo4j Aura
 
@@ -179,7 +179,7 @@ ORDER BY Count DESC
 | Flight | ~800 | Flight operations |
 | Delay | ~300 | Delay causes |
 | MaintenanceEvent | ~300 | Fault tracking |
-| Removal | ~100 | Component removals |
+| Removal | ~60 | Component removals |
 
 ### Sample Aircraft
 

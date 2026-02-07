@@ -11,7 +11,7 @@ In this workshop, you'll learn to build AI-powered applications that combine:
 
 ## This Lab
 
-Set up your Neo4j Aura database and explore a pre-built SEC 10-K filings knowledge graph.
+Set up your Neo4j Aura database and explore a pre-built knowledge graph.
 
 ---
 

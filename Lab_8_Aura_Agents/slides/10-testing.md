@@ -3,16 +3,14 @@
 ## Sample Questions by Tool Type
 
 ### Cypher Templates
-- "Tell me about Apple's SEC filing and major investors"
-- "What risks do Apple and Microsoft share?"
-
-### Similarity Search
-- "What do the filings say about AI and machine learning?"
-- "Find content about supply chain risks"
+- "Tell me about aircraft N95040A"
+- "What faults do aircraft N95040A and N30268B share?"
+- "Show the maintenance summary for N54980C"
 
 ### Text2Cypher
-- "Which company has the most risk factors?"
-- "How many products does NVIDIA mention?"
+- "Which aircraft has the most critical maintenance events?"
+- "What are the top causes of flight delays?"
+- "Which airports have the most delayed arrivals?"
 
 ## What to Observe
 

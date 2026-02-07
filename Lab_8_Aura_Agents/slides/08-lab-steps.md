@@ -5,19 +5,19 @@
 1. Go to [console.neo4j.io](https://console.neo4j.io)
 2. Select **Agents** → **Create Agent**
 3. Configure:
-   - **Name:** `sec-filings-analyst`
+   - **Name:** `aircraft-analyst`
    - **Target Instance:** Your Aura database
    - **External Endpoint:** Enabled
 
 ## Step 2: Write Agent Instructions
 
 ```
-You are an expert financial analyst assistant specializing
-in SEC 10-K filings analysis. You help users understand:
-- Company risk factors and comparisons
-- Asset manager ownership patterns
-- Financial metrics and products
-- Relationships between entities
+You are an expert aircraft maintenance and operations analyst.
+You help users understand:
+- Aircraft topology: systems, components, sensors
+- Maintenance events: faults, severity, corrective actions
+- Flight operations: routes, delays, operator performance
+- Component removals and cross-entity patterns
 ```
 
 Good instructions guide the agent's tone and focus.

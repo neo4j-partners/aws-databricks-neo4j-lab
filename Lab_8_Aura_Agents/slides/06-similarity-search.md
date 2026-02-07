@@ -1,4 +1,4 @@
-# Similarity Search Tool
+# Similarity Search Tool (Optional)
 
 ## Semantic Content Discovery
 
@@ -7,29 +7,30 @@ Similarity search finds content by **meaning**, not keywords.
 ## How It Works
 
 ```
-User Question: "What do filings say about artificial intelligence?"
+User Question: "How do I troubleshoot engine vibration?"
     ↓
 Question → Embedding (vector)
     ↓
 Find chunks with similar embeddings
     ↓
-Return semantically relevant passages
+Return semantically relevant maintenance procedures
 ```
 
 ## Configuration
 
 | Setting | Purpose |
 |---------|---------|
-| **Embedding Provider** | OpenAI, Bedrock, etc. |
-| **Embedding Model** | text-embedding-ada-002 |
-| **Vector Index** | chunkEmbeddings |
+| **Embedding Provider** | Must match embeddings in the index |
+| **Vector Index** | maintenanceChunkEmbeddings |
 | **Top K** | Number of results (e.g., 5) |
 
 ## Best For
 
-- "What does [topic] mean?"
-- "Find information about..."
-- Conceptual, exploratory questions
+- "How do I troubleshoot...?"
+- "What are the limits for...?"
+- Procedural and specification questions
+
+> **Note:** Requires a compatible embedding provider. See the README for details.
 
 ---
 

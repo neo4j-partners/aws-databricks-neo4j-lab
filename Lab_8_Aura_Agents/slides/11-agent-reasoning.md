@@ -5,18 +5,18 @@
 The agent shows its reasoning process:
 
 ```
-Question: "Tell me about Apple Inc"
+Question: "Tell me about aircraft N95040A"
 
-Reasoning: This question asks for company overview information.
-           The get_company_overview tool is designed for this.
-           Parameter: company_name = "APPLE INC"
+Reasoning: This question asks for aircraft overview information.
+           The get_aircraft_overview tool is designed for this.
+           Parameter: tail_number = "N95040A"
 
-Action: Calling get_company_overview with company_name="APPLE INC"
+Action: Calling get_aircraft_overview with tail_number="N95040A"
 
-Result: Company data with risks and investors
+Result: Aircraft data with systems and maintenance events
 
-Response: "Apple Inc is a technology company that faces
-          several key risk factors including..."
+Response: "Aircraft N95040A is a Boeing B737-800 operated by
+          ExampleAir with 4 systems and recent maintenance..."
 ```
 
 ## Why Reasoning Matters

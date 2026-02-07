@@ -5,22 +5,22 @@
 Text2Cypher uses an LLM to convert questions into Cypher:
 
 ```
-"Which company has the most risk factors?"
+"Which aircraft has the most critical maintenance events?"
     ↓
-MATCH (c:Company)-[:FACES_RISK]->(r:RiskFactor)
-RETURN c.name, count(r) AS riskCount
-ORDER BY riskCount DESC
-LIMIT 1
+MATCH (a:Aircraft)-[:HAS_SYSTEM]->()-[:HAS_COMPONENT]->()
+      -[:HAS_EVENT]->(m:MaintenanceEvent {severity: 'Critical'})
+RETURN a.tail_number, count(m) AS criticalEvents
+ORDER BY criticalEvents DESC LIMIT 1
 ```
 
 ## When to Use
 
 | Question Pattern | Example |
 |------------------|---------|
-| Counts | "How many products does Apple mention?" |
-| Lists | "List all companies in the database" |
-| Comparisons | "Which company has the most executives?" |
-| Specific facts | "What is NVIDIA's ticker symbol?" |
+| Counts | "How many flights does ExampleAir operate?" |
+| Lists | "List all airports in the route network" |
+| Comparisons | "Which aircraft has the most delays?" |
+| Specific facts | "What model is aircraft N95040A?" |
 
 ## Trade-offs
 

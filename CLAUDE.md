@@ -4,13 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-This is a hands-on workshop teaching GraphRAG (Graph Retrieval-Augmented Generation) using Neo4j and AWS Bedrock. The workshop uses SEC 10-K filings as the dataset and progresses from no-code tools to building custom agents.
+This is a hands-on workshop teaching AI agents and GraphRAG using Neo4j, AWS, and Databricks. The workshop uses an Aircraft Digital Twin dataset and progresses from setup through ETL, semantic search, and multi-agent orchestration across three platforms (AWS AgentCore, Databricks AgentBricks, Neo4j Aura Agents).
 
 ## Workshop Structure
 
-- **Part 1 (Labs 0-2)**: No-code exploration using Neo4j Aura console and Aura Agents visual builder
-- **Part 2 (Labs 4-5)**: Python-based GraphRAG with LangGraph and neo4j-graphrag library
-- **Part 3 (Labs 6-7)**: Advanced API integration and MCP (Model Context Protocol) agents
+- **Phase 1 (Labs 0-1)**: Environment setup — AWS console sign-in, Neo4j Aura database creation, backup restore
+- **Phase 2 (Lab 4)**: AWS AgentCore — Explore pre-deployed multi-agent orchestrator with Neo4j MCP
+- **Phase 3 (Labs 5-6)**: Databricks ETL + Semantic Search — Load Aircraft Digital Twin to Neo4j, add embeddings and GraphRAG retrievers
+- **Phase 4 (Lab 7)**: Databricks AgentBricks — Multi-agent supervisor combining Genie Space + Neo4j MCP
+- **Phase 5 (Lab 8)**: Neo4j Aura Agents — No-code agent with Cypher Templates and Text2Cypher
 
 ## Key Configuration
 
@@ -26,34 +28,37 @@ Databricks notebooks use Foundation Model APIs (MLflow deployments client) which
 
 ## Lab Code Patterns
 
-### Lab 4 - Basic LangGraph Agent
-Location: `Lab_4_Intro_to_Bedrock_and_Agents/basic_langgraph_agent.ipynb`
+### Lab 4 - AWS AgentCore
+Location: `Lab_4_AWS_Agent_Core/`
 
-Uses `ChatBedrockConverse` from langchain-aws with the ReAct pattern:
-```python
-from langchain_aws import ChatBedrockConverse
-from langgraph.graph import StateGraph, MessagesState
-from langgraph.prebuilt import ToolNode
-```
+Pre-deployed multi-agent orchestrator using AgentCore with Neo4j MCP Server. Setup code in `setup/`:
+- `orchestrator_agent.py`: Main routing agent
+- `maintenance_agent.py`, `operations_agent.py`: Specialist agents
+- `invoke_agent.py`: Python client for calling agents
+- Uses Neo4j MCP tools: `get-schema` (read-only) and `read-cypher`
 
-For cross-region inference profiles (MODEL_ID starting with `us.` or `global.`), derive base_model_id:
-```python
-if MODEL_ID.startswith("us.anthropic."):
-    BASE_MODEL_ID = MODEL_ID.replace("us.anthropic.", "anthropic.")
-```
+### Lab 5 - Databricks ETL to Neo4j
+Location: `Lab_5_Databricks_ETL_Neo4j/`
 
-### Lab 5 - GraphRAG
-Location: `Lab_5_GraphRAG/`
+Two notebooks:
+- `01_aircraft_etl_to_neo4j.ipynb`: Loads Aircraft, System, Component nodes using Neo4j Spark Connector
+- `02_load_neo4j_full.ipynb`: Loads full dataset (Sensors, Flights, Airports, Delays, MaintenanceEvents, Removals) using Python neo4j driver
 
-Uses a forked neo4j-graphrag with Bedrock support:
-```bash
-pip install "neo4j-graphrag[bedrock] @ git+https://github.com/neo4j-partners/neo4j-graphrag-python.git@bedrock-embeddings"
-```
+Data is read from Unity Catalog Volume: `/Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/`
+
+### Lab 6 - Semantic Search / GraphRAG
+Location: `Lab_6_Semantic_Search/`
+
+Three notebooks + utility module:
+- `03_data_and_embeddings.ipynb`: Loads A320-200 Maintenance Manual, creates Document/Chunk nodes, generates embeddings, creates vector + fulltext indexes
+- `04_graphrag_retrievers.ipynb`: VectorRetriever, VectorCypherRetriever, GraphRAG pipeline
+- `05_hybrid_retrievers.ipynb`: HybridRetriever, HybridCypherRetriever (optional)
 
 Key utility classes in `data_utils.py`:
 - `Neo4jConnection`: Manages driver connection (credentials passed explicitly)
-- `get_embedder()`: Returns `DatabricksEmbeddings` using Foundation Model APIs
-- `get_llm()`: Returns `DatabricksLLM` using Foundation Model APIs
+- `DatabricksEmbeddings`: Embedder using Foundation Model APIs (BGE-large, 1024 dims)
+- `DatabricksLLM`: LLM using Foundation Model APIs (Llama 3.3 70B)
+- `get_embedder()`, `get_llm()`: Factory functions
 - `split_text()`: Wraps `FixedSizeSplitter` with async handling for Jupyter
 
 Graph structure for chunked documents:
@@ -61,45 +66,42 @@ Graph structure for chunked documents:
 (:Document) <-[:FROM_DOCUMENT]- (:Chunk) -[:NEXT_CHUNK]-> (:Chunk)
 ```
 
-### Lab 6 - Aura Agents API
-Location: `Lab_6_Aura_Agents_API/aura_agent_client.ipynb`
+### Lab 7 - AgentBricks
+Location: `Lab_7_AgentBricks/`
 
-Contains `AuraAgentClient` class for OAuth2 authentication and agent invocation:
-- Token URL: `https://api.neo4j.io/oauth/token`
-- Uses client credentials flow with Basic Auth
-- Tokens cached and auto-refreshed on 401
+Documentation-only lab (no notebooks):
+- `PART_A.md`: Create Genie Space for aircraft sensor analytics over Unity Catalog tables
+- `PART_B.md`: Create Multi-Agent Supervisor combining Genie Space + Neo4j MCP agent
 
-### Lab 7 - MCP Agent
-Location: `Lab_7_Neo4j_MCP_Agent/`
+Data sources: `aws-databricks-neo4j-lab.lakehouse` (sensor tables) and Neo4j MCP connection
 
-Two implementations:
-- `neo4j_langgraph_mcp_agent.ipynb`: LangGraph + langchain-mcp-adapters
-- `neo4j_strands_mcp_agent.ipynb`: Alternative using Strands framework
+### Lab 8 - Aura Agents
+Location: `Lab_8_Aura_Agents/`
 
-MCP connection pattern:
-```python
-from mcp.client.streamable_http import streamablehttp_client
-from langchain_mcp_adapters.tools import load_mcp_tools
-```
+No-code lab using Neo4j Aura Agents console:
+- Part A: Explore the Aircraft Digital Twin graph with Cypher queries
+- Part B: Build an agent with Cypher Template tools, Text2Cypher tool
+- `slides/`: 12 presentation slides
 
 ## Knowledge Graph Schema
 
-The SEC 10-K dataset includes:
-- **Nodes**: Document, Chunk, Company, Product, RiskFactor, Executive, FinancialMetric, AssetManager
-- **Relationships**: FROM_DOCUMENT, NEXT_CHUNK, FROM_CHUNK, FACES_RISK, OFFERS, HAS_EXECUTIVE, REPORTS, OWNS
-- **Vector Index**: `chunkEmbeddings` on Chunk.embedding (1024 dims for Titan, 1536 for OpenAI)
-- **Fulltext Indexes**: `chunkText`, `search_entities`
+The Aircraft Digital Twin dataset includes:
+- **Nodes**: Aircraft, System, Component, Sensor, Airport, Flight, Delay, MaintenanceEvent, Removal, Document, Chunk
+- **Relationships**: HAS_SYSTEM, HAS_COMPONENT, HAS_SENSOR, HAS_EVENT, OPERATES_FLIGHT, DEPARTS_FROM, ARRIVES_AT, HAS_DELAY, AFFECTS_SYSTEM, AFFECTS_AIRCRAFT, HAS_REMOVAL, REMOVED_COMPONENT, FROM_DOCUMENT, NEXT_CHUNK
+- **Vector Index**: `maintenanceChunkEmbeddings` on Chunk.embedding (1024 dims, Databricks BGE-large)
+- **Fulltext Index**: `maintenanceChunkText` on Chunk.text
 
 ## Running Notebooks
 
-The notebooks are designed for Databricks but can be adapted locally:
+The notebooks are designed for Databricks:
 1. Enter Neo4j credentials in each notebook's Configuration cell
 2. Install dependencies per notebook (uses `%pip install`)
 3. Databricks Foundation Model APIs require a Databricks workspace
 
-## Dependencies
+## Admin Setup
 
-Lab 5 uses `pyproject.toml` at `Lab_5_GraphRAG/src/pyproject.toml`:
-- Python 3.11+
-- neo4j-graphrag
-- mlflow, nest-asyncio
+Lab setup automation is in `lab_setup/`:
+- `auto_scripts/`: CLI tool for cluster creation, data upload, table creation, warehouse setup
+- `aircraft_digital_twin_data/`: CSV data files and maintenance manuals
+- `scripts/`: Shell scripts for external location setup
+- `docs/`: Manual setup and workspace configuration guides

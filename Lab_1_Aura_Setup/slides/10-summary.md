@@ -3,7 +3,7 @@
 ## What You Accomplished
 
 - Set up a **Neo4j Aura** database on AWS
-- Restored a **knowledge graph** from SEC 10-K filings
+- Restored a pre-built **knowledge graph** from backup
 - Explored the graph using **Neo4j Explore**
 - Saved credentials for later labs
 
@@ -27,7 +27,7 @@ You'll enter these directly in each notebook's Configuration cell.
 
 ## Next Up
 
-**Lab 2: Aura Agents** - Build an AI-powered agent that queries your knowledge graph using natural language - no code required!
+**Lab 4: AWS AgentCore** - Explore pre-deployed AI agent infrastructure and test the AgentCore Agent Sandbox.
 
 ---
 

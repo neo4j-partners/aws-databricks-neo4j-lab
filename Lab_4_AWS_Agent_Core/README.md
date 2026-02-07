@@ -227,7 +227,7 @@ As you test queries, observe how the multi-agent system works:
 
 1. **Query Classification** - The Router Node analyzes your question and classifies it as "maintenance" or "operations"
 2. **Agent Selection** - The query is routed to the appropriate specialist agent
-3. **Tool Selection** - The specialist agent selects the right MCP tools (Cypher read/write)
+3. **Tool Selection** - The specialist agent selects the right MCP tools (`get-schema` and `read-cypher`)
 4. **Cypher Generation** - The agent generates a graph query based on the domain schema
 5. **Response Synthesis** - Graph results are formatted into a natural language answer
 

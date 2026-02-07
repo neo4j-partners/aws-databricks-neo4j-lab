@@ -417,7 +417,7 @@ User Question
 Multi-Agent Supervisor
      |
      +---> "sensor readings?" ---> Genie Space ---> Unity Catalog
-     |                                              aws-databricks-neo4j-lab.lab-schema
+     |                                              aws-databricks-neo4j-lab.lakehouse
      |                                              (SQL Analytics)
      |
      +---> "relationships?" ---> Neo4j MCP ---> Knowledge Graph

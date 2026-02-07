@@ -1,15 +1,15 @@
-# Lab 2: Aura Agents
+# Lab 8: Aura Agents
 
 ## From Graph to Conversation
 
-In Lab 1, you set up a knowledge graph. Now you'll make it **conversational**.
+In previous labs, you built an Aircraft Digital Twin knowledge graph. Now you'll make it **conversational**.
 
 ## What You'll Build
 
-An AI-powered agent that helps users analyze SEC 10-K filings by combining:
-- **Semantic search** - Find content by meaning
-- **Graph traversal** - Follow relationships
+An AI-powered agent that helps users explore the Aircraft Digital Twin by combining:
+- **Graph traversal** - Follow relationships across aircraft topology
 - **Natural language** - No Cypher required
+- **Automatic tool selection** - The agent picks the right approach
 
 ## No Code Required
 
