@@ -21,6 +21,11 @@ EXPECTED_ROW_COUNTS: dict[str, int] = {
 }
 
 
+def _lakehouse_target(volume_config: VolumeConfig) -> str:
+    """Return the backtick-quoted `catalog`.`lakehouse_schema` target."""
+    return f"`{volume_config.catalog}`.`{volume_config.lakehouse_schema}`"
+
+
 def get_table_creation_sql(
     volume_config: VolumeConfig,
 ) -> list[tuple[str, str]]:
@@ -32,18 +37,14 @@ def get_table_creation_sql(
     Returns:
         List of (description, SQL statement) tuples.
     """
-    catalog = volume_config.catalog
-    volume_schema = volume_config.schema
-    volume = volume_config.volume
-    lakehouse_schema = volume_config.lakehouse_schema
-    volume_path = f"/Volumes/{catalog}/{volume_schema}/{volume}"
-    target = f"`{catalog}`.`{lakehouse_schema}`"
+    volume_path = volume_config.volumes_path
+    target = _lakehouse_target(volume_config)
     tblprops = "TBLPROPERTIES ('delta.columnMapping.mode' = 'name')"
 
     return [
         (
             "Creating lakehouse schema",
-            f"CREATE SCHEMA IF NOT EXISTS `{catalog}`.`{lakehouse_schema}`",
+            f"CREATE SCHEMA IF NOT EXISTS {target}",
         ),
         (
             "Creating aircraft table",
@@ -102,7 +103,7 @@ def get_comment_sql(volume_config: VolumeConfig) -> list[str]:
     Returns:
         List of SQL COMMENT statements.
     """
-    target = f"`{volume_config.catalog}`.`{volume_config.lakehouse_schema}`"
+    target = _lakehouse_target(volume_config)
 
     return [
         # Aircraft table
@@ -139,7 +140,7 @@ def get_verification_sql(volume_config: VolumeConfig) -> str:
     Returns:
         SQL query string.
     """
-    target = f"`{volume_config.catalog}`.`{volume_config.lakehouse_schema}`"
+    target = _lakehouse_target(volume_config)
 
     return f"""
         SELECT 'aircraft' as table_name, COUNT(*) as row_count FROM {target}.aircraft

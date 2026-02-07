@@ -3,6 +3,7 @@
 Provides warehouse discovery and SQL statement execution via the Statement Execution API.
 """
 
+import time
 from typing import Any
 
 from databricks.sdk import WorkspaceClient
@@ -86,8 +87,6 @@ def execute_sql(
         RuntimeError: If statement fails.
         TimeoutError: If statement doesn't complete in time.
     """
-    import time
-
     # API max wait is 50 seconds, so we use that and poll if needed
     api_wait = "50s"
 

@@ -247,7 +247,7 @@ def _print_summary(
     config: Config,
 ) -> None:
     """Print final setup summary."""
-    all_ok = (tables_ok is None or tables_ok) and cluster_id is not None or tables_ok
+    all_ok = tables_ok is not False  # True or None (skipped) both count as ok
 
     print_header("Setup Complete" if all_ok else "Setup Completed with Errors")
 

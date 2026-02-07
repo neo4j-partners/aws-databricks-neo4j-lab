@@ -67,27 +67,3 @@ def print_header(title: str) -> None:
     console.print("=" * 42, style="bold blue")
 
 
-def print_config_summary(
-    volume_path: str | None,
-    cluster_name: str,
-    spark_version: str,
-    runtime_engine: str,
-    node_type: str,
-    user_email: str,
-    timeout_minutes: int,
-    cluster_only: bool = False,
-) -> None:
-    """Print configuration summary."""
-    print_header("Databricks Environment Setup")
-
-    if cluster_only:
-        console.print("Mode:     [yellow]Cluster + libraries only[/yellow]")
-    elif volume_path:
-        console.print(f"Volume:   {volume_path}")
-
-    console.print(f"Cluster:  {cluster_name}")
-    console.print(f"Runtime:  {spark_version} + {runtime_engine}")
-    console.print(f"Node:     {node_type} (single node)")
-    console.print(f"User:     {user_email}")
-    console.print(f"Timeout:  {timeout_minutes} min")
-    console.print()
