@@ -1,0 +1,94 @@
+"""Cleanup logic for tearing down workshop resources.
+
+Deletes lakehouse schema (with tables), volume, volume schema, and catalog.
+Leaves the compute cluster intact.
+"""
+
+from databricks.sdk import WorkspaceClient
+from databricks.sdk.errors import NotFound
+from rich.console import Console
+
+from .config import VolumeConfig
+from .utils import print_header
+from .warehouse import execute_sql
+
+console = Console()
+
+
+def _drop_lakehouse_schema(
+    client: WorkspaceClient,
+    warehouse_id: str,
+    volume_config: VolumeConfig,
+    timeout_seconds: int,
+) -> None:
+    """Drop the lakehouse schema and all its tables via SQL CASCADE."""
+    target = f"`{volume_config.catalog}`.`{volume_config.lakehouse_schema}`"
+    console.print(f"  Dropping lakehouse schema {target} ...")
+    try:
+        execute_sql(
+            client,
+            warehouse_id,
+            f"DROP SCHEMA IF EXISTS {target} CASCADE",
+            timeout_seconds,
+        )
+        console.print("    Done.")
+    except RuntimeError as e:
+        console.print(f"    [yellow]Skipped: {e}[/yellow]")
+
+
+def _delete_volume(client: WorkspaceClient, volume_config: VolumeConfig) -> None:
+    """Delete the Unity Catalog volume."""
+    console.print(f"  Deleting volume {volume_config.full_path} ...")
+    try:
+        client.volumes.delete(name=volume_config.full_path)
+        console.print("    Done.")
+    except NotFound:
+        console.print("    Already deleted.")
+
+
+def _delete_schema(client: WorkspaceClient, volume_config: VolumeConfig) -> None:
+    """Delete the volume schema."""
+    full_name = f"{volume_config.catalog}.{volume_config.schema}"
+    console.print(f"  Deleting schema {full_name} ...")
+    try:
+        client.schemas.delete(full_name=full_name)
+        console.print("    Done.")
+    except NotFound:
+        console.print("    Already deleted.")
+
+
+def _delete_catalog(client: WorkspaceClient, volume_config: VolumeConfig) -> None:
+    """Delete the catalog (force cascades to any remaining contents)."""
+    console.print(f"  Deleting catalog {volume_config.catalog} ...")
+    try:
+        client.catalogs.delete(name=volume_config.catalog, force=True)
+        console.print("    Done.")
+    except NotFound:
+        console.print("    Already deleted.")
+
+
+def run_cleanup(
+    client: WorkspaceClient,
+    warehouse_id: str,
+    volume_config: VolumeConfig,
+    timeout_seconds: int,
+) -> None:
+    """Delete lakehouse schema, volume, volume schema, and catalog.
+
+    Each step is idempotent — already-deleted resources are skipped.
+
+    Args:
+        client: Databricks workspace client.
+        warehouse_id: SQL Warehouse ID (for DROP SCHEMA CASCADE).
+        volume_config: Volume configuration identifying the resources.
+        timeout_seconds: Timeout per SQL statement.
+    """
+    print_header("Cleaning Up Workshop Resources")
+
+    _drop_lakehouse_schema(client, warehouse_id, volume_config, timeout_seconds)
+    _delete_volume(client, volume_config)
+    _delete_schema(client, volume_config)
+    _delete_catalog(client, volume_config)
+
+    console.print()
+    console.print("[green]Cleanup complete.[/green]")

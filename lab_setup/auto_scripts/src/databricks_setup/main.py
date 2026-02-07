@@ -1,11 +1,7 @@
-"""Main entry point for Databricks environment setup.
+"""Main entry point for Databricks environment setup and cleanup.
 
-Provides CLI interface for setting up Databricks clusters, libraries,
-data files, and lakehouse tables for the Neo4j workshop.
-
-Runs two parallel tracks:
-  Track A: Cluster creation + library installation
-  Track B: Data upload + lakehouse table creation (via SQL Warehouse)
+Provides CLI interface for setting up (and tearing down) Databricks
+clusters, libraries, data files, and lakehouse tables for the Neo4j workshop.
 """
 
 from concurrent.futures import ThreadPoolExecutor
@@ -15,6 +11,7 @@ import typer
 from databricks.sdk import WorkspaceClient
 from rich.console import Console
 
+from .cleanup import run_cleanup
 from .cluster import get_or_create_cluster, wait_for_cluster_running
 from .config import Config, SetupResult
 from .data_upload import upload_data_files, verify_upload
@@ -25,7 +22,7 @@ from .warehouse import get_or_start_warehouse
 
 app = typer.Typer(
     name="databricks-setup",
-    help="Setup Databricks environment for Neo4j workshop.",
+    help="Setup and cleanup Databricks environment for Neo4j workshop.",
     add_completion=False,
 )
 
@@ -101,6 +98,79 @@ def setup(
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")
         raise typer.Exit(code=1) from None
+
+
+@app.command()
+def cleanup(
+    volume: Annotated[
+        str,
+        typer.Argument(
+            help="Target volume in format 'catalog.schema.volume'",
+        ),
+    ] = "aws-databricks-neo4j-lab.lab-schema.lab-volume",
+    profile: Annotated[
+        str | None,
+        typer.Option(
+            "--profile", "-p",
+            help="Databricks CLI profile to use",
+        ),
+    ] = None,
+    yes: Annotated[
+        bool,
+        typer.Option(
+            "--yes", "-y",
+            help="Skip confirmation prompt",
+        ),
+    ] = False,
+) -> None:
+    """Delete lakehouse tables, volume, schemas, and catalog.
+
+    Removes everything created by the setup command except the compute
+    cluster.  Each step is idempotent — already-deleted resources are
+    skipped.
+
+    Examples:
+
+        # Interactive confirmation
+        databricks-setup cleanup
+
+        # Skip confirmation
+        databricks-setup cleanup --yes
+
+        # Explicit volume
+        databricks-setup cleanup my-catalog.my-schema.my-volume --yes
+    """
+    try:
+        _run_cleanup(volume=volume, profile=profile, yes=yes)
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(code=1) from None
+
+
+def _run_cleanup(volume: str, profile: str | None, yes: bool) -> None:
+    """Load config, confirm, and run cleanup."""
+    config = Config.load()
+    client = config.prepare(volume=volume, profile=profile)
+    warehouse_id = get_or_start_warehouse(client, config.warehouse)
+
+    _print_cleanup_target(config)
+
+    if not yes:
+        typer.confirm("Proceed with cleanup?", abort=True)
+
+    run_cleanup(client, warehouse_id, config.volume, config.warehouse.timeout_seconds)
+
+
+def _print_cleanup_target(config: Config) -> None:
+    """Print what will be deleted."""
+    print_header("Cleanup Target")
+    console.print(f"Catalog:    {config.volume.catalog}")
+    console.print(f"Schema:     {config.volume.catalog}.{config.volume.schema}")
+    console.print(f"Volume:     {config.volume.full_path}")
+    console.print(f"Lakehouse:  {config.volume.catalog}.{config.volume.lakehouse_schema}")
+    console.print()
+    console.print("[yellow]This will permanently delete the catalog and all its contents.[/yellow]")
+    console.print("[yellow]The compute cluster will NOT be affected.[/yellow]")
 
 
 # ---------------------------------------------------------------------------

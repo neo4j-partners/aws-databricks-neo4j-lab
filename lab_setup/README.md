@@ -16,7 +16,7 @@
 Complete these steps before the workshop begins:
 
 - [ ] Create Unity Catalog, Schema, and Volume (Step 1 — UI required)
-- [ ] Run `databricks-setup` to set up compute, upload data, and create tables (Step 2)
+- [ ] Run `databricks-setup setup` to set up compute, upload data, and create tables (Step 2)
 - [ ] Configure Databricks Genie Space (Lab 7)
 - [ ] Provide DBC file to participants (or host for download)
 - [ ] Test the complete workflow
@@ -179,7 +179,7 @@ Cloud provider defaults:
 
 ```bash
 cd lab_setup/auto_scripts
-uv run databricks-setup [VOLUME] [OPTIONS]
+uv run databricks-setup setup [VOLUME] [OPTIONS]
 ```
 
 | Option | Short | Description | Default |
@@ -193,19 +193,19 @@ Examples:
 
 ```bash
 # All defaults (both tracks run in parallel)
-uv run databricks-setup
+uv run databricks-setup setup
 
 # Cluster + libraries only
-uv run databricks-setup --cluster-only
+uv run databricks-setup setup --cluster-only
 
 # Data upload + lakehouse tables only
-uv run databricks-setup --tables-only
+uv run databricks-setup setup --tables-only
 
 # Explicit volume
-uv run databricks-setup my-catalog.my-schema.my-volume
+uv run databricks-setup setup my-catalog.my-schema.my-volume
 
 # Use a specific Databricks CLI profile
-uv run databricks-setup --profile my-workspace
+uv run databricks-setup setup --profile my-workspace
 ```
 
 ### What it does
@@ -238,62 +238,6 @@ If a cluster with the same name already exists, the CLI reuses it (starting it i
 
 To change defaults, edit `.env`.
 
-### Expected data files in volume
-
-The CLI uploads all `.csv` and `.md` files from `aircraft_digital_twin_data/` (excluding documentation files). This includes data for Labs 5, 6, and 7:
-
-```
-/Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/
-│
-│  Nodes (Lab 5 core)
-├── nodes_aircraft.csv
-├── nodes_systems.csv
-├── nodes_components.csv
-│
-│  Nodes (Lab 5 full dataset - notebook 02)
-├── nodes_airports.csv
-├── nodes_delays.csv
-├── nodes_flights.csv
-├── nodes_maintenance.csv
-├── nodes_removals.csv
-│
-│  Nodes (Lab 7 sensors)
-├── nodes_sensors.csv
-├── nodes_readings.csv          (23 MB, 345,600 rows)
-│
-│  Relationships (Lab 5 core)
-├── rels_aircraft_system.csv
-├── rels_system_component.csv
-│
-│  Relationships (Lab 5 full dataset - notebook 02)
-├── rels_aircraft_flight.csv
-├── rels_aircraft_removal.csv
-├── rels_component_event.csv
-├── rels_component_removal.csv
-├── rels_event_aircraft.csv
-├── rels_event_system.csv
-├── rels_flight_arrival.csv
-├── rels_flight_delay.csv
-├── rels_flight_departure.csv
-│
-│  Relationships (Lab 7)
-├── rels_system_sensor.csv
-│
-│  Maintenance Manuals (Lab 6)
-├── MAINTENANCE_A320.md
-├── MAINTENANCE_A321neo.md
-└── MAINTENANCE_B737.md
-```
-
-### Expected lakehouse table row counts
-
-| Table | Rows |
-|-------|------|
-| aircraft | 20 |
-| systems | 80 |
-| sensors | 160 |
-| sensor_readings | 345,600 |
-
 
 ---
 
@@ -301,70 +245,21 @@ The CLI uploads all `.csv` and `.md` files from `aircraft_digital_twin_data/` (e
 
 If you prefer to set up the cluster, libraries, and data through the Databricks UI instead of using `databricks-setup`, see the complete step-by-step guide in **[MANUAL_SETUP.md](docs/MANUAL_SETUP.md)**.
 
----
+### Cleanup
 
-## Step 3: Configure Databricks Genie Space (Lab 7)
+To tear down everything the setup created (lakehouse tables, volume, schemas, and catalog) while keeping the compute cluster:
 
-Databricks Genie provides a natural language interface for querying data.
+```bash
+cd lab_setup/auto_scripts
 
-### 3.1 Create Genie Space
+# Interactive confirmation
+uv run databricks-setup cleanup
 
-1. Navigate to **Genie** in the left sidebar (under AI/BI)
-2. Click **New** > **Genie space**
-3. Configure:
-   - **Name:** `Aircraft Sensor Analytics`
-   - **Description:** `Natural language queries for aircraft sensor data`
-4. Click **Create**
+# Skip confirmation
+uv run databricks-setup cleanup --yes
+```
 
-### 3.2 Add Tables to Genie Space
-
-1. In the Genie space, click **Add tables**
-2. Navigate to `aws-databricks-neo4j-lab.lakehouse`
-3. Select all four tables:
-   - `aircraft`
-   - `systems`
-   - `sensors`
-   - `sensor_readings`
-4. Click **Add**
-
-### 3.3 Configure Table Relationships (Optional but Recommended)
-
-Help Genie understand how tables relate:
-
-1. Click on **Data model** in the Genie space
-2. Define relationships:
-   - `systems.aircraft_id` → `aircraft.:ID(Aircraft)`
-   - `sensors.system_id` → `systems.:ID(System)`
-   - `sensor_readings.sensor_id` → `sensors.:ID(Sensor)`
-
-### 3.4 Add Sample Questions
-
-Add sample questions to help users understand what they can ask:
-
-1. Click **Instructions** in the Genie space
-2. Add sample questions:
-   - "What is the average EGT for all engines?"
-   - "Show vibration readings for aircraft N95040A"
-   - "Which sensors have the highest readings?"
-   - "Compare fuel flow across aircraft models"
-   - "Find sensors with readings above 700 degrees"
-   - "What are the daily average temperatures by aircraft?"
-
-### 3.5 Test Genie
-
-Test the Genie space with a sample query:
-
-1. Type: "What is the average temperature for each aircraft?"
-2. Verify Genie generates appropriate SQL and returns results
-3. Test a few more queries to ensure the space is working
-
-### 3.6 Record Genie Space ID
-
-For programmatic access in Lab 7, note the Genie Space ID:
-
-1. Open the Genie space
-2. Copy the ID from the URL: `https://your-workspace.cloud.databricks.com/genie/spaces/{SPACE_ID}`
-3. Provide this to participants (e.g., in a shared document or handout)
+Each step is idempotent — safe to re-run if partially completed.
 
 ---
 
