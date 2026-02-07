@@ -3,11 +3,17 @@
 Loads configuration from environment variables, .env files, and CLI arguments.
 """
 
+from __future__ import annotations
+
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from dotenv import load_dotenv
+
+if TYPE_CHECKING:
+    from databricks.sdk import WorkspaceClient
 
 
 @dataclass
@@ -61,7 +67,7 @@ class VolumeConfig:
     lakehouse_schema: str = "lakehouse"
 
     @classmethod
-    def from_string(cls, volume_spec: str) -> "VolumeConfig":
+    def from_string(cls, volume_spec: str) -> VolumeConfig:
         """Parse 'catalog.schema.volume' format."""
         parts = volume_spec.split(".")
         if len(parts) != 3:
@@ -105,13 +111,13 @@ class DataConfig:
 
 @dataclass
 class WarehouseConfig:
-    """SQL Warehouse configuration for serverless mode."""
+    """SQL Warehouse configuration."""
 
     name: str = "Starter Warehouse"
     timeout_seconds: int = 600
 
     @classmethod
-    def from_env(cls) -> "WarehouseConfig":
+    def from_env(cls) -> WarehouseConfig:
         """Load warehouse config from environment."""
         config = cls()
         if val := os.getenv("WAREHOUSE_NAME"):
@@ -134,7 +140,7 @@ class Config:
     databricks_profile: str | None = None
 
     @classmethod
-    def load(cls) -> "Config":
+    def load(cls) -> Config:
         """Load configuration from environment and .env file."""
         default_env = Path(__file__).parent.parent.parent.parent / ".env"
         if default_env.exists():
@@ -171,11 +177,55 @@ class Config:
 
         return config
 
+    def prepare(
+        self,
+        volume: str | None = None,
+        profile: str | None = None,
+        resolve_user: bool = False,
+        require_data_dir: bool = False,
+    ) -> WorkspaceClient:
+        """Finalize config and return a ready WorkspaceClient.
 
-def get_script_dir() -> Path:
-    """Get the directory containing the lab_setup scripts.
+        Handles volume parsing, profile resolution, user detection,
+        and data-directory validation — all the init logic that runs
+        after ``load()`` but before the tracks start.
 
-    Returns the lab_setup directory (parent of auto_scripts).
-    """
-    # auto_scripts/src/databricks_setup/config.py -> lab_setup
-    return Path(__file__).resolve().parent.parent.parent.parent
+        Args:
+            volume: Volume spec in 'catalog.schema.volume' format.
+                    Parsed into ``self.volume`` when provided.
+            profile: CLI-provided Databricks profile (overrides env).
+            resolve_user: If True and ``user_email`` is unset, detect
+                          the current workspace user.
+            require_data_dir: If True, raise if ``data.data_dir`` is missing.
+
+        Returns:
+            An authenticated WorkspaceClient.
+        """
+        from .utils import get_current_user, get_workspace_client
+
+        if volume is not None:
+            self.volume = VolumeConfig.from_string(volume)
+
+        effective_profile = profile or self.databricks_profile
+        client = get_workspace_client(effective_profile)
+
+        if resolve_user and not self.user_email:
+            self.user_email = get_current_user(client)
+
+        if require_data_dir and not self.data.data_dir.exists():
+            raise RuntimeError(f"Data directory not found: {self.data.data_dir}")
+
+        return client
+
+
+@dataclass
+class SetupResult:
+    """Outcome of the two parallel setup tracks."""
+
+    cluster_id: str | None = None
+    tables_ok: bool | None = None
+
+    @property
+    def success(self) -> bool:
+        """True unless the tables track explicitly failed."""
+        return self.tables_ok is not False

@@ -15,6 +15,7 @@ from rich.console import Console
 from rich.table import Table
 
 from .config import LibraryConfig
+from .models import LibraryCounts
 from .utils import poll_until
 
 console = Console()
@@ -31,11 +32,11 @@ def get_library_status(
 
 def count_library_states(
     statuses: list[LibraryFullStatus],
-) -> tuple[int, int, int, int]:
+) -> LibraryCounts:
     """Count libraries by state.
 
     Returns:
-        Tuple of (total, installed, pending, failed).
+        LibraryCounts with total, installed, pending, and failed tallies.
     """
     total = len(statuses)
     installed = sum(1 for s in statuses if s.status == LibraryInstallStatus.INSTALLED)
@@ -48,7 +49,7 @@ def count_library_states(
         )
     )
     failed = sum(1 for s in statuses if s.status == LibraryInstallStatus.FAILED)
-    return total, installed, pending, failed
+    return LibraryCounts(total=total, installed=installed, pending=pending, failed=failed)
 
 
 def install_libraries(
@@ -100,11 +101,12 @@ def wait_for_libraries(
 
     def check_status() -> tuple[bool, list[LibraryFullStatus]]:
         statuses = get_library_status(client, cluster_id)
-        total, installed, pending, failed = count_library_states(statuses)
+        counts = count_library_states(statuses)
         console.print(
-            f"  {installed}/{total} installed, {pending} pending, {failed} failed"
+            f"  {counts.installed}/{counts.total} installed, "
+            f"{counts.pending} pending, {counts.failed} failed"
         )
-        return pending == 0, statuses
+        return counts.pending == 0, statuses
 
     return poll_until(
         check_status,
@@ -158,10 +160,10 @@ def ensure_libraries_installed(
     console.print("Checking library status...")
 
     statuses = get_library_status(client, cluster_id)
-    total, installed, pending, failed = count_library_states(statuses)
+    counts = count_library_states(statuses)
 
-    if total > 0 and pending == 0:
-        console.print(f"  {installed} libraries already installed - skipping installation.")
+    if counts.total > 0 and counts.pending == 0:
+        console.print(f"  {counts.installed} libraries already installed - skipping installation.")
         print_library_status(statuses)
         return
 
@@ -169,6 +171,6 @@ def ensure_libraries_installed(
     statuses = wait_for_libraries(client, cluster_id)
     print_library_status(statuses)
 
-    _, _, _, failed = count_library_states(statuses)
-    if failed > 0:
-        console.print(f"[yellow]WARNING: {failed} library(ies) failed to install.[/yellow]")
+    counts = count_library_states(statuses)
+    if counts.failed > 0:
+        console.print(f"[yellow]WARNING: {counts.failed} library(ies) failed to install.[/yellow]")

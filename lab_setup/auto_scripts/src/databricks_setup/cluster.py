@@ -15,6 +15,7 @@ from databricks.sdk.service.compute import (
 from rich.console import Console
 
 from .config import ClusterConfig
+from .models import ClusterInfo
 from .utils import poll_until
 
 console = Console()
@@ -47,17 +48,17 @@ def ensure_instance_profile_registered(
     console.print("  Registered successfully.")
 
 
-def find_cluster(client: WorkspaceClient, cluster_name: str) -> tuple[str | None, State | None]:
+def find_cluster(client: WorkspaceClient, cluster_name: str) -> ClusterInfo | None:
     """Find an existing cluster by name.
 
     Returns:
-        Tuple of (cluster_id, state) or (None, None) if not found.
+        ClusterInfo if found, None otherwise.
     """
     clusters = client.clusters.list()
     for cluster in clusters:
-        if cluster.cluster_name == cluster_name:
-            return cluster.cluster_id, cluster.state
-    return None, None
+        if cluster.cluster_name == cluster_name and cluster.cluster_id and cluster.state:
+            return ClusterInfo(cluster_id=cluster.cluster_id, state=cluster.state)
+    return None
 
 
 def create_cluster(
@@ -185,18 +186,17 @@ def get_or_create_cluster(
 
     console.print(f"Looking for existing cluster \"{config.name}\"...")
 
-    cluster_id, state = find_cluster(client, config.name)
+    info = find_cluster(client, config.name)
 
-    if cluster_id:
-        console.print(f"  Found: {cluster_id} (state: {state})")
+    if info:
+        console.print(f"  Found: {info.cluster_id} (state: {info.state})")
 
-        if state == State.TERMINATED:
-            start_cluster(client, cluster_id)
-        elif state == State.RUNNING:
+        if info.state == State.TERMINATED:
+            start_cluster(client, info.cluster_id)
+        elif info.state == State.RUNNING:
             console.print("  Cluster is already running.")
         # For other states (PENDING, RESTARTING, etc.), we'll wait below
-    else:
-        console.print("  Not found - creating new cluster...")
-        cluster_id = create_cluster(client, config, user_email)
+        return info.cluster_id
 
-    return cluster_id
+    console.print("  Not found - creating new cluster...")
+    return create_cluster(client, config, user_email)

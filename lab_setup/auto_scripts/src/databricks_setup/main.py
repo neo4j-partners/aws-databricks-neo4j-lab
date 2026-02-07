@@ -16,15 +16,11 @@ from databricks.sdk import WorkspaceClient
 from rich.console import Console
 
 from .cluster import get_or_create_cluster, wait_for_cluster_running
-from .config import Config, VolumeConfig
+from .config import Config, SetupResult
 from .data_upload import upload_data_files, verify_upload
 from .lakehouse_tables import create_lakehouse_tables
 from .libraries import ensure_libraries_installed
-from .utils import (
-    get_current_user,
-    get_workspace_client,
-    print_header,
-)
+from .utils import print_header
 from .warehouse import get_or_start_warehouse
 
 app = typer.Typer(
@@ -107,15 +103,15 @@ def setup(
         raise typer.Exit(code=1) from None
 
 
+# ---------------------------------------------------------------------------
+# Track runners
+# ---------------------------------------------------------------------------
+
 def _run_cluster_track(
     client: WorkspaceClient,
     config: Config,
 ) -> str:
     """Track A: create/reuse cluster and install libraries.
-
-    Args:
-        client: Databricks workspace client.
-        config: Full configuration.
 
     Returns:
         The cluster ID.
@@ -133,10 +129,6 @@ def _run_tables_track(
 ) -> bool:
     """Track B: upload data and create lakehouse tables via SQL Warehouse.
 
-    Args:
-        client: Databricks workspace client.
-        config: Full configuration.
-
     Returns:
         True if successful, False otherwise.
     """
@@ -152,88 +144,91 @@ def _run_tables_track(
     )
 
 
+# ---------------------------------------------------------------------------
+# Orchestration
+# ---------------------------------------------------------------------------
+
 def _run_setup(
     volume: str,
     cluster_only: bool,
     tables_only: bool,
     profile: str | None,
 ) -> None:
-    """Internal implementation of setup command."""
+    """Load config, run parallel tracks, and print results."""
+    run_cluster = not tables_only
+    run_tables = not cluster_only
 
-    # Load configuration
     config = Config.load()
+    client = config.prepare(
+        volume=volume if run_tables else None,
+        profile=profile,
+        resolve_user=run_cluster,
+        require_data_dir=run_tables,
+    )
 
-    # Parse volume specification (needed unless cluster-only)
-    if not cluster_only:
-        config.volume = VolumeConfig.from_string(volume)
+    _print_config_summary(config, run_cluster=run_cluster, run_tables=run_tables)
 
-    # Use profile from CLI or config
-    effective_profile = profile or config.databricks_profile
+    result = _run_tracks(client, config, run_cluster=run_cluster, run_tables=run_tables)
 
-    # Create Databricks client
-    client = get_workspace_client(effective_profile)
+    _print_summary(result, config)
 
-    # Resolve user email (needed for cluster track)
-    if not tables_only and not config.user_email:
-        console.print("Detecting current Databricks user...")
-        config.user_email = get_current_user(client)
 
-    # Validate data directory exists (needed for tables track)
-    if not cluster_only and not config.data.data_dir.exists():
-        raise RuntimeError(f"Data directory not found: {config.data.data_dir}")
-
-    # Print configuration summary
-    _print_config_summary(config, cluster_only, tables_only)
-
-    # Run tracks
-    cluster_id: str | None = None
-    tables_ok: bool | None = None
+def _run_tracks(
+    client: WorkspaceClient,
+    config: Config,
+    *,
+    run_cluster: bool,
+    run_tables: bool,
+) -> SetupResult:
+    """Execute Track A and/or Track B in parallel threads."""
+    result = SetupResult()
 
     with ThreadPoolExecutor(max_workers=2) as executor:
-        cluster_future = None
-        tables_future = None
+        cluster_future = (
+            executor.submit(_run_cluster_track, client, config)
+            if run_cluster else None
+        )
+        tables_future = (
+            executor.submit(_run_tables_track, client, config)
+            if run_tables else None
+        )
 
-        # Track A: cluster + libraries (skip if --tables-only)
-        if not tables_only:
-            cluster_future = executor.submit(_run_cluster_track, client, config)
-
-        # Track B: upload + lakehouse tables (skip if --cluster-only)
-        if not cluster_only:
-            tables_future = executor.submit(_run_tables_track, client, config)
-
-        # Gather results — re-raise exceptions from threads
         if cluster_future is not None:
-            cluster_id = cluster_future.result()
+            result.cluster_id = cluster_future.result()
         if tables_future is not None:
-            tables_ok = tables_future.result()
+            result.tables_ok = tables_future.result()
 
-    # Final summary
-    _print_summary(cluster_id, tables_ok, config)
+    return result
 
+
+# ---------------------------------------------------------------------------
+# Output
+# ---------------------------------------------------------------------------
 
 def _print_config_summary(
     config: Config,
-    cluster_only: bool,
-    tables_only: bool,
+    *,
+    run_cluster: bool,
+    run_tables: bool,
 ) -> None:
     """Print configuration overview before running tracks."""
     print_header("Databricks Environment Setup")
 
-    if tables_only:
+    if run_tables and not run_cluster:
         console.print("[cyan]Mode: Tables only (SQL Warehouse)[/cyan]")
-    elif cluster_only:
+    elif run_cluster and not run_tables:
         console.print("[cyan]Mode: Cluster only[/cyan]")
     else:
         console.print("[cyan]Mode: Full setup (parallel tracks)[/cyan]")
 
-    if not tables_only:
+    if run_cluster:
         console.print(f"Cluster:    {config.cluster.name}")
         console.print(f"Runtime:    {config.cluster.spark_version}")
         console.print(f"Node:       {config.cluster.get_node_type()} (single node)")
         if config.user_email:
             console.print(f"User:       {config.user_email}")
 
-    if not cluster_only:
+    if run_tables:
         console.print(f"Warehouse:  {config.warehouse.name}")
         console.print(f"Volume:     {config.volume.full_path}")
         console.print(f"Lakehouse:  {config.volume.catalog}.{config.volume.lakehouse_schema}")
@@ -241,32 +236,26 @@ def _print_config_summary(
     console.print()
 
 
-def _print_summary(
-    cluster_id: str | None,
-    tables_ok: bool | None,
-    config: Config,
-) -> None:
+def _print_summary(result: SetupResult, config: Config) -> None:
     """Print final setup summary."""
-    all_ok = tables_ok is not False  # True or None (skipped) both count as ok
+    print_header("Setup Complete" if result.success else "Setup Completed with Errors")
 
-    print_header("Setup Complete" if all_ok else "Setup Completed with Errors")
-
-    if cluster_id is not None:
-        console.print(f"Cluster ID:   {cluster_id}")
+    if result.cluster_id is not None:
+        console.print(f"Cluster ID:   {result.cluster_id}")
         console.print(f"Cluster Name: {config.cluster.name}")
         console.print(f"User:         {config.user_email}")
         console.print("Access Mode:  Dedicated (Single User)")
 
-    if tables_ok is not None:
+    if result.tables_ok is not None:
         console.print(f"Volume:       {config.volume.full_path}")
         console.print(f"Lakehouse:    {config.volume.catalog}.{config.volume.lakehouse_schema}")
-        if not tables_ok:
+        if not result.tables_ok:
             console.print("[red]Lakehouse table creation had errors.[/red]")
 
     console.print()
-    if cluster_id is not None:
+    if result.cluster_id is not None:
         console.print("To check cluster status:")
-        console.print(f"  databricks clusters get {cluster_id}")
+        console.print(f"  databricks clusters get {result.cluster_id}")
 
 
 if __name__ == "__main__":

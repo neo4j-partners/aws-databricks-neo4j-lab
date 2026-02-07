@@ -4,7 +4,6 @@ Provides warehouse discovery and SQL statement execution via the Statement Execu
 """
 
 import time
-from typing import Any
 
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service.sql import (
@@ -16,6 +15,7 @@ from databricks.sdk.service.sql import (
 from rich.console import Console
 
 from .config import WarehouseConfig
+from .models import SqlResult
 
 console = Console()
 
@@ -71,7 +71,7 @@ def execute_sql(
     warehouse_id: str,
     sql: str,
     timeout_seconds: int = 600,
-) -> dict[str, Any]:
+) -> SqlResult:
     """Execute a SQL statement on a warehouse.
 
     Args:
@@ -122,9 +122,9 @@ def execute_sql(
         error = response.status.error
         raise RuntimeError(f"SQL execution failed: {error}")
 
-    return {
-        "state": response.status.state if response.status else None,
-        "row_count": response.manifest.total_row_count if response.manifest else 0,
-    }
+    return SqlResult(
+        state=response.status.state if response.status else None,
+        row_count=(response.manifest.total_row_count or 0) if response.manifest else 0,
+    )
 
 

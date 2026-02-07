@@ -8,6 +8,7 @@ from databricks.sdk import WorkspaceClient
 from rich.console import Console
 
 from .config import VolumeConfig
+from .models import SqlStep
 from .utils import print_header
 from .warehouse import execute_sql
 
@@ -28,54 +29,54 @@ def _lakehouse_target(volume_config: VolumeConfig) -> str:
 
 def get_table_creation_sql(
     volume_config: VolumeConfig,
-) -> list[tuple[str, str]]:
-    """Return (description, sql) tuples for schema and table creation.
+) -> list[SqlStep]:
+    """Return labelled SQL steps for schema and table creation.
 
     Args:
         volume_config: Volume configuration with catalog, schema, volume, lakehouse_schema.
 
     Returns:
-        List of (description, SQL statement) tuples.
+        List of SqlStep(description, sql) for each step.
     """
     volume_path = volume_config.volumes_path
     target = _lakehouse_target(volume_config)
     tblprops = "TBLPROPERTIES ('delta.columnMapping.mode' = 'name')"
 
     return [
-        (
-            "Creating lakehouse schema",
-            f"CREATE SCHEMA IF NOT EXISTS {target}",
+        SqlStep(
+            description="Creating lakehouse schema",
+            sql=f"CREATE SCHEMA IF NOT EXISTS {target}",
         ),
-        (
-            "Creating aircraft table",
-            f"""
+        SqlStep(
+            description="Creating aircraft table",
+            sql=f"""
             CREATE TABLE IF NOT EXISTS {target}.aircraft
             {tblprops}
             AS SELECT * FROM read_files('{volume_path}/nodes_aircraft.csv',
                 format => 'csv', header => 'true', inferSchema => 'true')
             """,
         ),
-        (
-            "Creating systems table",
-            f"""
+        SqlStep(
+            description="Creating systems table",
+            sql=f"""
             CREATE TABLE IF NOT EXISTS {target}.systems
             {tblprops}
             AS SELECT * FROM read_files('{volume_path}/nodes_systems.csv',
                 format => 'csv', header => 'true', inferSchema => 'true')
             """,
         ),
-        (
-            "Creating sensors table",
-            f"""
+        SqlStep(
+            description="Creating sensors table",
+            sql=f"""
             CREATE TABLE IF NOT EXISTS {target}.sensors
             {tblprops}
             AS SELECT * FROM read_files('{volume_path}/nodes_sensors.csv',
                 format => 'csv', header => 'true', inferSchema => 'true')
             """,
         ),
-        (
-            "Creating sensor_readings table",
-            f"""
+        SqlStep(
+            description="Creating sensor_readings table",
+            sql=f"""
             CREATE TABLE IF NOT EXISTS {target}.sensor_readings
             {tblprops}
             PARTITIONED BY (sensor_id)
@@ -174,9 +175,9 @@ def create_lakehouse_tables(
 
     try:
         # Create schema and tables
-        for desc, sql in get_table_creation_sql(volume_config):
-            console.print(f"  {desc}...")
-            execute_sql(client, warehouse_id, sql, timeout_seconds)
+        for step in get_table_creation_sql(volume_config):
+            console.print(f"  {step.description}...")
+            execute_sql(client, warehouse_id, step.sql, timeout_seconds)
             console.print("    Done.")
 
         # Verify row counts
