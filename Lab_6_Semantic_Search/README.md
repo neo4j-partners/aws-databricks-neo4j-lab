@@ -14,7 +14,7 @@ Before starting, make sure you have:
 
 This lab consists of two notebooks that add semantic search to your existing knowledge graph:
 
-### 01_data_and_embeddings.ipynb - Data Preparation
+### 03_data_and_embeddings.ipynb - Data Preparation
 Build the foundation for semantic search over maintenance documentation:
 - Understand the Document -> Chunk graph structure
 - Load the A320-200 Maintenance Manual into Neo4j
@@ -23,7 +23,7 @@ Build the foundation for semantic search over maintenance documentation:
 - Create a vector index in Neo4j
 - Perform similarity search to find relevant maintenance procedures
 
-### 02_graphrag_retrievers.ipynb - Retrieval Strategies
+### 04_graphrag_retrievers.ipynb - Retrieval Strategies
 Learn retrieval patterns from simple to graph-enhanced:
 - Set up a VectorRetriever using Neo4j's vector index
 - Use GraphRAG to combine vector search with LLM-generated answers
@@ -118,17 +118,18 @@ The embedding and LLM models use Databricks Foundation Model APIs which are pre-
    /Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/MAINTENANCE_A320.md
    ```
 3. Upload the notebook files and `data_utils.py` to your Databricks workspace
-4. Open `01_data_and_embeddings.ipynb`
+4. Open `03_data_and_embeddings.ipynb`
 5. Enter your Neo4j credentials in the Configuration cell
 6. Run cells sequentially to load the maintenance manual and create embeddings
-7. Continue to `02_graphrag_retrievers.ipynb` for retrieval strategies
+7. Continue to `04_graphrag_retrievers.ipynb` for retrieval strategies
 
 ## Files
 
 | File | Description |
 |------|-------------|
-| `01_data_and_embeddings.ipynb` | Data loading and embedding generation |
-| `02_graphrag_retrievers.ipynb` | Retrieval strategies and GraphRAG |
+| `03_data_and_embeddings.ipynb` | Data loading and embedding generation |
+| `04_graphrag_retrievers.ipynb` | Retrieval strategies and GraphRAG |
+| `05_hybrid_retrievers.ipynb` | Hybrid search combining vector + keyword retrieval |
 | `data_utils.py` | Utility functions for Neo4j and Databricks |
 | `maintenance_manual.md` | Local copy of A320-200 Maintenance Manual (for reference) |
 | `README.md` | This file |
