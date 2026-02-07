@@ -11,14 +11,12 @@ from databricks.sdk.service.compute import (
     MavenLibrary,
     PythonPyPiLibrary,
 )
-from rich.console import Console
 from rich.table import Table
 
 from .config import LibraryConfig
+from .log import log
 from .models import LibraryCounts
 from .utils import poll_until
-
-console = Console()
 
 
 def get_library_status(
@@ -64,7 +62,7 @@ def install_libraries(
         cluster_id: Target cluster ID.
         config: Library configuration.
     """
-    console.print("Installing libraries...")
+    log("Installing libraries...")
 
     libraries: list[Library] = []
 
@@ -79,7 +77,7 @@ def install_libraries(
 
     client.libraries.install(cluster_id=cluster_id, libraries=libraries)
 
-    console.print(f"  Requested installation of {len(libraries)} libraries")
+    log(f"  Requested installation of {len(libraries)} libraries")
 
 
 def wait_for_libraries(
@@ -97,12 +95,12 @@ def wait_for_libraries(
     Returns:
         Final library statuses.
     """
-    console.print("Waiting for libraries to install...")
+    log("Waiting for libraries to install...")
 
     def check_status() -> tuple[bool, list[LibraryFullStatus]]:
         statuses = get_library_status(client, cluster_id)
         counts = count_library_states(statuses)
-        console.print(
+        log(
             f"  {counts.installed}/{counts.total} installed, "
             f"{counts.pending} pending, {counts.failed} failed"
         )
@@ -117,8 +115,8 @@ def wait_for_libraries(
 
 def print_library_status(statuses: list[LibraryFullStatus]) -> None:
     """Print a table of library installation statuses."""
-    console.print()
-    console.print("[bold]Library status:[/bold]")
+    log()
+    log("[bold]Library status:[/bold]")
 
     table = Table(show_header=True, header_style="bold")
     table.add_column("Status", style="dim", width=12)
@@ -144,7 +142,7 @@ def print_library_status(statuses: list[LibraryFullStatus]) -> None:
 
         table.add_row(f"[{status_style}]{status.status}[/{status_style}]", name)
 
-    console.print(table)
+    log(table)
 
 
 def ensure_libraries_installed(
@@ -156,14 +154,14 @@ def ensure_libraries_installed(
 
     Skips installation if libraries are already present and installed.
     """
-    console.print()
-    console.print("Checking library status...")
+    log()
+    log("Checking library status...")
 
     statuses = get_library_status(client, cluster_id)
     counts = count_library_states(statuses)
 
     if counts.total > 0 and counts.pending == 0:
-        console.print(f"  {counts.installed} libraries already installed - skipping installation.")
+        log(f"  {counts.installed} libraries already installed - skipping installation.")
         print_library_status(statuses)
         return
 
@@ -173,4 +171,4 @@ def ensure_libraries_installed(
 
     counts = count_library_states(statuses)
     if counts.failed > 0:
-        console.print(f"[yellow]WARNING: {counts.failed} library(ies) failed to install.[/yellow]")
+        log(f"[yellow]WARNING: {counts.failed} library(ies) failed to install.[/yellow]")

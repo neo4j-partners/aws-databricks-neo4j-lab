@@ -5,14 +5,12 @@ Creates tables via Statement Execution API on a SQL Warehouse.
 """
 
 from databricks.sdk import WorkspaceClient
-from rich.console import Console
 
 from .config import VolumeConfig
+from .log import log
 from .models import SqlStep
 from .utils import print_header
 from .warehouse import execute_sql
-
-console = Console()
 
 EXPECTED_ROW_COUNTS: dict[str, int] = {
     "aircraft": 20,
@@ -176,25 +174,25 @@ def create_lakehouse_tables(
     try:
         # Create schema and tables
         for step in get_table_creation_sql(volume_config):
-            console.print(f"  {step.description}...")
+            log(f"  {step.description}...")
             execute_sql(client, warehouse_id, step.sql, timeout_seconds)
-            console.print("    Done.")
+            log("    Done.")
 
         # Verify row counts
-        console.print()
-        console.print("Verifying table row counts...")
+        log()
+        log("Verifying table row counts...")
         execute_sql(client, warehouse_id, get_verification_sql(volume_config), timeout_seconds)
-        console.print("  Verification complete.")
+        log("  Verification complete.")
 
         # Add table and column comments
-        console.print()
-        console.print("Adding table and column comments...")
+        log()
+        log("Adding table and column comments...")
         for comment_sql in get_comment_sql(volume_config):
             execute_sql(client, warehouse_id, comment_sql, timeout_seconds)
-        console.print("  Done.")
+        log("  Done.")
 
         return True
 
     except Exception as e:
-        console.print(f"[red]Error creating tables: {e}[/red]")
+        log(f"[red]Error creating tables: {e}[/red]")
         return False

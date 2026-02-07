@@ -12,12 +12,10 @@ from databricks.sdk.service.sql import (
     Format,
     StatementState,
 )
-from rich.console import Console
 
 from .config import WarehouseConfig
+from .log import Level, log
 from .models import SqlResult
-
-console = Console()
 
 
 def find_warehouse(client: WorkspaceClient, warehouse_name: str) -> str | None:
@@ -53,7 +51,7 @@ def get_or_start_warehouse(
     Raises:
         RuntimeError: If warehouse not found.
     """
-    console.print(f"Looking for warehouse \"{config.name}\"...")
+    log(f"Looking for warehouse \"{config.name}\"...")
 
     warehouse_id = find_warehouse(client, config.name)
     if not warehouse_id:
@@ -62,7 +60,7 @@ def get_or_start_warehouse(
             "Set WAREHOUSE_NAME in .env or create a Starter Warehouse in your workspace."
         )
 
-    console.print(f"  Found: {warehouse_id}")
+    log(f"  Found: {warehouse_id}")
     return warehouse_id
 
 
@@ -114,6 +112,8 @@ def execute_sql(
 
         time.sleep(poll_interval)
         elapsed += poll_interval
+        state = response.status.state if response.status else "unknown"
+        log(f"  SQL still {state} ({elapsed}s elapsed)...", level=Level.DEBUG)
 
         if response.statement_id:
             response = client.statement_execution.get_statement(response.statement_id)

@@ -5,9 +5,8 @@ from collections.abc import Callable
 from typing import TypeVar
 
 from databricks.sdk import WorkspaceClient
-from rich.console import Console
 
-console = Console()
+from .log import log
 
 T = TypeVar("T")
 
@@ -54,16 +53,16 @@ def poll_until(
             return result
         time.sleep(interval_seconds)
         elapsed += interval_seconds
-        console.print(f"  Waiting... ({elapsed}s elapsed)")
+        log(f"  Waiting... ({elapsed}s elapsed)")
 
     raise TimeoutError(f"Timed out waiting for {description} ({timeout_seconds}s)")
 
 
 def print_header(title: str) -> None:
     """Print a formatted header."""
-    console.print()
-    console.print("=" * 42, style="bold blue")
-    console.print(title, style="bold blue")
-    console.print("=" * 42, style="bold blue")
+    log()
+    log("=" * 42, style="bold blue")
+    log(title, style="bold blue")
+    log("=" * 42, style="bold blue")
 
 

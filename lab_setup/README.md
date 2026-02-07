@@ -129,7 +129,7 @@ This returns volume metadata if successful, or an error if any component is miss
 
 ## Step 2: Automated Setup
 
-The `databricks-setup` CLI (in `auto_scripts/`) handles everything after catalog creation. It runs two parallel tracks:
+The `databricks-setup` CLI (in `auto_scripts/`) handles everything after catalog creation. It runs two sequential tracks:
 
 - **Track A:** Creates a dedicated Spark cluster with the Neo4j Spark Connector and all Python libraries
 - **Track B:** Uploads data files and creates Delta Lake tables via SQL Warehouse
@@ -185,21 +185,13 @@ uv run databricks-setup setup [VOLUME] [OPTIONS]
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
 | `VOLUME` | | Target volume (`catalog.schema.volume`) | `aws-databricks-neo4j-lab.lab-schema.lab-volume` |
-| `--cluster-only` | | Only create cluster and install libraries | `false` |
-| `--tables-only` | | Only upload data and create lakehouse tables | `false` |
 | `--profile` | `-p` | Databricks CLI profile | From `DATABRICKS_PROFILE` env var |
 
 Examples:
 
 ```bash
-# All defaults (both tracks run in parallel)
+# All defaults
 uv run databricks-setup setup
-
-# Cluster + libraries only
-uv run databricks-setup setup --cluster-only
-
-# Data upload + lakehouse tables only
-uv run databricks-setup setup --tables-only
 
 # Explicit volume
 uv run databricks-setup setup my-catalog.my-schema.my-volume
@@ -210,7 +202,7 @@ uv run databricks-setup setup --profile my-workspace
 
 ### What it does
 
-Runs two parallel tracks by default:
+Runs two tracks sequentially:
 
 **Track A — Cluster + Libraries:**
 1. Creates (or reuses) a single-node Spark cluster with Dedicated (Single User) access mode

@@ -10,7 +10,7 @@ For full usage instructions, configuration options, and examples, see the main [
 cd lab_setup/auto_scripts
 uv sync
 
-# Set up environment (both tracks run in parallel)
+# Set up environment
 uv run databricks-setup setup
 
 # Tear down everything except the compute cluster
@@ -21,33 +21,27 @@ uv run databricks-setup cleanup
 
 ### `setup`
 
-Runs two parallel tracks by default:
+Runs two tracks sequentially:
 
 ```
 databricks-setup setup
-├── Track A (parallel): Cluster + Libraries
+├── Track A: Cluster + Libraries
 │   ├── Create or reuse dedicated Spark cluster
 │   ├── Wait for cluster to reach RUNNING state
 │   └── Install Neo4j Spark Connector + Python packages
 │
-├── Track B (parallel): Data + Lakehouse Tables
+├── Track B: Data + Lakehouse Tables
 │   ├── Find SQL Warehouse
 │   ├── Upload CSV files to Unity Catalog volume
 │   ├── Verify upload
 │   └── Create Delta Lake tables via Statement Execution API
 │
-└── Wait for both tracks, report results
+└── Report results
 ```
 
 ```bash
-# Full setup (default)
+# Run setup
 uv run databricks-setup setup
-
-# Cluster + libraries only
-uv run databricks-setup setup --cluster-only
-
-# Data upload + lakehouse tables only
-uv run databricks-setup setup --tables-only
 
 # Explicit volume target
 uv run databricks-setup setup my-catalog.my-schema.my-volume
@@ -80,6 +74,7 @@ auto_scripts/
     ├── main.py                 # Typer CLI entry point (setup + cleanup)
     ├── config.py               # Configuration dataclasses
     ├── models.py               # Shared domain models (SqlStep, SqlResult, etc.)
+    ├── log.py                  # Dual-output logging (terminal + timestamped log file)
     ├── utils.py                # Polling, client helpers
     ├── cluster.py              # Cluster creation/management
     ├── libraries.py            # Library installation

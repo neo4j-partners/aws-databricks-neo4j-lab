@@ -12,13 +12,11 @@ from databricks.sdk.service.compute import (
     RuntimeEngine,
     State,
 )
-from rich.console import Console
 
 from .config import ClusterConfig
+from .log import log
 from .models import ClusterInfo
 from .utils import poll_until
-
-console = Console()
 
 
 def ensure_instance_profile_registered(
@@ -36,16 +34,16 @@ def ensure_instance_profile_registered(
     registered = {ip.instance_profile_arn for ip in client.instance_profiles.list()}
 
     if instance_profile_arn in registered:
-        console.print(f"  Instance profile already registered: {instance_profile_arn}")
+        log(f"  Instance profile already registered: {instance_profile_arn}")
         return
 
-    console.print(f"  Registering instance profile: {instance_profile_arn}")
+    log(f"  Registering instance profile: {instance_profile_arn}")
     client.instance_profiles.add(
         instance_profile_arn=instance_profile_arn,
         iam_role_arn=iam_role_arn,
         skip_validation=True,
     )
-    console.print("  Registered successfully.")
+    log("  Registered successfully.")
 
 
 def find_cluster(client: WorkspaceClient, cluster_name: str) -> ClusterInfo | None:
@@ -100,7 +98,7 @@ def create_cluster(
 
     runtime = RuntimeEngine.PHOTON if config.runtime_engine == "PHOTON" else RuntimeEngine.STANDARD
 
-    console.print(f"Creating cluster '{config.name}'...")
+    log(f"Creating cluster '{config.name}'...")
 
     response = client.clusters.create(
         cluster_name=config.name,
@@ -120,13 +118,13 @@ def create_cluster(
     if not response.cluster_id:
         raise RuntimeError("Failed to create cluster - no cluster ID returned")
 
-    console.print(f"  Created: {response.cluster_id}")
+    log(f"  Created: {response.cluster_id}")
     return response.cluster_id
 
 
 def start_cluster(client: WorkspaceClient, cluster_id: str) -> None:
     """Start a terminated cluster."""
-    console.print(f"  Starting cluster {cluster_id}...")
+    log(f"  Starting cluster {cluster_id}...")
     client.clusters.start(cluster_id)
 
 
@@ -146,12 +144,12 @@ def wait_for_cluster_running(
         RuntimeError: If cluster enters an error state.
         TimeoutError: If timeout is reached.
     """
-    console.print("Waiting for cluster to start...")
+    log("Waiting for cluster to start...")
 
     def check_state() -> tuple[bool, State | None]:
         cluster = client.clusters.get(cluster_id)
         state = cluster.state
-        console.print(f"  State: {state}")
+        log(f"  State: {state}")
 
         if state == State.RUNNING:
             return True, state
@@ -161,8 +159,8 @@ def wait_for_cluster_running(
         return False, state
 
     poll_until(check_state, timeout_seconds=timeout_seconds, description="cluster to start")
-    console.print()
-    console.print("[green]Cluster is running.[/green]")
+    log()
+    log("[green]Cluster is running.[/green]")
 
 
 def get_or_create_cluster(
@@ -184,19 +182,19 @@ def get_or_create_cluster(
     if config.instance_profile_arn and config.cloud_provider != "azure":
         ensure_instance_profile_registered(client, config.instance_profile_arn)
 
-    console.print(f"Looking for existing cluster \"{config.name}\"...")
+    log(f"Looking for existing cluster \"{config.name}\"...")
 
     info = find_cluster(client, config.name)
 
     if info:
-        console.print(f"  Found: {info.cluster_id} (state: {info.state})")
+        log(f"  Found: {info.cluster_id} (state: {info.state})")
 
         if info.state == State.TERMINATED:
             start_cluster(client, info.cluster_id)
         elif info.state == State.RUNNING:
-            console.print("  Cluster is already running.")
+            log("  Cluster is already running.")
         # For other states (PENDING, RESTARTING, etc.), we'll wait below
         return info.cluster_id
 
-    console.print("  Not found - creating new cluster...")
+    log("  Not found - creating new cluster...")
     return create_cluster(client, config, user_email)

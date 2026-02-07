@@ -242,10 +242,10 @@ Create the Delta Lake tables needed for Databricks Genie (Lab 7) using the Pytho
 
 ```bash
 cd lab_setup/auto_scripts
-uv run databricks-setup --tables-only
+uv run databricks-setup setup
 ```
 
-This uploads data files and creates the lakehouse tables via the SQL Warehouse's Statement Execution API. No cluster is needed for this step.
+This uploads data files and creates the lakehouse tables via the SQL Warehouse's Statement Execution API.
 
 ### Expected lakehouse table row counts
 

@@ -179,10 +179,8 @@ class Config:
 
     def prepare(
         self,
-        volume: str | None = None,
+        volume: str,
         profile: str | None = None,
-        resolve_user: bool = False,
-        require_data_dir: bool = False,
     ) -> WorkspaceClient:
         """Finalize config and return a ready WorkspaceClient.
 
@@ -192,27 +190,22 @@ class Config:
 
         Args:
             volume: Volume spec in 'catalog.schema.volume' format.
-                    Parsed into ``self.volume`` when provided.
             profile: CLI-provided Databricks profile (overrides env).
-            resolve_user: If True and ``user_email`` is unset, detect
-                          the current workspace user.
-            require_data_dir: If True, raise if ``data.data_dir`` is missing.
 
         Returns:
             An authenticated WorkspaceClient.
         """
         from .utils import get_current_user, get_workspace_client
 
-        if volume is not None:
-            self.volume = VolumeConfig.from_string(volume)
+        self.volume = VolumeConfig.from_string(volume)
 
         effective_profile = profile or self.databricks_profile
         client = get_workspace_client(effective_profile)
 
-        if resolve_user and not self.user_email:
+        if not self.user_email:
             self.user_email = get_current_user(client)
 
-        if require_data_dir and not self.data.data_dir.exists():
+        if not self.data.data_dir.exists():
             raise RuntimeError(f"Data directory not found: {self.data.data_dir}")
 
         return client
@@ -220,12 +213,12 @@ class Config:
 
 @dataclass
 class SetupResult:
-    """Outcome of the two parallel setup tracks."""
+    """Outcome of the setup tracks."""
 
-    cluster_id: str | None = None
-    tables_ok: bool | None = None
+    cluster_id: str = ""
+    tables_ok: bool = True
 
     @property
     def success(self) -> bool:
-        """True unless the tables track explicitly failed."""
-        return self.tables_ok is not False
+        """True unless the tables track failed."""
+        return self.tables_ok

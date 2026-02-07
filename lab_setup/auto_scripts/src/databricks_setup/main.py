@@ -4,12 +4,11 @@ Provides CLI interface for setting up (and tearing down) Databricks
 clusters, libraries, data files, and lakehouse tables for the Neo4j workshop.
 """
 
-from concurrent.futures import ThreadPoolExecutor
+import time
+import traceback
 from typing import Annotated
 
 import typer
-from databricks.sdk import WorkspaceClient
-from rich.console import Console
 
 from .cleanup import run_cleanup
 from .cluster import get_or_create_cluster, wait_for_cluster_running
@@ -17,6 +16,7 @@ from .config import Config, SetupResult
 from .data_upload import upload_data_files, verify_upload
 from .lakehouse_tables import create_lakehouse_tables
 from .libraries import ensure_libraries_installed
+from .log import Level, close_log_file, init_log_file, log, log_to_file
 from .utils import print_header
 from .warehouse import get_or_start_warehouse
 
@@ -25,8 +25,6 @@ app = typer.Typer(
     help="Setup and cleanup Databricks environment for Neo4j workshop.",
     add_completion=False,
 )
-
-console = Console()
 
 
 @app.command()
@@ -37,20 +35,6 @@ def setup(
             help="Target volume in format 'catalog.schema.volume'",
         ),
     ] = "aws-databricks-neo4j-lab.lab-schema.lab-volume",
-    cluster_only: Annotated[
-        bool,
-        typer.Option(
-            "--cluster-only",
-            help="Only create cluster and install libraries (skip data upload and tables)",
-        ),
-    ] = False,
-    tables_only: Annotated[
-        bool,
-        typer.Option(
-            "--tables-only",
-            help="Only upload data and create lakehouse tables (skip cluster creation)",
-        ),
-    ] = False,
     profile: Annotated[
         str | None,
         typer.Option(
@@ -61,7 +45,7 @@ def setup(
 ) -> None:
     """Set up Databricks environment for the Neo4j workshop.
 
-    Runs two parallel tracks by default:
+    Runs two tracks sequentially:
 
       Track A: Create (or reuse) a compute cluster and install libraries.
 
@@ -72,32 +56,27 @@ def setup(
 
     Examples:
 
-        # All defaults (both tracks run in parallel)
-        databricks-setup
-
-        # Cluster + libraries only
-        databricks-setup --cluster-only
-
-        # Data upload + lakehouse tables only
-        databricks-setup --tables-only
+        databricks-setup setup
 
         # Explicit volume
-        databricks-setup my-catalog.my-schema.my-volume
+        databricks-setup setup my-catalog.my-schema.my-volume
     """
-    if cluster_only and tables_only:
-        console.print("[red]Error: --cluster-only and --tables-only are mutually exclusive[/red]")
-        raise typer.Exit(code=1)
+    log_path = init_log_file()
+    log(f"[dim]Log file: {log_path}[/dim]")
 
+    start = time.monotonic()
     try:
-        _run_setup(
-            volume=volume,
-            cluster_only=cluster_only,
-            tables_only=tables_only,
-            profile=profile,
-        )
+        _run_setup(volume=volume, profile=profile)
+        elapsed = time.monotonic() - start
+        log(f"[green]Total elapsed time: {_fmt_elapsed(elapsed)}[/green]")
     except Exception as e:
-        console.print(f"[red]Error: {e}[/red]")
+        elapsed = time.monotonic() - start
+        log(f"[red]Error: {e}[/red]", level=Level.ERROR)
+        log_to_file(traceback.format_exc(), level=Level.ERROR)
+        log(f"[dim]Failed after {_fmt_elapsed(elapsed)}[/dim]")
         raise typer.Exit(code=1) from None
+    finally:
+        close_log_file()
 
 
 @app.command()
@@ -140,14 +119,32 @@ def cleanup(
         # Explicit volume
         databricks-setup cleanup my-catalog.my-schema.my-volume --yes
     """
+    log_path = init_log_file()
+    log(f"[dim]Log file: {log_path}[/dim]")
+    start = time.monotonic()
     try:
         _run_cleanup(volume=volume, profile=profile, yes=yes)
+        elapsed = time.monotonic() - start
+        log(f"[green]Total elapsed time: {_fmt_elapsed(elapsed)}[/green]")
     except Exception as e:
-        console.print(f"[red]Error: {e}[/red]")
+        elapsed = time.monotonic() - start
+        log(f"[red]Error: {e}[/red]", level=Level.ERROR)
+        log_to_file(traceback.format_exc(), level=Level.ERROR)
+        log(f"[dim]Failed after {_fmt_elapsed(elapsed)}[/dim]")
         raise typer.Exit(code=1) from None
+    finally:
+        close_log_file()
 
 
-def _run_cleanup(volume: str, profile: str | None, yes: bool) -> None:
+def _fmt_elapsed(seconds: float) -> str:
+    """Format elapsed seconds as a human-readable string."""
+    m, s = divmod(int(seconds), 60)
+    if m:
+        return f"{m}m {s:02d}s"
+    return f"{s}s"
+
+
+def _run_cleanup(volume: str, profile: str | None, *, yes: bool) -> None:
     """Load config, confirm, and run cleanup."""
     config = Config.load()
     client = config.prepare(volume=volume, profile=profile)
@@ -164,168 +161,86 @@ def _run_cleanup(volume: str, profile: str | None, yes: bool) -> None:
 def _print_cleanup_target(config: Config) -> None:
     """Print what will be deleted."""
     print_header("Cleanup Target")
-    console.print(f"Catalog:    {config.volume.catalog}")
-    console.print(f"Schema:     {config.volume.catalog}.{config.volume.schema}")
-    console.print(f"Volume:     {config.volume.full_path}")
-    console.print(f"Lakehouse:  {config.volume.catalog}.{config.volume.lakehouse_schema}")
-    console.print()
-    console.print("[yellow]This will permanently delete the catalog and all its contents.[/yellow]")
-    console.print("[yellow]The compute cluster will NOT be affected.[/yellow]")
-
-
-# ---------------------------------------------------------------------------
-# Track runners
-# ---------------------------------------------------------------------------
-
-def _run_cluster_track(
-    client: WorkspaceClient,
-    config: Config,
-) -> str:
-    """Track A: create/reuse cluster and install libraries.
-
-    Returns:
-        The cluster ID.
-    """
-    print_header("Track A: Cluster + Libraries")
-    cluster_id = get_or_create_cluster(client, config.cluster, config.user_email or "")
-    wait_for_cluster_running(client, cluster_id)
-    ensure_libraries_installed(client, cluster_id, config.library)
-    return cluster_id
-
-
-def _run_tables_track(
-    client: WorkspaceClient,
-    config: Config,
-) -> bool:
-    """Track B: upload data and create lakehouse tables via SQL Warehouse.
-
-    Returns:
-        True if successful, False otherwise.
-    """
-    print_header("Track B: Data Upload + Lakehouse Tables")
-    warehouse_id = get_or_start_warehouse(client, config.warehouse)
-    upload_data_files(client, config.data, config.volume)
-    verify_upload(client, config.volume)
-    return create_lakehouse_tables(
-        client,
-        warehouse_id,
-        config.volume,
-        config.warehouse.timeout_seconds,
-    )
+    log(f"Catalog:    {config.volume.catalog}")
+    log(f"Schema:     {config.volume.catalog}.{config.volume.schema}")
+    log(f"Volume:     {config.volume.full_path}")
+    log(f"Lakehouse:  {config.volume.catalog}.{config.volume.lakehouse_schema}")
+    log()
+    log("[yellow]This will permanently delete the catalog and all its contents.[/yellow]")
+    log("[yellow]The compute cluster will NOT be affected.[/yellow]")
 
 
 # ---------------------------------------------------------------------------
 # Orchestration
 # ---------------------------------------------------------------------------
 
-def _run_setup(
-    volume: str,
-    cluster_only: bool,
-    tables_only: bool,
-    profile: str | None,
-) -> None:
-    """Load config, run parallel tracks, and print results."""
-    run_cluster = not tables_only
-    run_tables = not cluster_only
-
+def _run_setup(volume: str, profile: str | None) -> None:
+    """Load config, run Track A then Track B, and print results."""
     config = Config.load()
-    client = config.prepare(
-        volume=volume if run_tables else None,
-        profile=profile,
-        resolve_user=run_cluster,
-        require_data_dir=run_tables,
-    )
+    client = config.prepare(volume=volume, profile=profile)
 
-    _print_config_summary(config, run_cluster=run_cluster, run_tables=run_tables)
+    _print_config_summary(config)
 
-    result = _run_tracks(client, config, run_cluster=run_cluster, run_tables=run_tables)
-
-    _print_summary(result, config)
-
-
-def _run_tracks(
-    client: WorkspaceClient,
-    config: Config,
-    *,
-    run_cluster: bool,
-    run_tables: bool,
-) -> SetupResult:
-    """Execute Track A and/or Track B in parallel threads."""
     result = SetupResult()
 
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        cluster_future = (
-            executor.submit(_run_cluster_track, client, config)
-            if run_cluster else None
-        )
-        tables_future = (
-            executor.submit(_run_tables_track, client, config)
-            if run_tables else None
-        )
+    # Track A: Cluster + Libraries
+    print_header("Track A: Cluster + Libraries")
+    result.cluster_id = get_or_create_cluster(client, config.cluster, config.user_email or "")
+    wait_for_cluster_running(client, result.cluster_id)
+    ensure_libraries_installed(client, result.cluster_id, config.library)
 
-        if cluster_future is not None:
-            result.cluster_id = cluster_future.result()
-        if tables_future is not None:
-            result.tables_ok = tables_future.result()
+    # Track B: Data Upload + Lakehouse Tables
+    print_header("Track B: Data Upload + Lakehouse Tables")
+    warehouse_id = get_or_start_warehouse(client, config.warehouse)
+    upload_data_files(client, config.data, config.volume)
+    verify_upload(client, config.volume)
+    result.tables_ok = create_lakehouse_tables(
+        client,
+        warehouse_id,
+        config.volume,
+        config.warehouse.timeout_seconds,
+    )
 
-    return result
+    _print_summary(result, config)
 
 
 # ---------------------------------------------------------------------------
 # Output
 # ---------------------------------------------------------------------------
 
-def _print_config_summary(
-    config: Config,
-    *,
-    run_cluster: bool,
-    run_tables: bool,
-) -> None:
+def _print_config_summary(config: Config) -> None:
     """Print configuration overview before running tracks."""
     print_header("Databricks Environment Setup")
 
-    if run_tables and not run_cluster:
-        console.print("[cyan]Mode: Tables only (SQL Warehouse)[/cyan]")
-    elif run_cluster and not run_tables:
-        console.print("[cyan]Mode: Cluster only[/cyan]")
-    else:
-        console.print("[cyan]Mode: Full setup (parallel tracks)[/cyan]")
+    log(f"Cluster:    {config.cluster.name}")
+    log(f"Runtime:    {config.cluster.spark_version}")
+    log(f"Node:       {config.cluster.get_node_type()} (single node)")
+    if config.user_email:
+        log(f"User:       {config.user_email}")
+    log(f"Warehouse:  {config.warehouse.name}")
+    log(f"Volume:     {config.volume.full_path}")
+    log(f"Lakehouse:  {config.volume.catalog}.{config.volume.lakehouse_schema}")
 
-    if run_cluster:
-        console.print(f"Cluster:    {config.cluster.name}")
-        console.print(f"Runtime:    {config.cluster.spark_version}")
-        console.print(f"Node:       {config.cluster.get_node_type()} (single node)")
-        if config.user_email:
-            console.print(f"User:       {config.user_email}")
-
-    if run_tables:
-        console.print(f"Warehouse:  {config.warehouse.name}")
-        console.print(f"Volume:     {config.volume.full_path}")
-        console.print(f"Lakehouse:  {config.volume.catalog}.{config.volume.lakehouse_schema}")
-
-    console.print()
+    log()
 
 
 def _print_summary(result: SetupResult, config: Config) -> None:
     """Print final setup summary."""
     print_header("Setup Complete" if result.success else "Setup Completed with Errors")
 
-    if result.cluster_id is not None:
-        console.print(f"Cluster ID:   {result.cluster_id}")
-        console.print(f"Cluster Name: {config.cluster.name}")
-        console.print(f"User:         {config.user_email}")
-        console.print("Access Mode:  Dedicated (Single User)")
+    log(f"Cluster ID:   {result.cluster_id}")
+    log(f"Cluster Name: {config.cluster.name}")
+    log(f"User:         {config.user_email}")
+    log("Access Mode:  Dedicated (Single User)")
 
-    if result.tables_ok is not None:
-        console.print(f"Volume:       {config.volume.full_path}")
-        console.print(f"Lakehouse:    {config.volume.catalog}.{config.volume.lakehouse_schema}")
-        if not result.tables_ok:
-            console.print("[red]Lakehouse table creation had errors.[/red]")
+    log(f"Volume:       {config.volume.full_path}")
+    log(f"Lakehouse:    {config.volume.catalog}.{config.volume.lakehouse_schema}")
+    if not result.tables_ok:
+        log("[red]Lakehouse table creation had errors.[/red]")
 
-    console.print()
-    if result.cluster_id is not None:
-        console.print("To check cluster status:")
-        console.print(f"  databricks clusters get {result.cluster_id}")
+    log()
+    log("To check cluster status:")
+    log(f"  databricks clusters get {result.cluster_id}")
 
 
 if __name__ == "__main__":
