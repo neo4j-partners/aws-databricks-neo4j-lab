@@ -1,8 +1,8 @@
 # Manual Setup Guide (UI Alternative)
 
-**Purpose:** Step-by-step instructions for setting up the entire Databricks workshop environment through the UI, without using the `setup_databricks.sh` automation script.
+**Purpose:** Step-by-step instructions for setting up the entire Databricks workshop environment through the UI, without using the `databricks-setup` CLI.
 
-> **Prefer the automated approach?** Run `./lab_setup/setup_databricks.sh` instead — it handles Steps 2–5 below in one command. See the main [README.md](README.md) for details.
+> **Prefer the automated approach?** Run `uv run databricks-setup` from `lab_setup/auto_scripts/` instead — it handles Steps 2–5 below in one command. See the main [README.md](README.md) for details.
 
 ---
 
@@ -238,19 +238,14 @@ The volume should contain 25 files (22 CSV + 3 Markdown):
 
 ## Step 5: Create Lakehouse Tables
 
-Create the Delta Lake tables needed for Databricks Genie (Lab 7). Use the helper script, which runs SQL against your cluster:
+Create the Delta Lake tables needed for Databricks Genie (Lab 7) using the Python CLI:
 
 ```bash
-./lab_setup/create_lakehouse_tables.sh [catalog]
+cd lab_setup/auto_scripts
+uv run databricks-setup --tables-only
 ```
 
-Or run `create_lakehouse_tables.py` directly in a Databricks notebook:
-
-1. Upload `lab_setup/create_lakehouse_tables.py` to your Databricks workspace
-2. Open it as a notebook
-3. Attach it to the cluster created in Step 2
-4. Set the catalog, schema, and volume values at the top of the script
-5. Run all cells
+This uploads data files and creates the lakehouse tables via the SQL Warehouse's Statement Execution API. No cluster is needed for this step.
 
 ### Expected lakehouse table row counts
 

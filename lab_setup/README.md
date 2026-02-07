@@ -16,7 +16,7 @@
 Complete these steps before the workshop begins:
 
 - [ ] Create Unity Catalog, Schema, and Volume (Step 1 — UI required)
-- [ ] Run `setup_databricks.sh` to set up compute, upload data, and create tables (Step 2)
+- [ ] Run `databricks-setup` to set up compute, upload data, and create tables (Step 2)
 - [ ] Configure Databricks Genie Space (Lab 7)
 - [ ] Provide DBC file to participants (or host for download)
 - [ ] Test the complete workflow
@@ -24,7 +24,9 @@ Complete these steps before the workshop begins:
 
 ---
 
-## Prerequisites: Databricks CLI Authentication
+## Prerequisites
+
+### Databricks CLI Authentication
 
 Before running any CLI commands, authenticate the Databricks CLI with your user account:
 
@@ -40,7 +42,7 @@ databricks current-user me
 
 You should see your email address in the output.
 
-### Using a Named Profile
+#### Using a Named Profile
 
 If you have multiple Databricks profiles configured, set `DATABRICKS_PROFILE` in `.env` (see Step 2.1), or export for ad-hoc CLI commands:
 
@@ -48,7 +50,7 @@ If you have multiple Databricks profiles configured, set `DATABRICKS_PROFILE` in
 export DATABRICKS_CONFIG_PROFILE=<your-profile-name>
 ```
 
-### Troubleshooting Authentication
+#### Troubleshooting Authentication
 
 If you see a UUID instead of your email, your CLI may be configured with a service principal. Check for overriding environment variables:
 
@@ -66,12 +68,21 @@ unset DATABRICKS_CLIENT_SECRET
 
 Then re-run `databricks auth login`.
 
+### Python and uv
+
+The setup CLI requires Python 3.11+ and [uv](https://docs.astral.sh/uv/):
+
+```bash
+cd lab_setup/auto_scripts
+uv sync
+```
+
 ---
 
 
 ## Why Catalog Creation Is Manual
 
-Newer Databricks workspaces use **Default Storage**, which blocks programmatic catalog creation via CLI, REST API, and SQL — all return the same error. Only the UI has the special handling to assign Default Storage to a new catalog. Once the catalog exists, everything else (schema, volume, compute, data upload, and table creation) is automated by `setup_databricks.sh`. See [CATALOG_SETUP_COMPLEXITY.md](CATALOG_SETUP_COMPLEXITY.md) for details.
+Newer Databricks workspaces use **Default Storage**, which blocks programmatic catalog creation via CLI, REST API, and SQL — all return the same error. Only the UI has the special handling to assign Default Storage to a new catalog. Once the catalog exists, everything else (schema, volume, compute, data upload, and table creation) is automated by `databricks-setup`. See [CATALOG_SETUP_COMPLEXITY.md](CATALOG_SETUP_COMPLEXITY.md) for details.
 
 ---
 
@@ -118,9 +129,14 @@ This returns volume metadata if successful, or an error if any component is miss
 
 ## Step 2: Automated Setup
 
+The `databricks-setup` CLI (in `auto_scripts/`) handles everything after catalog creation. It runs two parallel tracks:
+
+- **Track A:** Creates a dedicated Spark cluster with the Neo4j Spark Connector and all Python libraries
+- **Track B:** Uploads data files and creates Delta Lake tables via SQL Warehouse
+
 ### 2.1 Configure Environment
 
-Copy the example environment file and configure for your cloud:
+Copy the example environment file and customize:
 
 ```bash
 cp lab_setup/.env.example lab_setup/.env
@@ -136,49 +152,77 @@ CLOUD_PROVIDER="aws"
 DATABRICKS_PROFILE=""
 ```
 
-The script auto-selects the appropriate node type based on `CLOUD_PROVIDER`:
-- **AWS:** `m5.xlarge` (16 GB, 4 cores)
-- **Azure:** `Standard_D4ds_v5` (16 GB, 4 cores)
+#### All configuration options
 
-You can override with a specific `NODE_TYPE` if needed.
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `WAREHOUSE_NAME` | SQL Warehouse name (for lakehouse tables) | `Starter Warehouse` |
+| `WAREHOUSE_TIMEOUT` | SQL statement timeout (seconds) | `600` |
+| `DATABRICKS_PROFILE` | CLI profile from ~/.databrickscfg | Default |
+| `CLUSTER_NAME` | Cluster name to create or reuse | `Small Spark 4.0` |
+| `USER_EMAIL` | Cluster owner email | Auto-detected |
+| `SPARK_VERSION` | Databricks Runtime version | `17.3.x-cpu-ml-scala2.13` |
+| `AUTOTERMINATION_MINUTES` | Cluster auto-shutdown | `30` |
+| `RUNTIME_ENGINE` | `STANDARD` or `PHOTON` | `STANDARD` |
+| `CLOUD_PROVIDER` | `aws` or `azure` | `aws` |
+| `NODE_TYPE` | Instance type (auto-detected per cloud) | See below |
+| `INSTANCE_PROFILE_ARN` | AWS IAM instance profile for cluster nodes | None |
 
-### 2.2 Run Setup Script
+Cloud provider defaults:
 
-The `setup_databricks.sh` script handles everything after catalog creation in one command:
+| Provider | Default Node Type | Notes |
+|----------|------------------|-------|
+| AWS | `m5.xlarge` | 16 GB, 4 cores, EBS volume attached |
+| Azure | `Standard_D4ds_v5` | 16 GB, 4 cores |
 
-1. Creates (or reuses) a Dedicated compute cluster
-2. Installs the Neo4j Spark Connector and all PyPI libraries
-3. Uploads CSV and Markdown data files to the volume
-4. Creates Delta Lake tables for Databricks Genie (Lab 7)
-
-If a cluster with the same name already exists, the script reuses it (starting it if terminated) instead of creating a new one.
-
-### How to run it
+### 2.2 Run Setup
 
 ```bash
-./lab_setup/setup_databricks.sh [--cluster-only] [catalog.schema.volume] [user-email] [cluster-name]
+cd lab_setup/auto_scripts
+uv run databricks-setup [VOLUME] [OPTIONS]
 ```
 
-All arguments are optional:
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `VOLUME` | | Target volume (`catalog.schema.volume`) | `aws-databricks-neo4j-lab.lab-schema.lab-volume` |
+| `--cluster-only` | | Only create cluster and install libraries | `false` |
+| `--tables-only` | | Only upload data and create lakehouse tables | `false` |
+| `--profile` | `-p` | Databricks CLI profile | From `DATABRICKS_PROFILE` env var |
+
+Examples:
 
 ```bash
-# All defaults (catalog=aws-databricks-neo4j-lab, auto-detect user, cluster="Small Spark 4.0")
-./lab_setup/setup_databricks.sh
+# All defaults (both tracks run in parallel)
+uv run databricks-setup
 
-# Cluster + libraries only (skip data upload and table creation)
-./lab_setup/setup_databricks.sh --cluster-only
+# Cluster + libraries only
+uv run databricks-setup --cluster-only
+
+# Data upload + lakehouse tables only
+uv run databricks-setup --tables-only
 
 # Explicit volume
-./lab_setup/setup_databricks.sh aws-databricks-neo4j-lab.lab-schema.lab-volume
+uv run databricks-setup my-catalog.my-schema.my-volume
 
-# Explicit volume + user
-./lab_setup/setup_databricks.sh test_catalog.test_schema.test_volume ryan.knight@neo4j.com
-
-# Explicit volume + user + cluster name
-./lab_setup/setup_databricks.sh test_catalog.test_schema.test_volume ryan.knight@neo4j.com "My Workshop"
+# Use a specific Databricks CLI profile
+uv run databricks-setup --profile my-workspace
 ```
 
-The `--cluster-only` flag creates the cluster and installs libraries, then exits — skipping data upload and lakehouse table creation. Useful when you only need a running cluster with the right libraries (e.g., for Lab 6 which doesn't use lakehouse tables).
+### What it does
+
+Runs two parallel tracks by default:
+
+**Track A — Cluster + Libraries:**
+1. Creates (or reuses) a single-node Spark cluster with Dedicated (Single User) access mode
+2. Waits for the cluster to reach RUNNING state
+3. Installs the Neo4j Spark Connector and all Python libraries
+
+**Track B — Data Upload + Lakehouse Tables:**
+1. Finds the configured SQL Warehouse
+2. Uploads CSV and Markdown data files to the volume
+3. Creates Delta Lake tables via the Statement Execution API
+
+If a cluster with the same name already exists, the CLI reuses it (starting it if terminated).
 
 ### Cluster defaults
 
@@ -192,11 +236,11 @@ The `--cluster-only` flag creates the cluster and installs libraries, then exits
 | Access mode | Dedicated (Single User) |
 | Auto-terminate | 30 minutes |
 
-To change defaults, edit `.env` or the configuration variables at the top of `setup_databricks.sh`.
+To change defaults, edit `.env`.
 
 ### Expected data files in volume
 
-The script uploads all `.csv` and `.md` files from `aircraft_digital_twin_data/` (excluding documentation files). This includes data for Labs 5, 6, and 7:
+The CLI uploads all `.csv` and `.md` files from `aircraft_digital_twin_data/` (excluding documentation files). This includes data for Labs 5, 6, and 7:
 
 ```
 /Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/
@@ -255,7 +299,7 @@ The script uploads all `.csv` and `.md` files from `aircraft_digital_twin_data/`
 
 ### Manual Setup (UI Alternative)
 
-If you prefer to set up the cluster, libraries, and data through the Databricks UI instead of using `setup_databricks.sh`, see the complete step-by-step guide in **[MANUAL_SETUP.md](MANUAL_SETUP.md)**.
+If you prefer to set up the cluster, libraries, and data through the Databricks UI instead of using `databricks-setup`, see the complete step-by-step guide in **[MANUAL_SETUP.md](docs/MANUAL_SETUP.md)**.
 
 ---
 
@@ -379,22 +423,22 @@ Create a handout or slide with:
   ```
 
 **Genie not generating correct SQL**
-- Ensure table comments are added (handled by `create_lakehouse_tables.py`)
+- Ensure table comments are added (handled by `databricks-setup` CLI)
 - Verify table relationships are configured (Step 3.3)
 - Add more sample questions to guide the model
 
 **Lakehouse table creation fails**
 - Ensure CSV files are uploaded to the Volume first
 - Check file paths match exactly
-- Verify cluster has access to the Volume
+- Verify the SQL Warehouse has access to the Volume
 
 ---
 
 ## File Inventory
 
-For the full file inventory with sizes, record counts, and sensor data details, see **[MANUAL_SETUP.md](MANUAL_SETUP.md#file-inventory)**.
+For the full file inventory with sizes, record counts, and sensor data details, see **[MANUAL_SETUP.md](docs/MANUAL_SETUP.md#file-inventory)**.
 
-The setup script uploads **25 files** to the Volume:
+The setup CLI uploads **25 files** to the Volume:
 - **22 CSV files** from `aircraft_digital_twin_data/` (nodes and relationships for Labs 5 and 7)
 - **3 Markdown files** (maintenance manuals for Lab 6: A320, A321neo, B737)
 

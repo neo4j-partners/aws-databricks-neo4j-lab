@@ -13,7 +13,7 @@ rm -f "$OUTPUT_FILE"
 
 # Create zip with just the notebooks, preserving folder structure
 cd "$PROJECT_ROOT"
-zip -r "$OUTPUT_FILE" \
+zip -j "$OUTPUT_FILE" \
     Lab_5_Databricks_ETL_Neo4j/*.ipynb \
     Lab_6_Semantic_Search/*.ipynb \
     Lab_6_Semantic_Search/data_utils.py

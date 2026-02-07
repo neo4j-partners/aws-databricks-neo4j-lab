@@ -91,7 +91,6 @@ class DataConfig:
     """Data file configuration."""
 
     data_dir: Path = field(default_factory=lambda: Path(__file__).parent.parent.parent.parent / "aircraft_digital_twin_data")
-    lakehouse_script: Path = field(default_factory=lambda: Path(__file__).parent.parent.parent.parent / "create_lakehouse_tables.py")
     excluded_files: tuple[str, ...] = ("README_LARGE_DATASET.md", "ARCHITECTURE.md")
 
     def get_upload_files(self) -> list[Path]:
@@ -133,7 +132,6 @@ class Config:
     warehouse: WarehouseConfig = field(default_factory=WarehouseConfig)
     user_email: str | None = None
     databricks_profile: str | None = None
-    use_serverless: bool = False
 
     @classmethod
     def load(cls) -> "Config":
@@ -143,10 +141,6 @@ class Config:
             load_dotenv(default_env)
 
         config = cls()
-
-        # Serverless mode
-        if val := os.getenv("USE_SERVERLESS"):
-            config.use_serverless = val.lower() in ("true", "1", "yes")
 
         # Warehouse settings
         config.warehouse = WarehouseConfig.from_env()

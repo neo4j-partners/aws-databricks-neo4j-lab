@@ -1,6 +1,6 @@
-"""SQL Warehouse operations for serverless mode.
+"""SQL Warehouse management and SQL execution.
 
-Executes SQL statements via the Statement Execution API instead of using a cluster.
+Provides warehouse discovery and SQL statement execution via the Statement Execution API.
 """
 
 from typing import Any
@@ -14,8 +14,7 @@ from databricks.sdk.service.sql import (
 )
 from rich.console import Console
 
-from .config import VolumeConfig, WarehouseConfig
-from .utils import print_header
+from .config import WarehouseConfig
 
 console = Console()
 
@@ -130,126 +129,3 @@ def execute_sql(
     }
 
 
-def create_lakehouse_tables_serverless(
-    client: WorkspaceClient,
-    warehouse_id: str,
-    volume_config: VolumeConfig,
-    timeout_seconds: int = 600,
-) -> bool:
-    """Create lakehouse tables using SQL warehouse (serverless mode).
-
-    Args:
-        client: Databricks workspace client.
-        warehouse_id: SQL warehouse ID.
-        volume_config: Volume configuration.
-        timeout_seconds: Timeout for each statement.
-
-    Returns:
-        True if successful, False otherwise.
-    """
-    print_header("Creating Lakehouse Tables (Serverless)")
-
-    catalog = volume_config.catalog
-    volume_schema = volume_config.schema
-    volume = volume_config.volume
-    lakehouse_schema = volume_config.lakehouse_schema
-    volume_path = f"/Volumes/{catalog}/{volume_schema}/{volume}"
-    target = f"`{catalog}`.`{lakehouse_schema}`"
-
-    tblprops = "TBLPROPERTIES ('delta.columnMapping.mode' = 'name')"
-
-    statements = [
-        # Create schema
-        (
-            "Creating lakehouse schema",
-            f"CREATE SCHEMA IF NOT EXISTS `{catalog}`.`{lakehouse_schema}`",
-        ),
-        # Aircraft table
-        (
-            "Creating aircraft table",
-            f"""
-            CREATE TABLE IF NOT EXISTS {target}.aircraft
-            {tblprops}
-            AS SELECT * FROM read_files('{volume_path}/nodes_aircraft.csv',
-                format => 'csv', header => 'true', inferSchema => 'true')
-            """,
-        ),
-        # Systems table
-        (
-            "Creating systems table",
-            f"""
-            CREATE TABLE IF NOT EXISTS {target}.systems
-            {tblprops}
-            AS SELECT * FROM read_files('{volume_path}/nodes_systems.csv',
-                format => 'csv', header => 'true', inferSchema => 'true')
-            """,
-        ),
-        # Sensors table
-        (
-            "Creating sensors table",
-            f"""
-            CREATE TABLE IF NOT EXISTS {target}.sensors
-            {tblprops}
-            AS SELECT * FROM read_files('{volume_path}/nodes_sensors.csv',
-                format => 'csv', header => 'true', inferSchema => 'true')
-            """,
-        ),
-        # Sensor readings table
-        (
-            "Creating sensor_readings table",
-            f"""
-            CREATE TABLE IF NOT EXISTS {target}.sensor_readings
-            {tblprops}
-            PARTITIONED BY (sensor_id)
-            AS SELECT
-                reading_id,
-                sensor_id,
-                to_timestamp(ts) as timestamp,
-                CAST(value AS DOUBLE) as value
-            FROM read_files('{volume_path}/nodes_readings.csv',
-                format => 'csv', header => 'true', inferSchema => 'true')
-            """,
-        ),
-    ]
-
-    # Table comments
-    comments = [
-        f"COMMENT ON TABLE {target}.aircraft IS 'Fleet of aircraft with tail numbers, models, and operators'",
-        f"COMMENT ON TABLE {target}.systems IS 'Aircraft systems including engines, avionics, and hydraulics'",
-        f"COMMENT ON TABLE {target}.sensors IS 'Sensors installed on aircraft systems'",
-        f"COMMENT ON TABLE {target}.sensor_readings IS 'Hourly sensor readings over 90 days (July-September 2024)'",
-    ]
-
-    try:
-        # Execute table creation statements
-        for desc, sql in statements:
-            console.print(f"  {desc}...")
-            execute_sql(client, warehouse_id, sql, timeout_seconds)
-            console.print("    Done.")
-
-        # Verify tables
-        console.print()
-        console.print("Verifying table row counts...")
-        verify_sql = f"""
-            SELECT 'aircraft' as table_name, COUNT(*) as row_count FROM {target}.aircraft
-            UNION ALL
-            SELECT 'systems', COUNT(*) FROM {target}.systems
-            UNION ALL
-            SELECT 'sensors', COUNT(*) FROM {target}.sensors
-            UNION ALL
-            SELECT 'sensor_readings', COUNT(*) FROM {target}.sensor_readings
-        """
-        execute_sql(client, warehouse_id, verify_sql, timeout_seconds)
-
-        # Add comments
-        console.print()
-        console.print("Adding table comments...")
-        for comment_sql in comments:
-            execute_sql(client, warehouse_id, comment_sql, timeout_seconds)
-        console.print("  Done.")
-
-        return True
-
-    except Exception as e:
-        console.print(f"[red]Error creating tables: {e}[/red]")
-        return False

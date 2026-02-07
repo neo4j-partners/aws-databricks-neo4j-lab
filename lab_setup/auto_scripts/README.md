@@ -1,119 +1,38 @@
 # Databricks Setup CLI
 
-A modular Python CLI tool for setting up Databricks environments for the Neo4j workshop. Replaces the shell script `setup_databricks.sh` with a clean, type-safe implementation using the Databricks SDK.
+A modular Python CLI tool for setting up Databricks environments for the Neo4j workshop.
 
-## Features
+For full usage instructions, configuration options, and examples, see the main [Lab Admin Setup Guide](../README.md#step-2-automated-setup).
 
-- **Two execution modes**:
-  - **Serverless mode**: Uses SQL Warehouse (faster, no cluster needed)
-  - **Cluster mode**: Creates dedicated Spark cluster with Neo4j Spark Connector
-- Upload data files to Unity Catalog volumes
-- Create Delta Lake tables for Databricks Genie
-- Full configuration via environment variables or `.env` file
-
-## Requirements
-
-- Python 3.11+
-- [uv](https://docs.astral.sh/uv/) package manager
-- Databricks CLI configured with authentication (`databricks auth login`)
-
-## Installation
+## Quick Start
 
 ```bash
 cd lab_setup/auto_scripts
-
-# Install dependencies and create virtual environment
 uv sync
-```
-
-## Usage
-
-```bash
-# Run with all defaults
 uv run databricks-setup
-
-# Cluster + libraries only (skip data upload and tables)
-uv run databricks-setup --cluster-only
-
-# Explicit volume
-uv run databricks-setup my-catalog.my-schema.my-volume
-
-# Use a specific Databricks CLI profile
-uv run databricks-setup --profile my-workspace
 ```
 
-### CLI Options
+## What It Does
 
-| Option | Short | Description | Default |
-|--------|-------|-------------|---------|
-| `VOLUME` | | Target volume (`catalog.schema.volume`) | `aws-databricks-neo4j-lab.lab-schema.lab-volume` |
-| `--cluster-only` | | Skip data upload and table creation | `false` |
-| `--profile` | `-p` | Databricks CLI profile | From `DATABRICKS_PROFILE` env var |
+Runs two parallel tracks by default:
 
-## Configuration
-
-The CLI reads from `lab_setup/.env`. Copy the example and customize:
-
-```bash
-cd lab_setup
-cp .env.example .env
+```
+databricks-setup CLI
+├── Track A (parallel): Cluster + Libraries
+│   ├── Create or reuse dedicated Spark cluster
+│   ├── Wait for cluster to reach RUNNING state
+│   └── Install Neo4j Spark Connector + Python packages
+│
+├── Track B (parallel): Data + Lakehouse Tables
+│   ├── Find SQL Warehouse
+│   ├── Upload CSV files to Unity Catalog volume
+│   ├── Verify upload
+│   └── Create Delta Lake tables via Statement Execution API
+│
+└── Wait for both tracks, report results
 ```
 
-### Serverless Mode
-
-Use a SQL Warehouse instead of creating a cluster. This is faster and more cost-effective:
-
-```bash
-# In lab_setup/.env
-USE_SERVERLESS=true
-WAREHOUSE_NAME=Starter Warehouse
-```
-
-When `USE_SERVERLESS=true`:
-- Skips cluster creation and library installation
-- Uses the Statement Execution API to create tables
-- Requires a SQL Warehouse (Starter Warehouse works)
-
-### Cluster Mode
-
-Create a dedicated Spark cluster (required for Neo4j Spark Connector):
-
-```bash
-# In lab_setup/.env
-USE_SERVERLESS=false
-
-# Cluster settings
-CLUSTER_NAME=Small Spark 4.0
-USER_EMAIL=user@example.com   # auto-detected if empty
-SPARK_VERSION=17.3.x-cpu-ml-scala2.13
-AUTOTERMINATION_MINUTES=30
-RUNTIME_ENGINE=STANDARD  # or PHOTON
-NODE_TYPE=m5.xlarge      # AWS default
-CLOUD_PROVIDER=aws       # or azure
-```
-
-### All Configuration Options
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `USE_SERVERLESS` | Use SQL Warehouse instead of cluster | `false` |
-| `WAREHOUSE_NAME` | SQL Warehouse name (serverless mode) | `Starter Warehouse` |
-| `WAREHOUSE_TIMEOUT` | SQL statement timeout (seconds) | `600` |
-| `DATABRICKS_PROFILE` | CLI profile from ~/.databrickscfg | Default |
-| `CLUSTER_NAME` | Cluster name to create or reuse | `Small Spark 4.0` |
-| `USER_EMAIL` | Cluster owner email | Auto-detected |
-| `SPARK_VERSION` | Databricks Runtime version | `17.3.x-cpu-ml-scala2.13` |
-| `AUTOTERMINATION_MINUTES` | Cluster auto-shutdown | `30` |
-| `RUNTIME_ENGINE` | `STANDARD` or `PHOTON` | `STANDARD` |
-| `CLOUD_PROVIDER` | `aws` or `azure` | `aws` |
-| `NODE_TYPE` | Instance type | Auto-detected |
-
-### Cloud Provider Defaults
-
-| Provider | Default Node Type | Notes |
-|----------|------------------|-------|
-| AWS | `m5.xlarge` | 16 GB, 4 cores, EBS volume attached |
-| Azure | `Standard_D4ds_v5` | 16 GB, 4 cores |
+Use `--cluster-only` to skip Track B, or `--tables-only` to skip Track A.
 
 ## Project Structure
 
@@ -129,8 +48,8 @@ auto_scripts/
     ├── cluster.py              # Cluster creation/management
     ├── libraries.py            # Library installation
     ├── data_upload.py          # Volume file upload
-    ├── lakehouse.py            # Table creation via cluster
-    ├── warehouse.py            # Table creation via SQL Warehouse
+    ├── lakehouse_tables.py     # Lakehouse SQL definitions + creation
+    ├── warehouse.py            # SQL Warehouse management + SQL execution
     └── main.py                 # Typer CLI entry point
 ```
 
@@ -149,30 +68,3 @@ uv run mypy src/
 # Auto-fix linting issues
 uv run ruff check --fix src/
 ```
-
-## What It Does
-
-### Serverless Mode (`USE_SERVERLESS=true`)
-
-1. **Find Warehouse**: Locates the configured SQL Warehouse
-2. **Data Upload**: Uploads CSV files to Unity Catalog volume (no cluster needed)
-3. **Table Creation**: Creates Delta Lake tables via Statement Execution API
-
-### Cluster Mode (`USE_SERVERLESS=false`)
-
-1. **Cluster Setup**: Creates a single-node Spark 4.0 cluster with Dedicated (Single User) access mode (required for Neo4j Spark Connector)
-2. **Library Installation**: Installs Neo4j Spark Connector + Python packages
-3. **Data Upload**: Uploads CSV files to Unity Catalog volume
-4. **Table Creation**: Executes `create_lakehouse_tables.py` via Command Execution API
-
-## Comparison with Shell Script
-
-| Feature | Shell Script | Python CLI |
-|---------|-------------|------------|
-| Dependencies | `jq`, `databricks` CLI | `databricks-sdk`, `typer` |
-| Serverless Mode | No | Yes (`USE_SERVERLESS=true`) |
-| Type Safety | None | Full mypy strict |
-| Error Handling | Exit codes | Exceptions with context |
-| Progress Display | Echo statements | Rich progress bars |
-| Testability | Difficult | Modular, mockable |
-| Configuration | Positional args | Named options + `.env` |
