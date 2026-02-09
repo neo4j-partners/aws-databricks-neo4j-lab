@@ -4,6 +4,8 @@ Load aircraft data from Databricks into Neo4j using the Spark Connector.
 
 **Duration:** ~45 minutes
 
+> **First time?** Complete the [Databricks Workspace Setup](DATABRICKS_SIGNUP.md) guide before starting this lab. It walks you through accepting your workspace invitation, verifying your compute cluster, and cloning the notebooks into your personal folder.
+
 ---
 
 ## Notebooks
