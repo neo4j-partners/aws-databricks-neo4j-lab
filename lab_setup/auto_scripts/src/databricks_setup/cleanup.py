@@ -1,7 +1,7 @@
 """Cleanup logic for tearing down workshop resources.
 
-Deletes lakehouse schema (with tables), volume, volume schema, and catalog.
-Leaves the compute cluster intact.
+Deletes permissions grants, workshop group, lakehouse schema (with tables),
+volume, volume schema, and catalog.  Leaves the compute cluster intact.
 """
 
 from databricks.sdk import WorkspaceClient
@@ -9,6 +9,7 @@ from databricks.sdk.errors import NotFound
 
 from .config import VolumeConfig
 from .log import log
+from .permissions import cleanup_permissions
 from .utils import print_header
 from .warehouse import execute_sql
 
@@ -82,6 +83,10 @@ def run_cleanup(
         timeout_seconds: Timeout per SQL statement.
     """
     print_header("Cleaning Up Workshop Resources")
+
+    # Permissions must be cleaned up before the catalog is deleted,
+    # because we cannot revoke grants on a catalog that no longer exists.
+    cleanup_permissions(client, volume_config)
 
     _drop_lakehouse_schema(client, warehouse_id, volume_config, timeout_seconds)
     _delete_volume(client, volume_config)

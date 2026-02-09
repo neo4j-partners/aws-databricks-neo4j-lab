@@ -1,6 +1,6 @@
 """Configuration management for Databricks setup.
 
-Loads configuration from environment variables, .env files, and CLI arguments.
+Loads configuration from environment variables and .env file.
 """
 
 from __future__ import annotations
@@ -27,6 +27,26 @@ class ClusterConfig:
     node_type: str | None = None  # Auto-detected from cloud provider
     instance_profile_arn: str | None = None  # AWS instance profile for cluster nodes
     cloud_provider: str = "aws"
+
+    @classmethod
+    def from_env(cls) -> ClusterConfig:
+        """Load cluster config from environment."""
+        config = cls()
+        if val := os.getenv("CLUSTER_NAME"):
+            config.name = val
+        if val := os.getenv("SPARK_VERSION"):
+            config.spark_version = val
+        if val := os.getenv("AUTOTERMINATION_MINUTES"):
+            config.autotermination_minutes = int(val)
+        if val := os.getenv("RUNTIME_ENGINE"):
+            config.runtime_engine = val
+        if val := os.getenv("NODE_TYPE"):
+            config.node_type = val
+        if val := os.getenv("INSTANCE_PROFILE_ARN"):
+            config.instance_profile_arn = val
+        if val := os.getenv("CLOUD_PROVIDER"):
+            config.cloud_provider = val.lower()
+        return config
 
     def get_node_type(self) -> str:
         """Get node type, auto-detecting based on cloud provider if not set."""
@@ -67,14 +87,18 @@ class VolumeConfig:
     lakehouse_schema: str = "lakehouse"
 
     @classmethod
-    def from_string(cls, volume_spec: str) -> VolumeConfig:
-        """Parse 'catalog.schema.volume' format."""
-        parts = volume_spec.split(".")
-        if len(parts) != 3:
-            raise ValueError(
-                f"Volume must be in format 'catalog.schema.volume', got: {volume_spec}"
-            )
-        return cls(catalog=parts[0], schema=parts[1], volume=parts[2])
+    def from_env(cls) -> VolumeConfig:
+        """Load volume config from environment."""
+        config = cls()
+        if val := os.getenv("CATALOG_NAME"):
+            config.catalog = val
+        if val := os.getenv("VOLUME_SCHEMA"):
+            config.schema = val
+        if val := os.getenv("VOLUME_NAME"):
+            config.volume = val
+        if val := os.getenv("LAKEHOUSE_SCHEMA"):
+            config.lakehouse_schema = val
+        return config
 
     @property
     def full_path(self) -> str:
@@ -148,24 +172,9 @@ class Config:
 
         config = cls()
 
-        # Warehouse settings
+        config.cluster = ClusterConfig.from_env()
+        config.volume = VolumeConfig.from_env()
         config.warehouse = WarehouseConfig.from_env()
-
-        # Cluster settings from environment
-        if val := os.getenv("CLUSTER_NAME"):
-            config.cluster.name = val
-        if val := os.getenv("SPARK_VERSION"):
-            config.cluster.spark_version = val
-        if val := os.getenv("AUTOTERMINATION_MINUTES"):
-            config.cluster.autotermination_minutes = int(val)
-        if val := os.getenv("RUNTIME_ENGINE"):
-            config.cluster.runtime_engine = val
-        if val := os.getenv("NODE_TYPE"):
-            config.cluster.node_type = val
-        if val := os.getenv("INSTANCE_PROFILE_ARN"):
-            config.cluster.instance_profile_arn = val
-        if val := os.getenv("CLOUD_PROVIDER"):
-            config.cluster.cloud_provider = val.lower()
 
         # User settings
         if val := os.getenv("USER_EMAIL"):
@@ -177,30 +186,19 @@ class Config:
 
         return config
 
-    def prepare(
-        self,
-        volume: str,
-        profile: str | None = None,
-    ) -> WorkspaceClient:
+    def prepare(self) -> WorkspaceClient:
         """Finalize config and return a ready WorkspaceClient.
 
-        Handles volume parsing, profile resolution, user detection,
-        and data-directory validation — all the init logic that runs
-        after ``load()`` but before the tracks start.
-
-        Args:
-            volume: Volume spec in 'catalog.schema.volume' format.
-            profile: CLI-provided Databricks profile (overrides env).
+        Handles profile resolution, user detection, and data-directory
+        validation — all the init logic that runs after ``load()`` but
+        before the tracks start.
 
         Returns:
             An authenticated WorkspaceClient.
         """
         from .utils import get_current_user, get_workspace_client
 
-        self.volume = VolumeConfig.from_string(volume)
-
-        effective_profile = profile or self.databricks_profile
-        client = get_workspace_client(effective_profile)
+        client = get_workspace_client(self.databricks_profile)
 
         if not self.user_email:
             self.user_email = get_current_user(client)
@@ -217,8 +215,9 @@ class SetupResult:
 
     cluster_id: str = ""
     tables_ok: bool = True
+    lockdown_ok: bool = True
 
     @property
     def success(self) -> bool:
-        """True unless the tables track failed."""
-        return self.tables_ok
+        """True unless any track failed."""
+        return self.tables_ok and self.lockdown_ok

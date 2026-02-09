@@ -40,12 +40,10 @@ databricks-setup setup
 ```
 
 ```bash
-# Run setup
 uv run databricks-setup setup
-
-# Explicit volume target
-uv run databricks-setup setup my-catalog.my-schema.my-volume
 ```
+
+All configuration (volume target, cluster settings, etc.) is loaded from `lab_setup/.env`.
 
 ### `cleanup`
 
@@ -57,9 +55,6 @@ uv run databricks-setup cleanup
 
 # Skip confirmation
 uv run databricks-setup cleanup --yes
-
-# Explicit volume target
-uv run databricks-setup cleanup my-catalog.my-schema.my-volume --yes
 ```
 
 ## Project Structure

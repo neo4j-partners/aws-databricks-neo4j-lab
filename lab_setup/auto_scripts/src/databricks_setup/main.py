@@ -6,7 +6,6 @@ clusters, libraries, data files, and lakehouse tables for the Neo4j workshop.
 
 import time
 import traceback
-from typing import Annotated
 
 import typer
 
@@ -17,6 +16,7 @@ from .data_upload import upload_data_files, verify_upload
 from .lakehouse_tables import create_lakehouse_tables
 from .libraries import ensure_libraries_installed
 from .log import Level, close_log_file, init_log_file, log, log_to_file
+from .permissions import run_permissions_lockdown
 from .utils import print_header
 from .warehouse import get_or_start_warehouse
 
@@ -28,45 +28,26 @@ app = typer.Typer(
 
 
 @app.command()
-def setup(
-    volume: Annotated[
-        str,
-        typer.Argument(
-            help="Target volume in format 'catalog.schema.volume'",
-        ),
-    ] = "aws-databricks-neo4j-lab.lab-schema.lab-volume",
-    profile: Annotated[
-        str | None,
-        typer.Option(
-            "--profile", "-p",
-            help="Databricks CLI profile to use",
-        ),
-    ] = None,
-) -> None:
+def setup() -> None:
     """Set up Databricks environment for the Neo4j workshop.
 
-    Runs two tracks sequentially:
+    Runs three tracks sequentially:
 
       Track A: Create (or reuse) a compute cluster and install libraries.
 
       Track B: Upload data files and create lakehouse tables via SQL Warehouse.
 
-    Configuration is loaded from lab_setup/.env (CLUSTER_NAME, USER_EMAIL, etc.).
+      Track C: Lock down permissions (entitlements, group, UC grants, cluster ACL).
+
+    All configuration is loaded from lab_setup/.env.
     The Neo4j Spark Connector requires Dedicated (Single User) access mode.
-
-    Examples:
-
-        databricks-setup setup
-
-        # Explicit volume
-        databricks-setup setup my-catalog.my-schema.my-volume
     """
     log_path = init_log_file()
     log(f"[dim]Log file: {log_path}[/dim]")
 
     start = time.monotonic()
     try:
-        _run_setup(volume=volume, profile=profile)
+        _run_setup()
         elapsed = time.monotonic() - start
         log(f"[green]Total elapsed time: {_fmt_elapsed(elapsed)}[/green]")
     except Exception as e:
@@ -81,49 +62,25 @@ def setup(
 
 @app.command()
 def cleanup(
-    volume: Annotated[
-        str,
-        typer.Argument(
-            help="Target volume in format 'catalog.schema.volume'",
-        ),
-    ] = "aws-databricks-neo4j-lab.lab-schema.lab-volume",
-    profile: Annotated[
-        str | None,
-        typer.Option(
-            "--profile", "-p",
-            help="Databricks CLI profile to use",
-        ),
-    ] = None,
-    yes: Annotated[
-        bool,
-        typer.Option(
-            "--yes", "-y",
-            help="Skip confirmation prompt",
-        ),
-    ] = False,
+    yes: bool = typer.Option(
+        False,
+        "--yes", "-y",
+        help="Skip confirmation prompt",
+    ),
 ) -> None:
-    """Delete lakehouse tables, volume, schemas, and catalog.
+    """Delete permissions, lakehouse tables, volume, schemas, and catalog.
 
     Removes everything created by the setup command except the compute
-    cluster.  Each step is idempotent — already-deleted resources are
-    skipped.
+    cluster and entitlement changes.  Each step is idempotent —
+    already-deleted resources are skipped.
 
-    Examples:
-
-        # Interactive confirmation
-        databricks-setup cleanup
-
-        # Skip confirmation
-        databricks-setup cleanup --yes
-
-        # Explicit volume
-        databricks-setup cleanup my-catalog.my-schema.my-volume --yes
+    All configuration is loaded from lab_setup/.env.
     """
     log_path = init_log_file()
     log(f"[dim]Log file: {log_path}[/dim]")
     start = time.monotonic()
     try:
-        _run_cleanup(volume=volume, profile=profile, yes=yes)
+        _run_cleanup(yes=yes)
         elapsed = time.monotonic() - start
         log(f"[green]Total elapsed time: {_fmt_elapsed(elapsed)}[/green]")
     except Exception as e:
@@ -144,10 +101,10 @@ def _fmt_elapsed(seconds: float) -> str:
     return f"{s}s"
 
 
-def _run_cleanup(volume: str, profile: str | None, *, yes: bool) -> None:
+def _run_cleanup(*, yes: bool) -> None:
     """Load config, confirm, and run cleanup."""
     config = Config.load()
-    client = config.prepare(volume=volume, profile=profile)
+    client = config.prepare()
     warehouse_id = get_or_start_warehouse(client, config.warehouse)
 
     _print_cleanup_target(config)
@@ -174,10 +131,10 @@ def _print_cleanup_target(config: Config) -> None:
 # Orchestration
 # ---------------------------------------------------------------------------
 
-def _run_setup(volume: str, profile: str | None) -> None:
-    """Load config, run Track A then Track B, and print results."""
+def _run_setup() -> None:
+    """Load config, run Tracks A, B, and C, and print results."""
     config = Config.load()
-    client = config.prepare(volume=volume, profile=profile)
+    client = config.prepare()
 
     _print_config_summary(config)
 
@@ -199,6 +156,13 @@ def _run_setup(volume: str, profile: str | None) -> None:
         warehouse_id,
         config.volume,
         config.warehouse.timeout_seconds,
+    )
+
+    # Track C: Permissions Lockdown
+    result.lockdown_ok = run_permissions_lockdown(
+        client,
+        cluster_config=config.cluster,
+        volume_config=config.volume,
     )
 
     _print_summary(result, config)
@@ -237,6 +201,10 @@ def _print_summary(result: SetupResult, config: Config) -> None:
     log(f"Lakehouse:    {config.volume.catalog}.{config.volume.lakehouse_schema}")
     if not result.tables_ok:
         log("[red]Lakehouse table creation had errors.[/red]")
+    if result.lockdown_ok:
+        log("Lockdown:     [green]Permissions locked down[/green]")
+    else:
+        log("Lockdown:     [red]Permissions lockdown had errors[/red]")
 
     log()
     log("To check cluster status:")

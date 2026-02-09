@@ -156,6 +156,10 @@ DATABRICKS_PROFILE=""
 
 | Variable | Description | Default |
 |----------|-------------|---------|
+| `CATALOG_NAME` | Unity Catalog name | `aws-databricks-neo4j-lab` |
+| `VOLUME_SCHEMA` | Schema for the data volume | `lab-schema` |
+| `VOLUME_NAME` | Volume name for CSV data upload | `lab-volume` |
+| `LAKEHOUSE_SCHEMA` | Schema for lakehouse Delta tables | `lakehouse` |
 | `WAREHOUSE_NAME` | SQL Warehouse name (for lakehouse tables) | `Starter Warehouse` |
 | `WAREHOUSE_TIMEOUT` | SQL statement timeout (seconds) | `600` |
 | `DATABRICKS_PROFILE` | CLI profile from ~/.databrickscfg | Default |
@@ -179,26 +183,10 @@ Cloud provider defaults:
 
 ```bash
 cd lab_setup/auto_scripts
-uv run databricks-setup setup [VOLUME] [OPTIONS]
-```
-
-| Option | Short | Description | Default |
-|--------|-------|-------------|---------|
-| `VOLUME` | | Target volume (`catalog.schema.volume`) | `aws-databricks-neo4j-lab.lab-schema.lab-volume` |
-| `--profile` | `-p` | Databricks CLI profile | From `DATABRICKS_PROFILE` env var |
-
-Examples:
-
-```bash
-# All defaults
 uv run databricks-setup setup
-
-# Explicit volume
-uv run databricks-setup setup my-catalog.my-schema.my-volume
-
-# Use a specific Databricks CLI profile
-uv run databricks-setup setup --profile my-workspace
 ```
+
+All configuration is loaded from `lab_setup/.env` — there are no CLI arguments.
 
 ### What it does
 
