@@ -163,3 +163,6 @@ import/
 
 # Large generated data files (keep small CSVs, ignore generated large ones)
 *_large.csv
+
+# User management
+users.csv
