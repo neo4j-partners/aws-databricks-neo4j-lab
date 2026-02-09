@@ -138,6 +138,7 @@ class NotebookConfig:
     """Configuration for uploading workshop notebooks to the workspace."""
 
     workspace_folder: str = "/Shared/aws-databricks-neo4j-lab"
+    upload_folder: str = "labs"
     repo_root: Path = field(
         default_factory=lambda: Path(__file__).resolve().parent.parent.parent.parent.parent,
     )
@@ -174,7 +175,7 @@ class NotebookConfig:
                 local = self.repo_root / lab_dir / name
                 if not local.exists():
                     raise FileNotFoundError(f"Expected notebook not found: {local}")
-                files.append((local, lab_dir))
+                files.append((local, self.upload_folder))
         return files
 
 
@@ -260,6 +261,7 @@ class Config:
 class SetupResult:
     """Outcome of the setup tracks."""
 
+    cluster_ok: bool = True
     tables_ok: bool = True
     notebooks_ok: bool = True
     lockdown_ok: bool = True
@@ -267,4 +269,4 @@ class SetupResult:
     @property
     def success(self) -> bool:
         """True unless any track failed."""
-        return self.tables_ok and self.notebooks_ok and self.lockdown_ok
+        return self.cluster_ok and self.tables_ok and self.notebooks_ok and self.lockdown_ok

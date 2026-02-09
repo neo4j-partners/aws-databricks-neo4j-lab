@@ -9,17 +9,22 @@ from __future__ import annotations
 import time
 import traceback
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import typer
 from rich.table import Table
 
 from databricks.sdk.service.compute import State
 
+if TYPE_CHECKING:
+    from databricks.sdk import WorkspaceClient
+
 from .cleanup import run_cleanup
 from .cluster import (
     create_user_cluster,
     delete_cluster,
     find_user_clusters,
+    get_or_create_cluster,
     wait_for_cluster_running,
 )
 from .config import Config, SetupResult
@@ -65,7 +70,9 @@ app = typer.Typer(
 def setup() -> None:
     """Set up Databricks environment for the Neo4j workshop.
 
-    Runs two tracks sequentially:
+    Runs three tracks sequentially:
+
+      Track A: Create/start admin cluster and install libraries.
 
       Track B: Upload data files and create lakehouse tables via SQL Warehouse.
 
@@ -227,13 +234,16 @@ def _fmt_elapsed(seconds: float) -> str:
 # ---------------------------------------------------------------------------
 
 def _run_setup() -> None:
-    """Load config, run Tracks B and C, and print results."""
+    """Load config, run Tracks A, B, and C, and print results."""
     config = Config.load()
     client = config.prepare()
 
     _print_config_summary(config)
 
     result = SetupResult()
+
+    # Track A: Admin Cluster
+    result.cluster_ok = _setup_admin_cluster(client, config)
 
     # Track B: Data Upload + Lakehouse Tables
     print_header("Track B: Data Upload + Lakehouse Tables")
@@ -263,6 +273,33 @@ def _run_setup() -> None:
     )
 
     _print_summary(result, config)
+
+
+def _setup_admin_cluster(client: WorkspaceClient, config: Config) -> bool:
+    """Create/start the admin cluster and install libraries (Track A).
+
+    The cluster is created in Single User (dedicated) mode, assigned to the
+    admin user running the setup.
+
+    Returns:
+        True if the cluster is running with libraries installed, False on error.
+    """
+    print_header("Track A: Admin Cluster")
+
+    if not config.user_email:
+        log("[red]Cannot create admin cluster: user email not resolved.[/red]")
+        return False
+
+    try:
+        cluster_id = get_or_create_cluster(client, config.cluster, config.user_email)
+        wait_for_cluster_running(client, cluster_id)
+        ensure_libraries_installed(client, cluster_id, config.library)
+    except Exception as e:
+        log(f"[red]Admin cluster setup failed: {e}[/red]")
+        log_to_file(traceback.format_exc(), level=Level.ERROR)
+        return False
+
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -543,6 +580,7 @@ def _print_config_summary(config: Config) -> None:
 
     if config.user_email:
         log(f"User:       {config.user_email}")
+    log(f"Cluster:    {config.cluster.name}")
     log(f"Warehouse:  {config.warehouse.name}")
     log(f"Volume:     {config.volume.full_path}")
     log(f"Lakehouse:  {config.volume.catalog}.{config.volume.lakehouse_schema}")
@@ -555,6 +593,10 @@ def _print_summary(result: SetupResult, config: Config) -> None:
     """Print final setup summary."""
     print_header("Setup Complete" if result.success else "Setup Completed with Errors")
 
+    if result.cluster_ok:
+        log(f"Cluster:      [green]{config.cluster.name}[/green]")
+    else:
+        log(f"Cluster:      [red]{config.cluster.name} — failed[/red]")
     log(f"Volume:       {config.volume.full_path}")
     log(f"Lakehouse:    {config.volume.catalog}.{config.volume.lakehouse_schema}")
     log(f"Notebooks:    {config.notebook.workspace_folder}")
