@@ -17,7 +17,15 @@ Your workshop admin has added you to a shared Databricks workspace. You received
 
 ## Step 2 — Verify Your Compute Cluster
 
-Each participant has a dedicated compute cluster pre-configured by the workshop admin. This cluster has the Neo4j Spark Connector library and other dependencies already installed.
+In Databricks, **compute** refers to the cloud infrastructure that runs your code. A **compute cluster** is a set of virtual machines managed by Databricks that provides the CPU, memory, and Apache Spark runtime needed to execute notebook cells. Think of it as the engine behind your notebooks — without it, your code has nowhere to run.
+
+Your workshop admin has pre-configured a personal cluster for each participant. Your cluster comes with:
+
+- **Apache Spark** runtime for processing data at scale
+- **Neo4j Spark Connector** library for writing DataFrames directly into Neo4j
+- **Python packages** (`neo4j`, `neo4j-graphrag`, etc.) needed by the lab notebooks
+
+To verify your cluster:
 
 1. Click **Compute** in the left sidebar.
 2. Look for a cluster named with your identifier (e.g., `lab-<yourname>`).
@@ -31,7 +39,9 @@ If the cluster is stopped, click the cluster name to open its detail page, then 
 
 ## Step 3 — Clone the Lab Notebooks
 
-The lab notebooks are stored in a shared folder. You will clone them into your own workspace so you can edit and run them without affecting other participants.
+A **notebook** in Databricks is an interactive document made up of cells that can contain Python code, SQL queries, or markdown text. You run cells one at a time or all at once, and each cell displays its output directly below it. Notebooks are the primary way you write and execute code in Databricks.
+
+The lab notebooks are stored in a shared folder that all participants can see. You will clone (copy) them into your own workspace so you can edit and run them without affecting other participants.
 
 1. Click **Workspace** in the left sidebar.
 2. Expand **Shared > aws-databricks-neo4j-lab > labs**.
@@ -56,10 +66,10 @@ The Clone dialog lets you place a personal copy of the notebooks in your home di
 
 ## Step 5 — Attach Your Compute Cluster
 
-Each notebook must be attached to a compute cluster before it can execute code. Attaching your personal cluster ensures you have the correct Spark Connector libraries and Python packages.
+A notebook by itself is just a document — it needs to be **attached** to a compute cluster before any code can run. Attaching tells Databricks which cluster should execute the notebook's cells. This is similar to choosing which machine runs your program. By attaching your personal cluster, you get the pre-installed Neo4j Spark Connector and Python libraries that the lab requires.
 
 1. Open the first notebook, `01_aircraft_etl_to_neo4j.ipynb`, from your cloned folder.
-2. Click the **compute selector** in the top-right corner of the notebook.
+2. Click the **compute selector** in the top-right corner of the notebook (it may say "Serverless" or "Connect" by default).
 3. Under **Active resources**, select your personal cluster (e.g., `lab-<yourname>`).
 
 > **Note:** Do not use **Serverless** compute — it does not have the Neo4j Spark Connector installed.
