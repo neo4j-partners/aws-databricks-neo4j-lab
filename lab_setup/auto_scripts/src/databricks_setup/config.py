@@ -142,17 +142,22 @@ class NotebookConfig:
     repo_root: Path = field(
         default_factory=lambda: Path(__file__).resolve().parent.parent.parent.parent.parent,
     )
-    lab_notebooks: tuple[tuple[str, tuple[str, ...]], ...] = (
+    lab_notebooks: tuple[tuple[str, tuple[str, ...], str], ...] = (
         ("Lab_5_Databricks_ETL_Neo4j", (
             "01_aircraft_etl_to_neo4j.ipynb",
             "02_load_neo4j_full.ipynb",
-        )),
+        ), "labs"),
         ("Lab_6_Semantic_Search", (
             "03_data_and_embeddings.ipynb",
             "04_graphrag_retrievers.ipynb",
             "05_hybrid_retrievers.ipynb",
             "data_utils.py",
-        )),
+        ), "labs"),
+        ("lab_setup/neo4j_mcp_connection", (
+            "neo4j_mcp_agent.py",
+            "neo4j-mcp-agent-deploy.ipynb",
+            "neo4j-mcp-http-connection.ipynb",
+        ), "neo4j_mcp_connection"),
     )
 
     @classmethod
@@ -164,18 +169,18 @@ class NotebookConfig:
         return config
 
     def get_upload_files(self) -> list[tuple[Path, str]]:
-        """Return (local_path, lab_dir_name) pairs for all files to upload.
+        """Return (local_path, workspace_subdir) pairs for all files to upload.
 
         Raises:
             FileNotFoundError: If any expected file is missing on disk.
         """
         files: list[tuple[Path, str]] = []
-        for lab_dir, filenames in self.lab_notebooks:
+        for lab_dir, filenames, workspace_subdir in self.lab_notebooks:
             for name in filenames:
                 local = self.repo_root / lab_dir / name
                 if not local.exists():
                     raise FileNotFoundError(f"Expected notebook not found: {local}")
-                files.append((local, self.upload_folder))
+                files.append((local, workspace_subdir))
         return files
 
 
