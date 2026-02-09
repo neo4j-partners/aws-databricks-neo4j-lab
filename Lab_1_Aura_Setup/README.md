@@ -12,7 +12,7 @@ In this lab, you will set up your Neo4j Aura database, restore the knowledge gra
 
 There are two signup options for this lab. **Please follow the signup process provided by your workshop organizer.**
 
-### Option A: Workshop SSO Login (Recommended for organized workshops)
+### Option A: Workshop SSO Login (For Organized Workshops)
 
 If your organizer has provided OneBlink credentials, use the SSO login process:
 
@@ -56,38 +56,6 @@ If you're completing this lab independently or your organizer has instructed you
 
 > **CRITICAL:** The password is only shown once and will not be available after you close this dialog. Download the credentials file and store it somewhere safe. You will need these credentials in later labs to connect your applications to Neo4j.
 
-
-## Part 2: Restore the Backup
-
-After your Aura instance is running, restore the pre-built knowledge graph:
-
-### Step 1: Download the Backup File
-
-1. Download the backup file from GitHub:
-   - **Download link:** [finance_data.backup](https://github.com/neo4j-partners/aws-databricks-neo4j-lab/raw/refs/heads/main/Lab_1_Aura_Setup/data/finance_data.backup)
-2. Save the file to a location you can easily find (e.g., your Downloads folder)
-
-### Step 2: Upload to Aura
-
-1. Go to your instance in the [Aura Console](https://console.neo4j.io)
-2. Click the **...** menu on your instance and select **Backup & restore**
-
-   ![Instance menu showing Backup & restore option](images/backup_restore.png)
-
-3. Click **Upload backup** to open the upload dialog
-4. Drag the `finance_data.backup` file you downloaded into the dialog:
-
-   ![Upload backup dialog with drag and drop area](images/restore_drag.png)
-
-5. Wait for the restore to complete - your instance will restart with a pre-built knowledge graph
-
-The backup contains a SEC 10-K filings knowledge graph with:
-- Filing documents from major companies (Apple, Microsoft, NVIDIA, etc.)
-- Extracted entities: Companies, Risk Factors, Products, Executives, Financial Metrics
-- Asset manager ownership data
-- Text chunks with vector embeddings for semantic search
-
-> **Note:** This knowledge graph is used for exploration in Part 3 below. In later labs (Labs 5-6), you'll clear this database and build an Aircraft Digital Twin graph from scratch using Databricks.
 
 ## Part 3: Explore the Knowledge Graph
 

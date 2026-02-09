@@ -5,32 +5,37 @@ In this part, you'll create a Databricks AI/BI Genie space that enables natural 
 
 ---
 
-## Prerequisites
+## Step 1: Explore the Lakehouse Data
 
-The sensor data tables were created during the Databricks ETL lab (Lab 5). To verify they exist, open the **Catalog Explorer** in the left sidebar and navigate to:
+Your workshop admin has pre-loaded a set of tables into Unity Catalog that represent the Aircraft Digital Twin sensor telemetry. This is the data you will use to create your Genie space — a natural language interface that lets agents query sensor readings, compare fleet metrics, and detect anomalies using SQL under the hood.
 
-**Catalog Explorer** > `aws-databricks-neo4j-lab` > `lakehouse`
+1. Click **Catalog** in the left sidebar.
+2. Expand **aws-databricks-neo4j-lab > lakehouse**.
+3. Browse the available tables:
 
-You should see four tables:
-- `aircraft` — Fleet inventory and metadata (20 rows)
-- `sensor_readings` — Time-series measurements (~345,600 rows)
-- `sensors` — Sensor metadata (160 rows)
-- `systems` — Aircraft systems (~80 rows)
+| Table | Rows | Description |
+|-------|------|-------------|
+| `aircraft` | 20 | Fleet inventory — tail numbers, models, manufacturers, operators |
+| `systems` | 80 | Aircraft systems — engines, avionics, hydraulics |
+| `sensors` | 160 | Sensor metadata — EGT, vibration, N1 speed, fuel flow |
+| `sensor_readings` | 345,600 | Hourly telemetry readings over 90 days (July–September 2024) |
 
-Click on any table to preview its sample data and confirm it was loaded correctly.
+4. Click on any table (e.g., `sensor_readings`) and select the **Sample Data** tab to preview its contents.
 
-![Catalog Explorer showing lakehouse tables](images/lakehouse_sensor_readings.png)
+![Lakehouse sensor_readings table in Unity Catalog](images/lakehouse_sensor_readings.png)
+
+These four tables form a join chain — `sensor_readings` → `sensors` → `systems` → `aircraft` — that connects raw telemetry values all the way up to fleet-level metadata. The Genie space you create in the next steps will use this structure to answer natural language questions by generating SQL queries across these tables automatically.
 
 ---
 
-## Step 1: Create the Genie Space
+## Step 2: Create the Genie Space
 
-### 1.1 Navigate to AI/BI Genie
+### 2.1 Navigate to AI/BI Genie
 
 1. In your Databricks workspace, click **New** > **Genie space**
 2. Or navigate to **AI/BI** in the left sidebar and click **New Genie space**
 
-### 1.2 Connect Your Data
+### 2.2 Connect Your Data
 
 After clicking **New Genie space**, the **Connect your data** dialog appears. Select `sensor_readings` from `aws-databricks-neo4j-lab.lakehouse`.
 
@@ -38,7 +43,7 @@ After clicking **New Genie space**, the **Connect your data** dialog appears. Se
 
 > **Tip:** If you don't see the table under **Recent**, click **All** or use the search bar to find `aws-databricks-neo4j-lab`.
 
-### 1.3 Configure Basic Settings
+### 2.3 Configure Basic Settings
 
 Once the Genie space is created, click **Configure** in the top navigation bar, then select the **Settings** tab:
 
@@ -49,7 +54,7 @@ Once the Genie space is created, click **Configure** in the top navigation bar, 
 2. **Description:** "Analyzes aircraft engine sensor telemetry including EGT, vibration, N1 speed, and fuel flow metrics"
 3. **Default warehouse:** Select a **Serverless SQL Warehouse**
 
-### 1.4 Add Sample Questions
+### 2.4 Add Sample Questions
 
 Still on the **Settings** tab, scroll down to **Sample questions**. These train the Genie to understand domain-specific language. Click **+ Add** and enter these examples:
 
@@ -107,7 +112,7 @@ Calculate the 7-day rolling average of vibration for Engine 1 on AC1001
 
 ---
 
-## Step 2: Add Remaining Data Sources
+## Step 3: Add Remaining Data Sources
 
 Navigate to **Configure** > **Data** to add the remaining tables.
 
@@ -129,7 +134,7 @@ You already added `sensor_readings` during creation. Now click **+ Add tables** 
 
 ---
 
-## Step 3: Add Instructions
+## Step 4: Add Instructions
 
 Navigate to **Configure** > **Instructions**. Instructions provide domain knowledge and query conventions. Enter the following:
 
@@ -180,13 +185,13 @@ Navigate to **Configure** > **Instructions**. Instructions provide domain knowle
 
 ---
 
-## Step 4: Test the Genie
+## Step 5: Test the Genie
 
-### 4.1 Start a Conversation
+### 5.1 Start a Conversation
 
 Click **Start conversation** or go to the chat interface.
 
-### 4.2 Test Basic Queries
+### 5.2 Test Basic Queries
 
 Try these progressively complex queries:
 
@@ -220,7 +225,7 @@ Find the top 5 sensors with the highest average readings for their type
 ```
 Expected: Top sensors with their average values and types
 
-### 4.3 View the SQL Generation
+### 5.3 View the SQL Generation
 
 For each query, click **View Code** to see the generated query is correct:
 
@@ -241,13 +246,13 @@ ORDER BY avg_vibration DESC
 
 ---
 
-## Step 5: Save and Note the Genie Space ID
+## Step 6: Save and Note the Genie Space ID
 
-### 5.1 Save Configuration
+### 6.1 Save Configuration
 
 Click **Save** to preserve your Genie space configuration.
 
-### 5.2 Record the Genie Space Name
+### 6.2 Record the Genie Space Name
 
 Note the exact name of your Genie space (e.g., `Aircraft Sensor Analyst RK`). You'll need this in Part B when configuring the multi-agent supervisor.
 

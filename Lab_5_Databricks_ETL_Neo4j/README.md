@@ -4,8 +4,6 @@ Load aircraft data from Databricks into Neo4j using the Spark Connector.
 
 **Duration:** ~45 minutes
 
-> **First time?** Complete the [Databricks Workspace Setup](DATABRICKS_SIGNUP.md) guide before starting this lab. It walks you through accepting your workspace invitation, verifying your compute cluster, and cloning the notebooks into your personal folder.
-
 ---
 
 ## Notebooks
@@ -21,77 +19,132 @@ This lab has two notebooks:
 
 ---
 
-## Import Notebooks
-
-**To import the notebooks into Databricks:**
-
-1. Download both `.ipynb` files from this repository
-2. In your Databricks workspace, navigate to **Workspace** > your personal folder
-3. Right-click and select **Import**
-4. Choose **File** and upload each `.ipynb` file
-5. Click **Import**
-
----
-
 ## Prerequisites
 
 Before starting this lab, ensure you have:
 
 - [ ] Neo4j Aura credentials from Lab 1 (URI, username, password)
-- [ ] Access to the Databricks workspace (URL provided by instructor)
-- [ ] Workshop login credentials
+- [ ] Databricks workspace invitation email from your workshop admin
 
 ---
 
 ## Quick Start
 
-1. **Log in** to Databricks workspace
-2. **Start/verify** the workshop cluster is running
-3. **Import** both notebooks (see [Import Notebooks](#import-notebooks) above)
-4. **Run notebook 01**: Enter your Neo4j credentials and **Run All** cells
-5. **Run notebook 02**: Enter your Neo4j credentials and **Run All** cells
-6. **Explore** the graph in Neo4j Aura
+1. **Accept** the workspace invitation from your email
+2. **Verify** your personal compute cluster is running
+3. **View** the CSV data files in the Unity Catalog Volume
+4. **Clone** the lab notebooks into your home directory
+5. **Attach** your compute cluster to the notebook
+6. **Run notebook 01**: Enter your Neo4j credentials and **Run All** cells
+7. **Run notebook 02**: Enter your Neo4j credentials and **Run All** cells
+8. **Explore** the graph in Neo4j Aura
 
 ---
 
 ## Step-by-Step Instructions
 
-### Part A: Access Databricks Workspace
+### Step 1: Accept the Workspace Invitation
 
-1. Open the Databricks workspace URL provided by your instructor
-2. Sign in with your workshop credentials
-3. Navigate to **Compute** in the left sidebar
-4. Verify the workshop cluster shows **Running** status
-   - If stopped, click the cluster name and click **Start**
-   - Wait for status to change to Running (may take 2-3 minutes)
+Your workshop admin has added you to a shared Databricks workspace. You received an email from Databricks inviting you to collaborate.
 
-### Part B: Import the Notebooks
+1. Click the link in the invitation email to open the Databricks sign-in page.
+2. Select **Sign in with email**.
+3. Databricks sends a one-time passcode (OTP) to your email address.
+4. Check your inbox, copy the 6-digit code, and enter it on the sign-in page.
 
-1. Download both notebooks from this repository:
-   - [`01_aircraft_etl_to_neo4j.ipynb`](01_aircraft_etl_to_neo4j.ipynb)
-   - [`02_load_neo4j_full.ipynb`](02_load_neo4j_full.ipynb)
-2. In Databricks, navigate to **Workspace** > your personal folder
-3. Right-click and select **Import**
-4. Choose **File** and upload each `.ipynb` file
-5. Click **Import**
+> **Tip:** The passcode expires after a few minutes. If it expires, click **Resend code** on the sign-in page to get a new one.
 
-After importing, open the first notebook (`01_aircraft_etl_to_neo4j`)
 
-### Part C: Configure and Run
+### Step 2: Verify Your Compute Cluster
 
-1. Locate the **Configuration** cell (Section 1)
-2. Enter your Neo4j Aura credentials:
+In Databricks, **compute** refers to the cloud infrastructure that runs your code. A **compute cluster** is a set of virtual machines managed by Databricks that provides the CPU, memory, and Apache Spark runtime needed to execute notebook cells. Think of it as the engine behind your notebooks — without it, your code has nowhere to run.
+
+Your workshop admin has pre-configured a personal cluster for each participant. Your cluster comes with:
+
+- **Apache Spark** runtime for processing data at scale
+- **Neo4j Spark Connector** library for writing DataFrames directly into Neo4j
+- **Python packages** (`neo4j`, `neo4j-graphrag`, etc.) needed by the lab notebooks
+
+To verify your cluster:
+
+1. Click **Compute** in the left sidebar.
+2. Look for a cluster named with your identifier (e.g., `lab-<yourname>`).
+3. Confirm the cluster shows a green dot or **Running** status.
+
+If the cluster is stopped, the workshop administrator will need to start it.
+
+![Compute overview showing your personal cluster](images/compute_overview.png)
+
+### Step 3: View the CSV Data
+
+The CSV data for this lab has already been uploaded to a Unity Catalog Volume by your workshop admin. The notebooks you will run next will read and process this data to load it into Neo4j.
+
+To view the data files:
+
+1. Click **Catalog** in the left sidebar.
+2. Navigate to **aws-databricks-neo4j-lab > lab-schema > lab-volume**.
+3. Browse the CSV files — you will see aircraft, airports, components, flights, delays, sensors, systems, and other data files that define the Aircraft Digital Twin dataset.
+
+![CSV data files in the Unity Catalog Volume](images/CSV_VOLUME_DATA.png)
+
+> **Note:** You do not need to modify or upload any data. The notebooks will read directly from this Volume path.
+
+### Step 4: Clone the Lab Notebooks
+
+A **notebook** in Databricks is an interactive document made up of cells that can contain Python code, SQL queries, or markdown text. You run cells one at a time or all at once, and each cell displays its output directly below it. Notebooks are the primary way you write and execute code in Databricks.
+
+The lab notebooks are stored in a shared folder that all participants can see. You will clone (copy) them into your own workspace so you can edit and run them without affecting other participants.
+
+1. Click **Workspace** in the left sidebar.
+2. Expand **Shared > aws-databricks-neo4j-lab > labs**.
+3. Right-click on the `labs` folder and select **Clone**.
+
+![Right-click the labs folder and select Clone](images/03_clone.png)
+
+The Clone dialog lets you place a personal copy of the notebooks in your home directory.
+
+4. Update the **New name** to include your initials (e.g., `labs-rk`) so it is easy to identify.
+5. Select the **For you** tab.
+6. Choose your home directory as the destination.
+7. Click **Clone**.
+
+![Clone dialog — rename and select your home directory](images/04_clone_labs.png)
+
+**Expected outcome:** A copy of the `labs` folder appears under your home directory in the Workspace browser. It contains all notebooks and the `data_utils.py` utility module.
+
+### Step 5: Attach Your Compute Cluster
+
+A notebook by itself is just a document — it needs to be **attached** to a compute cluster before any code can run. Attaching tells Databricks which cluster should execute the notebook's cells. By attaching your personal cluster, you get the pre-installed Neo4j Spark Connector and Python libraries that the lab requires.
+
+1. Open the first notebook, `01_aircraft_etl_to_neo4j.ipynb`, from your cloned folder.
+2. Click the **compute selector** in the top-right corner of the notebook (it may say "Serverless" or "Connect" by default).
+3. Under **Active resources**, select your personal cluster (e.g., `lab-<yourname>`).
+
+> **Note:** Do not use **Serverless** compute — it does not have the Neo4j Spark Connector installed.
+
+![Select your personal compute cluster from the dropdown](images/6-change-compute-your-compute.png)
+
+**Expected outcome:** The notebook header shows your cluster name and a green connection indicator.
+
+### Step 6: Configure and Run Notebook 01
+
+1. Scroll to the **Configuration** cell near the top of the notebook.
+2. Replace the placeholder values with your actual Neo4j Aura credentials:
+
    ```python
-   NEO4J_URI = "neo4j+s://xxxxxxxx.databases.neo4j.io"  # Your URI
+   NEO4J_URI = "neo4j+s://xxxxxxxx.databases.neo4j.io"
    NEO4J_USERNAME = "neo4j"
-   NEO4J_PASSWORD = "your-password"  # Your password
+   NEO4J_PASSWORD = "<your-password>"
    ```
-3. Click **Run All** (or press Shift+Enter through each cell)
-4. Watch the progress messages as data loads
 
-### Part D: Verify Results (Notebook 01)
+   > **Important:** The URI must start with `neo4j+s://` (the `+s` enables TLS encryption required by Aura).
 
-After running all cells in notebook 01, verify:
+3. Click **Run All** in the notebook toolbar (or press Shift+Enter through each cell).
+4. Monitor the cell outputs as each step executes — you will see progress messages as Aircraft, System, and Component nodes are written to Neo4j.
+
+### Step 7: Verify Results (Notebook 01)
+
+The final verification cells display node and relationship counts. Confirm:
 
 | Check | Expected Value |
 |-------|----------------|
@@ -101,15 +154,16 @@ After running all cells in notebook 01, verify:
 | HAS_SYSTEM relationships | 80 |
 | HAS_COMPONENT relationships | 320 |
 
-The verification cells at the end of the notebook will display these counts.
+**Expected outcome:** The notebook completes without errors and the verification cells show 20 Aircraft nodes, 80 System nodes, and 320 Component nodes in Neo4j.
 
-### Part E: Run the Full Dataset (Notebook 02)
+### Step 8: Run the Full Dataset (Notebook 02)
 
-Open `02_load_neo4j_full` and run the complete dataset load:
+Open `02_load_neo4j_full` from your cloned folder and run the complete dataset load:
 
-1. Enter your Neo4j credentials (same as notebook 01)
-2. Set `CLEAR_DATABASE = True` for a clean load (recommended)
-3. Click **Run All**
+1. Attach your compute cluster (same as Step 5)
+2. Enter your Neo4j credentials (same as notebook 01)
+3. Set `CLEAR_DATABASE = True` for a clean load (recommended)
+4. Click **Run All**
 
 This loads additional node types and relationships required by Lab 7:
 
@@ -122,7 +176,7 @@ This loads additional node types and relationships required by Lab 7:
 | MaintenanceEvent | ~300 | Fault tracking with severity |
 | Removal | ~60 | Component removal history |
 
-### Part F: Explore in Neo4j Aura
+### Step 9: Explore in Neo4j Aura
 
 1. Open [console.neo4j.io](https://console.neo4j.io) in a new browser tab
 2. Sign in and select your instance
