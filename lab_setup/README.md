@@ -18,7 +18,7 @@ Complete these steps before the workshop begins:
 - [ ] Create Unity Catalog, Schema, and Volume (Step 1 — UI required)
 - [ ] Create `aircraft_workshop_group` at the account level and add it to the workspace (Step 1.5)
 - [ ] Run `databricks-setup setup` to set up compute, data, tables, and permissions lockdown (Step 2)
-- [ ] Add participant emails to `users.csv` and run `user-mngmnt add` (Step 3)
+- [ ] Add participant emails to `lab_setup/users.csv` and run `user-mngmnt add` (Step 3)
 - [ ] Configure Databricks Genie Space (Lab 7)
 - [ ] Provide DBC file to participants (or host for download)
 - [ ] Test the complete workflow
@@ -52,24 +52,6 @@ If you have multiple Databricks profiles configured, set `DATABRICKS_PROFILE` in
 export DATABRICKS_CONFIG_PROFILE=<your-profile-name>
 ```
 
-#### Troubleshooting Authentication
-
-If you see a UUID instead of your email, your CLI may be configured with a service principal. Check for overriding environment variables:
-
-```bash
-env | grep -i DATABRICKS
-```
-
-If present, unset them for interactive use:
-
-```bash
-unset DATABRICKS_TOKEN
-unset DATABRICKS_CLIENT_ID
-unset DATABRICKS_CLIENT_SECRET
-```
-
-Then re-run `databricks auth login`.
-
 ### Python and uv
 
 Both CLIs require Python 3.11+ and [uv](https://docs.astral.sh/uv/):
@@ -78,6 +60,17 @@ Both CLIs require Python 3.11+ and [uv](https://docs.astral.sh/uv/):
 cd lab_setup/auto_scripts && uv sync
 cd lab_setup/user_mngmnt && uv sync
 ```
+
+### Databricks Resources
+
+The following resources must exist before running `databricks-setup`. See details below for setup instructions.
+
+| Resource | Name | Created In |
+|----------|------|------------|
+| Unity Catalog | `aws-databricks-neo4j-lab` | [Step 1.1](#11-create-a-catalog) |
+| Schema | `lab-schema` | [Step 1.2](#12-create-a-schema) |
+| Volume | `lab-volume` | [Step 1.3](#13-create-the-volume) |
+| Account-level group | `aircraft_workshop_group` | [Step 1.5](#step-15-create-account-level-group) |
 
 ---
 
@@ -177,32 +170,7 @@ CLOUD_PROVIDER="aws"
 DATABRICKS_PROFILE=""
 ```
 
-#### All configuration options
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `CATALOG_NAME` | Unity Catalog name | `aws-databricks-neo4j-lab` |
-| `VOLUME_SCHEMA` | Schema for the data volume | `lab-schema` |
-| `VOLUME_NAME` | Volume name for CSV data upload | `lab-volume` |
-| `LAKEHOUSE_SCHEMA` | Schema for lakehouse Delta tables | `lakehouse` |
-| `WAREHOUSE_NAME` | SQL Warehouse name (for lakehouse tables) | `Starter Warehouse` |
-| `WAREHOUSE_TIMEOUT` | SQL statement timeout (seconds) | `600` |
-| `DATABRICKS_PROFILE` | CLI profile from ~/.databrickscfg | Default |
-| `CLUSTER_NAME` | Cluster name to create or reuse | `Small Spark 4.0` |
-| `USER_EMAIL` | Cluster owner email | Auto-detected |
-| `SPARK_VERSION` | Databricks Runtime version | `17.3.x-cpu-ml-scala2.13` |
-| `AUTOTERMINATION_MINUTES` | Cluster auto-shutdown | `30` |
-| `RUNTIME_ENGINE` | `STANDARD` or `PHOTON` | `STANDARD` |
-| `CLOUD_PROVIDER` | `aws` or `azure` | `aws` |
-| `NODE_TYPE` | Instance type (auto-detected per cloud) | See below |
-| `INSTANCE_PROFILE_ARN` | AWS IAM instance profile for cluster nodes | None |
-
-Cloud provider defaults:
-
-| Provider | Default Node Type | Notes |
-|----------|------------------|-------|
-| AWS | `m5.xlarge` | 16 GB, 4 cores, EBS volume attached |
-| Azure | `Standard_D4ds_v5` | 16 GB, 4 cores |
+For the full list of configuration options, see the [auto_scripts README](auto_scripts/README.md#configuration).
 
 ### 2.2 Run Setup
 
@@ -235,46 +203,13 @@ Runs three tracks sequentially:
 
 If a cluster with the same name already exists, the CLI reuses it (starting it if terminated). All operations are idempotent — safe to re-run.
 
-### Cluster defaults
-
-| Setting | Value |
-|---------|-------|
-| Runtime | 17.3 LTS ML (Spark 4.0.0, Scala 2.13) |
-| Photon | Disabled (workshop data is small; Photon only benefits >100GB workloads) |
-| Node type (AWS) | `m5.xlarge` (16 GB, 4 cores) |
-| Node type (Azure) | `Standard_D4ds_v5` (16 GB, 4 cores) |
-| Workers | 0 (single node) |
-| Access mode | Dedicated (Single User) |
-| Auto-terminate | 30 minutes |
-
-To change defaults, edit `.env`.
-
+For configuration details (environment variables, cluster defaults, cloud provider options), see the [auto_scripts README](auto_scripts/README.md#configuration).
 
 ---
 
 ### Manual Setup (UI Alternative)
 
 If you prefer to set up the cluster, libraries, and data through the Databricks UI instead of using `databricks-setup`, see the complete step-by-step guide in **[MANUAL_SETUP.md](docs/MANUAL_SETUP.md)**.
-
-### Cleanup
-
-To tear down everything the setup created (permissions, lakehouse tables, volume, schemas, and catalog) while keeping the compute cluster:
-
-```bash
-cd lab_setup/auto_scripts
-
-# Interactive confirmation
-uv run databricks-setup cleanup
-
-# Skip confirmation
-uv run databricks-setup cleanup --yes
-```
-
-Cleanup revokes catalog grants for `aircraft_workshop_group` but does **not** delete the group (it is account-level and persists across setup/cleanup cycles). It also does **not** restore compute-creation entitlements on the `users` group — that is a deliberate admin action. A reminder is printed with instructions to re-add them manually if needed.
-
-Each step is idempotent — safe to re-run if partially completed.
-
----
 
 ## Step 3: Add Workshop Participants
 
@@ -284,7 +219,7 @@ This is a separate tool from `databricks-setup` because user management has a di
 
 ### 3.1 Prepare the CSV
 
-Edit `lab_setup/user_mngmnt/users.csv` with participant email addresses:
+Edit `lab_setup/users.csv` with participant email addresses:
 
 ```csv
 email,name
@@ -293,22 +228,23 @@ bob@example.com,Bob Smith
 carol@example.com,Carol Williams
 ```
 
-The `email` column is required. The `name` column is optional and ignored by the tool — it exists for human readability. Users must already exist in the Databricks workspace (this tool does not create accounts).
+The `email` column is required. The `name` column is optional and ignored by the tool — it exists for human readability. Users that don't already exist in the workspace will be automatically created (invited via SCIM).
 
 ### 3.2 Add Users
 
 ```bash
 cd lab_setup/user_mngmnt
-uv run user-mngmnt add --file users.csv
+uv run user-mngmnt add
 ```
 
-The tool looks up each email in the workspace, skips any that are not found or are already members, and adds the rest in a single batched SCIM operation. A summary table is printed:
+The tool reads the Databricks profile from `lab_setup/.env`, looks up each email in the workspace, creates any users that don't exist, skips those already in the group, and adds the rest in a single batched SCIM operation. A summary table is printed:
 
 | Status | Count |
 |---|---|
-| Added | 12 |
+| Added to group | 12 |
+| Created in workspace | 2 |
 | Already member | 3 |
-| Not found in workspace | 2 |
+| Failed to create | 0 |
 | Total in CSV | 17 |
 
 ### 3.3 List and Remove
@@ -318,20 +254,10 @@ The tool looks up each email in the workspace, skips any that are not found or a
 uv run user-mngmnt list
 
 # Remove users listed in the CSV from the group
-uv run user-mngmnt remove --file users.csv
+uv run user-mngmnt remove
 ```
 
-### 3.4 Options
-
-All commands accept `--profile` (`-p`) for the Databricks CLI profile and `--group` (`-g`) to override the group name. Both also respect `DATABRICKS_PROFILE` and `GROUP_NAME` environment variables from `lab_setup/.env`.
-
-```bash
-# Use a specific profile
-uv run user-mngmnt add --file users.csv --profile my-workspace
-
-# Use a different group name
-uv run user-mngmnt list --group custom-group
-```
+All commands use the `DATABRICKS_PROFILE` from `lab_setup/.env` and target the `aircraft_workshop_group` group. Use `--file` (`-f`) to override the CSV path if needed.
 
 ---
 
@@ -364,6 +290,24 @@ Create a handout or slide with:
 ---
 
 ## Troubleshooting
+
+### Authentication
+
+If you see a UUID instead of your email when running `databricks current-user me`, your CLI may be configured with a service principal. Check for overriding environment variables:
+
+```bash
+env | grep -i DATABRICKS
+```
+
+If present, unset them for interactive use:
+
+```bash
+unset DATABRICKS_TOKEN
+unset DATABRICKS_CLIENT_ID
+unset DATABRICKS_CLIENT_SECRET
+```
+
+Then re-run `databricks auth login`.
 
 ### Common Issues
 
@@ -406,7 +350,7 @@ Create a handout or slide with:
 
 **Participant cannot see the catalog or query tables**
 - Verify the user is a member of the `aircraft_workshop_group` group: `uv run user-mngmnt list`
-- If not listed, add them: add their email to `users.csv` and run `uv run user-mngmnt add`
+- If not listed, add their email to `lab_setup/users.csv` and run `uv run user-mngmnt add`
 - Check that `databricks-setup setup` completed Track C successfully (look for "Permissions lockdown complete" in the output)
 - Verify `aircraft_workshop_group` has **Source = "Account"** in Settings > Identity and access > Groups (workspace-local groups are invisible to Unity Catalog)
 
@@ -429,6 +373,26 @@ The setup CLI uploads **25 files** to the Volume:
 - **Storage:** Volume storage for CSV files is negligible (~25 MB total)
 - **Delta Lake:** The lakehouse tables add minimal storage overhead
 - **Genie:** Genie queries consume compute resources; monitor usage during workshop
+
+---
+
+## Cleanup
+
+To tear down everything the setup created (permissions, lakehouse tables, volume, schemas, and catalog) while keeping the compute cluster:
+
+```bash
+cd lab_setup/auto_scripts
+
+# Interactive confirmation
+uv run databricks-setup cleanup
+
+# Skip confirmation
+uv run databricks-setup cleanup --yes
+```
+
+Cleanup revokes catalog grants for `aircraft_workshop_group` but does **not** delete the group (it is account-level and persists across setup/cleanup cycles). It also does **not** restore compute-creation entitlements on the `users` group — that is a deliberate admin action. A reminder is printed with instructions to re-add them manually if needed.
+
+Each step is idempotent — safe to re-run if partially completed.
 
 ---
 

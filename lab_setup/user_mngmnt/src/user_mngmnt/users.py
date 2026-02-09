@@ -69,3 +69,16 @@ def find_workspace_user(client: WorkspaceClient, email: str) -> User | None:
     if results:
         return results[0]
     return None
+
+
+def create_workspace_user(client: WorkspaceClient, email: str) -> User:
+    """Create (invite) a user in the workspace via SCIM.
+
+    Args:
+        client: Databricks workspace client.
+        email: Email address for the new user.
+
+    Returns:
+        The newly created User object.
+    """
+    return client.users.create(user_name=email)

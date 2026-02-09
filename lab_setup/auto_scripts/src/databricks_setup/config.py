@@ -134,6 +134,51 @@ class DataConfig:
 
 
 @dataclass
+class NotebookConfig:
+    """Configuration for uploading workshop notebooks to the workspace."""
+
+    workspace_folder: str = "/Shared/aws-databricks-neo4j-lab"
+    repo_root: Path = field(
+        default_factory=lambda: Path(__file__).resolve().parent.parent.parent.parent.parent,
+    )
+    lab_notebooks: tuple[tuple[str, tuple[str, ...]], ...] = (
+        ("Lab_5_Databricks_ETL_Neo4j", (
+            "01_aircraft_etl_to_neo4j.ipynb",
+            "02_load_neo4j_full.ipynb",
+        )),
+        ("Lab_6_Semantic_Search", (
+            "03_data_and_embeddings.ipynb",
+            "04_graphrag_retrievers.ipynb",
+            "05_hybrid_retrievers.ipynb",
+            "data_utils.py",
+        )),
+    )
+
+    @classmethod
+    def from_env(cls) -> NotebookConfig:
+        """Load notebook config from environment."""
+        config = cls()
+        if val := os.getenv("NOTEBOOK_WORKSPACE_FOLDER"):
+            config.workspace_folder = val
+        return config
+
+    def get_upload_files(self) -> list[tuple[Path, str]]:
+        """Return (local_path, lab_dir_name) pairs for all files to upload.
+
+        Raises:
+            FileNotFoundError: If any expected file is missing on disk.
+        """
+        files: list[tuple[Path, str]] = []
+        for lab_dir, filenames in self.lab_notebooks:
+            for name in filenames:
+                local = self.repo_root / lab_dir / name
+                if not local.exists():
+                    raise FileNotFoundError(f"Expected notebook not found: {local}")
+                files.append((local, lab_dir))
+        return files
+
+
+@dataclass
 class WarehouseConfig:
     """SQL Warehouse configuration."""
 
@@ -160,6 +205,7 @@ class Config:
     volume: VolumeConfig = field(default_factory=VolumeConfig)
     data: DataConfig = field(default_factory=DataConfig)
     warehouse: WarehouseConfig = field(default_factory=WarehouseConfig)
+    notebook: NotebookConfig = field(default_factory=NotebookConfig)
     user_email: str | None = None
     databricks_profile: str | None = None
 
@@ -175,6 +221,7 @@ class Config:
         config.cluster = ClusterConfig.from_env()
         config.volume = VolumeConfig.from_env()
         config.warehouse = WarehouseConfig.from_env()
+        config.notebook = NotebookConfig.from_env()
 
         # User settings
         if val := os.getenv("USER_EMAIL"):
@@ -215,9 +262,10 @@ class SetupResult:
 
     cluster_id: str = ""
     tables_ok: bool = True
+    notebooks_ok: bool = True
     lockdown_ok: bool = True
 
     @property
     def success(self) -> bool:
         """True unless any track failed."""
-        return self.tables_ok and self.lockdown_ok
+        return self.tables_ok and self.notebooks_ok and self.lockdown_ok

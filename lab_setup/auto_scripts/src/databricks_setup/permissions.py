@@ -6,7 +6,7 @@ Track C of the setup process:
 2. Verify that the ``aircraft_workshop_group`` account-level group exists.
 3. Grant read-only Unity Catalog privileges on the lab catalog.
 4. Grant ``CAN_ATTACH_TO`` on the workshop cluster.
-5. Verify the final state.
+5. Grant ``CAN_READ`` on the shared notebook folder.
 """
 
 from __future__ import annotations
@@ -23,15 +23,18 @@ from databricks.sdk.service.compute import (
     ClusterPermissionLevel,
 )
 from databricks.sdk.service.iam import (
+    AccessControlRequest,
     Group,
     Patch,
     PatchOp,
     PatchSchema,
+    PermissionLevel,
 )
 
 from .cluster import find_cluster
-from .config import ClusterConfig, VolumeConfig
+from .config import ClusterConfig, NotebookConfig, VolumeConfig
 from .log import log
+from .notebooks import get_workspace_folder_id
 from .utils import print_header
 
 # ---------------------------------------------------------------------------
@@ -363,6 +366,75 @@ def grant_cluster_attach(
 
 
 # ---------------------------------------------------------------------------
+# Step 5: Workspace folder permissions
+# ---------------------------------------------------------------------------
+
+def grant_workspace_folder_read(
+    client: WorkspaceClient,
+    workspace_folder: str,
+    group_name: str,
+) -> bool:
+    """Grant CAN_READ on a workspace folder to a group.
+
+    Uses ``update_permissions`` (PATCH) which merges with existing ACLs.
+
+    Args:
+        client: Databricks workspace client.
+        workspace_folder: Absolute workspace path (e.g. "/Shared/my-folder").
+        group_name: Group to receive the permission.
+
+    Returns:
+        True on success, False on error.
+    """
+    log(f"Step 5: Granting CAN_READ on workspace folder to '{group_name}'...")
+    log(f"  Folder: {workspace_folder}")
+
+    folder_id = get_workspace_folder_id(client, workspace_folder)
+    if folder_id is None:
+        log(f"  [yellow]Workspace folder not found — skipping.[/yellow]")
+        return True  # Non-fatal: notebooks may not have been uploaded
+
+    try:
+        client.permissions.update(
+            request_object_type="directories",
+            request_object_id=str(folder_id),
+            access_control_list=[
+                AccessControlRequest(
+                    group_name=group_name,
+                    permission_level=PermissionLevel.CAN_READ,
+                ),
+            ],
+        )
+        log("  Done.")
+    except Exception as e:
+        log(f"  [red]Failed to set folder permissions: {e}[/red]")
+        return False
+
+    # --- Verify ---
+    try:
+        perms = client.permissions.get(
+            request_object_type="directories",
+            request_object_id=str(folder_id),
+        )
+        found = False
+        for acl in perms.access_control_list or []:
+            if acl.group_name == group_name:
+                for p in acl.all_permissions or []:
+                    if p.permission_level == PermissionLevel.CAN_READ:
+                        found = True
+                        break
+
+        if found:
+            log(f"  [green]Verified: CAN_READ present for '{group_name}'.[/green]")
+        else:
+            log(f"  [yellow]Warning: CAN_READ not found in folder ACL after grant.[/yellow]")
+    except Exception as e:
+        log(f"  [yellow]Warning: Could not verify folder permissions: {e}[/yellow]")
+
+    return True
+
+
+# ---------------------------------------------------------------------------
 # Orchestrator
 # ---------------------------------------------------------------------------
 
@@ -370,13 +442,15 @@ def run_permissions_lockdown(
     client: WorkspaceClient,
     cluster_config: ClusterConfig,
     volume_config: VolumeConfig,
+    notebook_config: NotebookConfig | None = None,
 ) -> bool:
-    """Run all Track C steps: lockdown, group, grants, cluster ACL.
+    """Run all Track C steps: lockdown, group, grants, cluster ACL, folder ACL.
 
     Args:
         client: Databricks workspace client.
         cluster_config: Cluster configuration (name loaded from .env).
         volume_config: Volume configuration identifying the catalog to lock down.
+        notebook_config: Notebook configuration (for workspace folder permissions).
 
     Returns:
         True if all steps succeeded, False otherwise.
@@ -412,6 +486,13 @@ def run_permissions_lockdown(
         return False
 
     log()
+
+    # Step 5: Workspace folder permissions
+    if notebook_config is not None:
+        if not grant_workspace_folder_read(client, notebook_config.workspace_folder, WORKSHOP_GROUP):
+            return False
+        log()
+
     log("[green]Permissions lockdown complete.[/green]")
     return True
 

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service.iam import (
-    ComplexValue,
     Group,
     Patch,
     PatchOp,
@@ -14,7 +13,6 @@ from rich.console import Console
 
 console = Console()
 
-DEFAULT_GROUP = "aircraft_workshop_group"
 _BATCH_SIZE = 50
 
 
@@ -102,9 +100,7 @@ def add_members_to_group(
                 Patch(
                     op=PatchOp.ADD,
                     path="members",
-                    value=[
-                        ComplexValue(value=uid) for uid in batch
-                    ],
+                    value=[{"value": uid} for uid in batch],
                 ),
             ],
             schemas=[PatchSchema.URN_IETF_PARAMS_SCIM_API_MESSAGES_2_0_PATCH_OP],

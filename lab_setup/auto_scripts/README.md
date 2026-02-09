@@ -43,7 +43,7 @@ databricks-setup setup
 uv run databricks-setup setup
 ```
 
-All configuration (volume target, cluster settings, etc.) is loaded from `lab_setup/.env`.
+All configuration is loaded from `lab_setup/.env` — see [Configuration](#configuration) below.
 
 ### `cleanup`
 
@@ -56,6 +56,65 @@ uv run databricks-setup cleanup
 # Skip confirmation
 uv run databricks-setup cleanup --yes
 ```
+
+## Configuration
+
+Copy the example environment file and customize:
+
+```bash
+cp lab_setup/.env.example lab_setup/.env
+```
+
+Edit `.env` and set at minimum:
+
+```bash
+# Cloud provider: "aws" or "azure"
+CLOUD_PROVIDER="aws"
+
+# Databricks CLI profile (optional - uses default if empty)
+DATABRICKS_PROFILE=""
+```
+
+### All options
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `CATALOG_NAME` | Unity Catalog name | `aws-databricks-neo4j-lab` |
+| `VOLUME_SCHEMA` | Schema for the data volume | `lab-schema` |
+| `VOLUME_NAME` | Volume name for CSV data upload | `lab-volume` |
+| `LAKEHOUSE_SCHEMA` | Schema for lakehouse Delta tables | `lakehouse` |
+| `WAREHOUSE_NAME` | SQL Warehouse name (for lakehouse tables) | `Starter Warehouse` |
+| `WAREHOUSE_TIMEOUT` | SQL statement timeout (seconds) | `600` |
+| `DATABRICKS_PROFILE` | CLI profile from ~/.databrickscfg | Default |
+| `CLUSTER_NAME` | Cluster name to create or reuse | `Small Spark 4.0` |
+| `USER_EMAIL` | Cluster owner email | Auto-detected |
+| `SPARK_VERSION` | Databricks Runtime version | `17.3.x-cpu-ml-scala2.13` |
+| `AUTOTERMINATION_MINUTES` | Cluster auto-shutdown | `30` |
+| `RUNTIME_ENGINE` | `STANDARD` or `PHOTON` | `STANDARD` |
+| `CLOUD_PROVIDER` | `aws` or `azure` | `aws` |
+| `NODE_TYPE` | Instance type (auto-detected per cloud) | See below |
+| `INSTANCE_PROFILE_ARN` | AWS IAM instance profile for cluster nodes | None |
+
+### Cloud provider defaults
+
+| Provider | Default Node Type | Notes |
+|----------|------------------|-------|
+| AWS | `m5.xlarge` | 16 GB, 4 cores, EBS volume attached |
+| Azure | `Standard_D4ds_v5` | 16 GB, 4 cores |
+
+### Cluster defaults
+
+| Setting | Value |
+|---------|-------|
+| Runtime | 17.3 LTS ML (Spark 4.0.0, Scala 2.13) |
+| Photon | Disabled (workshop data is small; Photon only benefits >100GB workloads) |
+| Node type (AWS) | `m5.xlarge` (16 GB, 4 cores) |
+| Node type (Azure) | `Standard_D4ds_v5` (16 GB, 4 cores) |
+| Workers | 0 (single node) |
+| Access mode | Dedicated (Single User) |
+| Auto-terminate | 30 minutes |
+
+To change defaults, edit `.env`.
 
 ## Project Structure
 

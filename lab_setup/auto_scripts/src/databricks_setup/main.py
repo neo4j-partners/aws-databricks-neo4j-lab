@@ -16,6 +16,7 @@ from .data_upload import upload_data_files, verify_upload
 from .lakehouse_tables import create_lakehouse_tables
 from .libraries import ensure_libraries_installed
 from .log import Level, close_log_file, init_log_file, log, log_to_file
+from .notebooks import upload_notebooks, verify_notebook_upload
 from .permissions import run_permissions_lockdown
 from .utils import print_header
 from .warehouse import get_or_start_warehouse
@@ -68,7 +69,7 @@ def cleanup(
         help="Skip confirmation prompt",
     ),
 ) -> None:
-    """Delete permissions, lakehouse tables, volume, schemas, and catalog.
+    """Delete permissions, notebooks, lakehouse tables, volume, schemas, and catalog.
 
     Removes everything created by the setup command except the compute
     cluster and entitlement changes.  Each step is idempotent —
@@ -112,7 +113,10 @@ def _run_cleanup(*, yes: bool) -> None:
     if not yes:
         typer.confirm("Proceed with cleanup?", abort=True)
 
-    run_cleanup(client, warehouse_id, config.volume, config.warehouse.timeout_seconds)
+    run_cleanup(
+        client, warehouse_id, config.volume, config.warehouse.timeout_seconds,
+        notebook_config=config.notebook,
+    )
 
 
 def _print_cleanup_target(config: Config) -> None:
@@ -122,6 +126,7 @@ def _print_cleanup_target(config: Config) -> None:
     log(f"Schema:     {config.volume.catalog}.{config.volume.schema}")
     log(f"Volume:     {config.volume.full_path}")
     log(f"Lakehouse:  {config.volume.catalog}.{config.volume.lakehouse_schema}")
+    log(f"Notebooks:  {config.notebook.workspace_folder}")
     log()
     log("[yellow]This will permanently delete the catalog and all its contents.[/yellow]")
     log("[yellow]The compute cluster will NOT be affected.[/yellow]")
@@ -151,6 +156,14 @@ def _run_setup() -> None:
     warehouse_id = get_or_start_warehouse(client, config.warehouse)
     upload_data_files(client, config.data, config.volume)
     verify_upload(client, config.volume)
+
+    try:
+        upload_notebooks(client, config.notebook)
+        verify_notebook_upload(client, config.notebook)
+    except Exception as e:
+        log(f"[red]Notebook upload failed: {e}[/red]")
+        result.notebooks_ok = False
+
     result.tables_ok = create_lakehouse_tables(
         client,
         warehouse_id,
@@ -163,6 +176,7 @@ def _run_setup() -> None:
         client,
         cluster_config=config.cluster,
         volume_config=config.volume,
+        notebook_config=config.notebook,
     )
 
     _print_summary(result, config)
@@ -184,6 +198,7 @@ def _print_config_summary(config: Config) -> None:
     log(f"Warehouse:  {config.warehouse.name}")
     log(f"Volume:     {config.volume.full_path}")
     log(f"Lakehouse:  {config.volume.catalog}.{config.volume.lakehouse_schema}")
+    log(f"Notebooks:  {config.notebook.workspace_folder}")
 
     log()
 
@@ -199,8 +214,11 @@ def _print_summary(result: SetupResult, config: Config) -> None:
 
     log(f"Volume:       {config.volume.full_path}")
     log(f"Lakehouse:    {config.volume.catalog}.{config.volume.lakehouse_schema}")
+    log(f"Notebooks:    {config.notebook.workspace_folder}")
     if not result.tables_ok:
         log("[red]Lakehouse table creation had errors.[/red]")
+    if not result.notebooks_ok:
+        log("[red]Notebook upload had errors.[/red]")
     if result.lockdown_ok:
         log("Lockdown:     [green]Permissions locked down[/green]")
     else:
