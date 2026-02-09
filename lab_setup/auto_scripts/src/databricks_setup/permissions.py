@@ -705,8 +705,9 @@ def verify_foundation_model_access(client: WorkspaceClient) -> None:
     if all_ok:
         log("  [green]All Foundation Model endpoints are available.[/green]")
     else:
-        log("  [yellow]Missing endpoints may indicate AI Gateway restrictions.[/yellow]")
-        log("  [yellow]If participants cannot access these endpoints, grant CAN_QUERY[/yellow]")
+        log("  [yellow]Missing endpoints may not be provisioned in this workspace,[/yellow]")
+        log("  [yellow]or may be restricted by an AI Gateway policy.[/yellow]")
+        log("  [yellow]If participants cannot access them, grant CAN_QUERY[/yellow]")
         log("  [yellow]via Serving > endpoint > Permissions.[/yellow]")
 
 
@@ -717,38 +718,25 @@ def verify_foundation_model_access(client: WorkspaceClient) -> None:
 def verify_agentbricks_prerequisites(client: WorkspaceClient) -> None:
     """Verify workspace prerequisites for AgentBricks (Lab 7B).
 
-    Checks for AgentBricks-related preview flags and serverless budget
-    policies.  These are workspace-level settings that must be enabled
-    by an admin in the Databricks UI.
+    Reminds the admin to check preview flags and serverless budget
+    policies.  These are workspace/account-level settings that must be
+    configured in the Databricks UI — they cannot be verified via the
+    workspace SDK.
 
-    This is a non-fatal verification step — it only logs warnings.
+    This is a non-fatal verification step — it only logs reminders.
     """
     log("Step 8: Verifying AgentBricks prerequisites...")
-
-    # Check for serverless budget policies
-    try:
-        policies = list(client.cluster_policies.list())
-        budget_policies = [
-            p for p in policies
-            if getattr(p, "policy_family_id", None) == "job-cluster"
-            or "budget" in (p.name or "").lower()
-            or "serverless" in (p.name or "").lower()
-        ]
-        if budget_policies:
-            names = ", ".join(p.name for p in budget_policies if p.name)
-            log(f"  Serverless/budget policies found: {names}")
-        else:
-            log("  [yellow]No serverless budget policies found.[/yellow]")
-            log("  [yellow]AgentBricks requires a serverless budget policy with nonzero budget.[/yellow]")
-            log("  [yellow]Create one at: Settings > Compute > Budget policies.[/yellow]")
-    except Exception as e:
-        log(f"  [yellow]Warning: Could not check budget policies: {e}[/yellow]")
-
     log()
-    log("  [yellow]Admin preview flags (verify manually in Settings > Previews):[/yellow]")
+    log("  [yellow]The following must be verified manually by a workspace admin:[/yellow]")
+    log()
+    log("  [yellow]Preview flags (Settings > Previews):[/yellow]")
     log("  [yellow]  - Mosaic AI Agent Bricks Preview[/yellow]")
     log("  [yellow]  - Production monitoring for MLflow[/yellow]")
     log("  [yellow]  - Agent Framework: On-Behalf-Of-User Authorization[/yellow]")
+    log()
+    log("  [yellow]Serverless budget policy (Settings > Compute > Budget policies):[/yellow]")
+    log("  [yellow]  - Create a budget policy with nonzero budget[/yellow]")
+    log("  [yellow]  - Assign it to the workshop group[/yellow]")
 
 
 # ---------------------------------------------------------------------------
@@ -846,7 +834,11 @@ def cleanup_permissions(
     volume_config: VolumeConfig,
     warehouse_config: WarehouseConfig | None = None,
 ) -> None:
-    """Revoke catalog/connection grants, warehouse ACL, and restore Personal Compute.
+    """Revoke catalog/connection grants and restore Personal Compute policy.
+
+    The warehouse CAN_USE ACL is intentionally retained — the workspace
+    permissions API only supports full replacement (PUT), which would
+    overwrite other principals' ACLs.
 
     Does NOT delete the account-level group — it persists across
     setup/cleanup cycles.  Does NOT restore entitlements — that is a
@@ -855,7 +847,7 @@ def cleanup_permissions(
     Args:
         client: Databricks workspace client.
         volume_config: Volume configuration identifying the catalog to clean up.
-        warehouse_config: Warehouse configuration (for revoking CAN_USE).
+        warehouse_config: Warehouse configuration (for logging retention note).
     """
     print_header("Cleaning Up Permissions")
 
@@ -910,24 +902,12 @@ def cleanup_permissions(
     else:
         log("    Personal Compute policy not found — skipping.")
 
-    # Revoke warehouse CAN_USE
+    # Warehouse CAN_USE — intentionally left in place.
+    # The permissions API only supports PATCH (additive) and PUT (full replace).
+    # PUT would overwrite all other ACLs on the warehouse.  Since the warehouse
+    # is retained during cleanup, leaving the workshop group's CAN_USE is safe.
     if warehouse_config is not None:
-        log(f"  Revoking warehouse CAN_USE for '{WORKSHOP_GROUP}'...")
-        wh_id = find_warehouse(client, warehouse_config.name)
-        if wh_id:
-            try:
-                # Set permissions to empty list for the group — PATCH with no
-                # entry for the group effectively removes it.  We use
-                # set_permissions (PUT) on the warehouse to clear the group's
-                # ACL.  However, set_permissions replaces ALL ACLs, so we use
-                # update (PATCH) with CAN_VIEW which is the implicit default.
-                # The simplest safe approach: just log a note.  The warehouse
-                # itself isn't deleted during cleanup, so the ACL can remain.
-                log("    [dim]Warehouse is retained — CAN_USE ACL left in place.[/dim]")
-            except Exception as e:
-                log(f"    [yellow]Skipped: {e}[/yellow]")
-        else:
-            log(f"    Warehouse '{warehouse_config.name}' not found — skipping.")
+        log(f"  [dim]Warehouse '{warehouse_config.name}' CAN_USE ACL retained (warehouse is not deleted).[/dim]")
 
     # Revoke connection grant
     log(f"  Revoking USE_CONNECTION on '{_MCP_CONNECTION_NAME}' for '{WORKSHOP_GROUP}'...")

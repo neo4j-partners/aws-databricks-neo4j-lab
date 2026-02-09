@@ -179,7 +179,7 @@ All five gaps have been implemented. Below is what was changed, where, and any d
 | `grant_warehouse_access()` | 5 | Yes | Grants `CAN_USE` on the Starter Warehouse using the workspace permissions API (`sql/warehouses` object type). Verifies the ACL after granting. |
 | `grant_connection_access()` | 6 | No | Grants `USE_CONNECTION` on `neo4j_mcp` via the UC grants API (`SecurableType.CONNECTION`). Handles `NotFound` gracefully if the connection doesn't exist yet, and prints the manual SQL grant as guidance. |
 | `verify_foundation_model_access()` | 7 | No | Lists all serving endpoints and checks whether the two required Foundation Model endpoints exist. Warns if missing but never fails the lockdown. |
-| `verify_agentbricks_prerequisites()` | 8 | No | Checks for serverless/budget cluster policies and logs the three admin preview flags that must be verified manually. |
+| `verify_agentbricks_prerequisites()` | 8 | No | Logs manual verification checklist for admin preview flags and serverless budget policies. |
 
 ### New Constants
 
@@ -194,8 +194,33 @@ All five gaps have been implemented. Below is what was changed, where, and any d
 
 2. **Connection grant uses `SecurableType.CONNECTION.value`.** Following the existing pattern for `SecurableType.CATALOG.value` (see MEMORY.md gotcha about enum not being a `str` enum).
 
-3. **Foundation Model check is existence-only.** The step checks whether the endpoints appear in the serving endpoints list. It does not attempt to query them or inspect their ACLs, because system endpoints may not expose permission details the same way custom endpoints do. If they're missing from the list entirely, it warns about AI Gateway restrictions.
+3. **Foundation Model check is existence-only.** The step checks whether the endpoints appear in the serving endpoints list via `GET /api/2.0/serving-endpoints`. Foundation Model pay-per-token endpoints (like `databricks-bge-large-en`) appear in this list when provisioned. If missing, it could mean the workspace doesn't have them enabled or an AI Gateway policy restricts visibility.
 
-4. **AgentBricks preview flags are manual.** The Databricks SDK does not expose workspace preview toggles via API. The step logs a reminder listing all three flags. Budget policy detection uses a heuristic search over cluster policies (looking for `policy_family_id == "job-cluster"` or names containing "budget" or "serverless") since the budget policy API is separate from the standard cluster policies API.
+4. **AgentBricks prerequisites are manual.** The Databricks SDK does not expose workspace preview toggles via API. Budget policies are managed via the account-level `BudgetPolicyAPI` (not the workspace `cluster_policies` API), so they also cannot be verified from the workspace client. Step 8 simply logs a checklist for the admin to verify manually.
 
 5. **All new parameters are optional with defaults of `None`.** This preserves backward compatibility — existing callers that don't pass `warehouse_config` will simply skip the warehouse grant step.
+
+---
+
+## Code Review Notes
+
+The implementation was reviewed against Databricks SDK source code and API documentation. Findings and fixes:
+
+| Issue | Severity | Resolution |
+|---|---|---|
+| Warehouse cleanup had dead `try/except` around a `log()` call | Medium | Replaced with a clear comment + one-line log explaining retention |
+| AgentBricks step searched `cluster_policies.list()` for budget policies — budget policies are an account-level API, not cluster policies | High | Removed the misleading heuristic; step now logs a manual checklist |
+| Foundation Model warning attributed missing endpoints only to AI Gateway | Low | Expanded to mention endpoints may not be provisioned |
+| `cleanup_permissions` docstring still said "warehouse ACL" after revocation was removed | Low | Updated docstring to accurately describe retention behavior |
+
+### API Verification Results
+
+All SDK API calls were verified against the installed `databricks-sdk` source code:
+
+| API Call | Object Type / Securable | Verified |
+|---|---|---|
+| `client.permissions.update("sql/warehouses", ...)` | `PermissionLevel.CAN_USE` | Correct — matches `PermissionsAPI.update()` signature |
+| `client.grants.update(SecurableType.CONNECTION.value, ...)` | `Privilege.USE_CONNECTION` | Correct — `.value` required (SecurableType is plain Enum) |
+| `client.serving_endpoints.list()` | Returns `Iterator[ServingEndpoint]` | Correct — each has `.name` attribute |
+| `client.permissions.get("sql/warehouses", ...)` | Returns `ObjectPermissions` | Correct — `.access_control_list[].all_permissions[].permission_level` |
+| `client.grants.update(..., remove=[Privilege.USE_CONNECTION])` | Raises `NotFound` if missing | Correct — handled with `except NotFound` |
