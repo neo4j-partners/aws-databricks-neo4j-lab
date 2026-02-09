@@ -13,6 +13,8 @@ from pathlib import Path
 import typer
 from rich.table import Table
 
+from databricks.sdk.service.compute import State
+
 from .cleanup import run_cleanup
 from .cluster import (
     create_user_cluster,
@@ -132,24 +134,19 @@ def cleanup(
 
 @app.command("add-users")
 def add_users(
-    file: Path = typer.Option(
-        _DEFAULT_CSV,
-        "--file", "-f",
-        help="Path to CSV file with an 'email' column.",
-    ),
     skip_clusters: bool = typer.Option(
         False,
         "--skip-clusters",
         help="Only add users to group, skip cluster creation.",
     ),
 ) -> None:
-    """Add users from a CSV → create workspace accounts → add to group → create per-user clusters."""
+    """Add users from lab_setup/users.csv → create workspace accounts → add to group → create per-user clusters."""
     log_path = init_log_file()
     log(f"[dim]Log file: {log_path}[/dim]")
 
     start = time.monotonic()
     try:
-        _run_add_users(file, skip_clusters=skip_clusters)
+        _run_add_users(skip_clusters=skip_clusters)
         elapsed = time.monotonic() - start
         log(f"[green]Total elapsed time: {_fmt_elapsed(elapsed)}[/green]")
     except Exception as e:
@@ -168,24 +165,19 @@ def add_users(
 
 @app.command("remove-users")
 def remove_users(
-    file: Path = typer.Option(
-        _DEFAULT_CSV,
-        "--file", "-f",
-        help="Path to CSV file with an 'email' column.",
-    ),
     keep_clusters: bool = typer.Option(
         False,
         "--keep-clusters",
         help="Skip cluster deletion.",
     ),
 ) -> None:
-    """Remove users from the workshop group and delete their per-user clusters."""
+    """Remove users (from lab_setup/users.csv) from the workshop group and delete their per-user clusters."""
     log_path = init_log_file()
     log(f"[dim]Log file: {log_path}[/dim]")
 
     start = time.monotonic()
     try:
-        _run_remove_users(file, keep_clusters=keep_clusters)
+        _run_remove_users(keep_clusters=keep_clusters)
         elapsed = time.monotonic() - start
         log(f"[green]Total elapsed time: {_fmt_elapsed(elapsed)}[/green]")
     except Exception as e:
@@ -298,92 +290,112 @@ def _run_cleanup(*, yes: bool) -> None:
 # add-users orchestration
 # ---------------------------------------------------------------------------
 
-def _run_add_users(csv_path: Path, *, skip_clusters: bool) -> None:
+def _run_add_users(*, skip_clusters: bool) -> None:
     """Parse CSV, find/create users, add to group, create per-user clusters."""
     config = Config.load()
     client = config.prepare()
     acct = get_account_client()
 
-    emails = parse_csv(csv_path)
-    log(f"Read {len(emails)} unique email(s) from {csv_path}")
+    emails = parse_csv(_DEFAULT_CSV)
+    log(f"Read {len(emails)} unique email(s) from {_DEFAULT_CSV}")
 
-    print_header("Adding Users")
+    # --- Phase 1: Find or create workspace users --------------------------
+    print_header("Checking Users")
 
     grp = require_group(client, WORKSHOP_GROUP)
     group_id: str = grp.id  # type: ignore[assignment]
     existing_members = get_group_member_ids(acct, group_id)
 
-    added = 0
-    already = 0
-    created = 0
-    failed_create = 0
-    to_add: list[str] = []
-    user_emails_added: list[str] = []
+    users_existed = 0
+    users_created = 0
+    users_failed = 0
+    already_in_group = 0
+    to_add_to_group: list[str] = []
+    user_emails_ok: list[str] = []
 
     for email in emails:
         user = find_workspace_user(client, email)
-        if user is None or user.id is None:
+        if user is not None and user.id is not None:
+            log(f"  {email} — exists")
+            users_existed += 1
+        else:
             try:
                 user = create_workspace_user(client, email)
-                created += 1
+                users_created += 1
             except Exception as exc:
                 log(f"  [red]Failed to create user {email}: {exc}[/red]")
-                failed_create += 1
+                users_failed += 1
                 continue
 
         if user.id in existing_members:
-            already += 1
-            log(f"  {email} — already a member")
+            already_in_group += 1
         else:
-            to_add.append(user.id)
+            to_add_to_group.append(user.id)
 
-        user_emails_added.append(email)
+        user_emails_ok.append(email)
 
-    if to_add:
-        add_members_to_group(acct, group_id, to_add)
-        added = len(to_add)
+    if to_add_to_group:
+        add_members_to_group(acct, group_id, to_add_to_group)
 
     log()
-    log(f"  Added to group: {added}")
-    log(f"  Created in workspace: {created}")
-    log(f"  Already member: {already}")
-    if failed_create:
-        log(f"  [red]Failed to create: {failed_create}[/red]")
+    log(f"  Users: {users_existed} existed, {users_created} created"
+        + (f", {users_failed} failed" if users_failed else ""))
+    log(f"  Group: {len(to_add_to_group)} added, {already_in_group} already members")
 
-    # --- Per-user clusters ------------------------------------------------
+    # --- Phase 2: Per-user clusters ---------------------------------------
     if skip_clusters:
         log()
         log("[dim]Skipping cluster creation (--skip-clusters).[/dim]")
         return
 
-    if not user_emails_added:
+    if not user_emails_ok:
         log()
         log("[yellow]No users to create clusters for.[/yellow]")
         return
 
-    print_header("Creating Per-User Clusters")
+    print_header("Checking Clusters")
 
-    # Phase 1: create/find all clusters (fast API calls)
-    cluster_ids: list[tuple[str, str]] = []  # (email, cluster_id)
-    for email in user_emails_added:
+    # Build lookup of existing lab-* clusters (single API call)
+    existing_clusters = {uc.cluster_name: uc for uc in find_user_clusters(client)}
+
+    needs_work: list[tuple[str, str]] = []  # (email, cluster_id) — needs wait + libs
+    skipped = 0
+
+    for email in user_emails_ok:
+        cname = cluster_name_for_user(email)
+        existing = existing_clusters.get(cname)
+
+        if existing and existing.state == State.RUNNING:
+            log(f"  {cname} — already running ({existing.cluster_id})")
+            skipped += 1
+            continue
+
         try:
             cid = create_user_cluster(client, config.cluster, email)
-            cluster_ids.append((email, cid))
+            needs_work.append((email, cid))
         except Exception as exc:
             log(f"  [red]Failed to create cluster for {email}: {exc}[/red]")
 
-    # Phase 2: wait for all clusters to reach RUNNING
+    if skipped:
+        log(f"  ({skipped} cluster(s) already running — skipped)")
+
+    if not needs_work:
+        log()
+        log("[green]add-users complete — nothing to do.[/green]")
+        return
+
+    # Wait for clusters that need starting
     log()
-    log(f"Waiting for {len(cluster_ids)} cluster(s) to start...")
-    for email, cid in cluster_ids:
+    log(f"Waiting for {len(needs_work)} cluster(s) to start...")
+    for email, cid in needs_work:
         try:
             wait_for_cluster_running(client, cid)
         except (RuntimeError, TimeoutError) as exc:
             log(f"  [red]Cluster for {email} did not reach RUNNING: {exc}[/red]")
 
-    # Phase 3: install libraries on each
+    # Install libraries
     print_header("Installing Libraries")
-    for email, cid in cluster_ids:
+    for email, cid in needs_work:
         log(f"  {email} ({cid})...")
         try:
             ensure_libraries_installed(client, cid, config.library)
@@ -398,14 +410,14 @@ def _run_add_users(csv_path: Path, *, skip_clusters: bool) -> None:
 # remove-users orchestration
 # ---------------------------------------------------------------------------
 
-def _run_remove_users(csv_path: Path, *, keep_clusters: bool) -> None:
+def _run_remove_users(*, keep_clusters: bool) -> None:
     """Parse CSV, remove from group, delete per-user clusters."""
     config = Config.load()
     client = config.prepare()
     acct = get_account_client()
 
-    emails = parse_csv(csv_path)
-    log(f"Read {len(emails)} unique email(s) from {csv_path}")
+    emails = parse_csv(_DEFAULT_CSV)
+    log(f"Read {len(emails)} unique email(s) from {_DEFAULT_CSV}")
 
     print_header("Removing Users")
 
@@ -556,7 +568,7 @@ def _print_summary(result: SetupResult, config: Config) -> None:
         log("Lockdown:     [red]Permissions lockdown had errors[/red]")
 
     log()
-    log("Next: run 'databricks-setup add-users -f users.csv' to create per-user clusters.")
+    log("Next: run 'databricks-setup add-users' to create per-user clusters.")
 
 
 def _print_cleanup_target(config: Config) -> None:

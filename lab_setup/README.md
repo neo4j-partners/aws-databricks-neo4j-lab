@@ -17,10 +17,9 @@ Complete these steps before the workshop begins:
 
 - [ ] Create Unity Catalog, Schema, and Volume (Step 1 — UI required)
 - [ ] Create `aircraft_workshop_group` at the account level and add it to the workspace (Step 1.5)
-- [ ] Run `databricks-setup setup` to set up compute, data, tables, and permissions lockdown (Step 2)
-- [ ] Add participant emails to `lab_setup/users.csv` and run `user-mngmnt add` (Step 3)
+- [ ] Run `databricks-setup setup` to upload data, create tables, and lock down permissions (Step 2)
+- [ ] Add participant emails to `lab_setup/users.csv` and run `databricks-setup add-users` (Step 3)
 - [ ] Configure Databricks Genie Space (Lab 7)
-- [ ] Provide DBC file to participants (or host for download)
 - [ ] Test the complete workflow
 - [ ] Document connection details for participants
 
@@ -54,11 +53,10 @@ export DATABRICKS_CONFIG_PROFILE=<your-profile-name>
 
 ### Python and uv
 
-Both CLIs require Python 3.11+ and [uv](https://docs.astral.sh/uv/):
+The CLI requires Python 3.11+ and [uv](https://docs.astral.sh/uv/):
 
 ```bash
 cd lab_setup/auto_scripts && uv sync
-cd lab_setup/user_mngmnt && uv sync
 ```
 
 ### Databricks Resources
@@ -146,11 +144,12 @@ Unity Catalog grants only work with **account-level** groups. Workspace-local gr
 
 ## Step 2: Automated Setup
 
-The `databricks-setup` CLI (in `auto_scripts/`) handles everything after catalog creation. It runs three sequential tracks:
+The `databricks-setup` CLI (in `auto_scripts/`) handles everything after catalog creation. It runs two sequential tracks:
 
-- **Track A:** Creates a dedicated Spark cluster with the Neo4j Spark Connector and all Python libraries
-- **Track B:** Uploads data files and creates Delta Lake tables via SQL Warehouse
-- **Track C:** Locks down permissions — removes compute-creation entitlements, verifies the `aircraft_workshop_group` account-level group exists, grants read-only catalog access, and sets cluster attach permissions
+- **Track B:** Uploads data files, notebooks, and creates Delta Lake tables via SQL Warehouse
+- **Track C:** Locks down permissions — removes compute-creation entitlements, verifies the `aircraft_workshop_group` account-level group exists, grants read-only catalog access, and sets workspace folder read permissions
+
+Per-user clusters are created separately in Step 3 via `databricks-setup add-users`.
 
 ### 2.1 Configure Environment
 
@@ -168,6 +167,9 @@ CLOUD_PROVIDER="aws"
 
 # Databricks CLI profile (optional - uses default if empty)
 DATABRICKS_PROFILE=""
+
+# Account ID (required for user management — found at https://accounts.cloud.databricks.com)
+DATABRICKS_ACCOUNT_ID=""
 ```
 
 For the full list of configuration options, see the [auto_scripts README](auto_scripts/README.md#configuration).
@@ -183,25 +185,22 @@ All configuration is loaded from `lab_setup/.env` — there are no CLI arguments
 
 ### What it does
 
-Runs three tracks sequentially:
-
-**Track A — Cluster + Libraries:**
-1. Creates (or reuses) a single-node Spark cluster with Dedicated (Single User) access mode
-2. Waits for the cluster to reach RUNNING state
-3. Installs the Neo4j Spark Connector and all Python libraries
+Runs two tracks sequentially:
 
 **Track B — Data Upload + Lakehouse Tables:**
 1. Finds the configured SQL Warehouse
 2. Uploads CSV and Markdown data files to the volume
-3. Creates Delta Lake tables via the Statement Execution API
+3. Uploads workshop notebooks to the shared workspace folder
+4. Creates Delta Lake tables via the Statement Execution API
 
 **Track C — Permissions Lockdown:**
 1. Removes `allow-cluster-create` and `allow-instance-pool-create` entitlements from the built-in `users` group (blocks all non-admin users from creating compute)
-2. Verifies the `aircraft_workshop_group` account-level group exists in the workspace (see Step 1.5)
-3. Grants read-only Unity Catalog privileges on the lab catalog (`USE_CATALOG`, `USE_SCHEMA`, `SELECT`, `READ_VOLUME`, `BROWSE`)
-4. Grants `CAN_ATTACH_TO` on the workshop cluster to the `aircraft_workshop_group` group
+2. Removes non-admin access from the Personal Compute cluster policy
+3. Verifies the `aircraft_workshop_group` account-level group exists in the workspace (see Step 1.5)
+4. Grants read-only Unity Catalog privileges on the lab catalog (`USE_CATALOG`, `USE_SCHEMA`, `SELECT`, `READ_VOLUME`, `BROWSE`)
+5. Grants `CAN_READ` on the shared notebook folder to the `aircraft_workshop_group` group
 
-If a cluster with the same name already exists, the CLI reuses it (starting it if terminated). All operations are idempotent — safe to re-run.
+All operations are idempotent — safe to re-run.
 
 For configuration details (environment variables, cluster defaults, cloud provider options), see the [auto_scripts README](auto_scripts/README.md#configuration).
 
@@ -209,15 +208,24 @@ For configuration details (environment variables, cluster defaults, cloud provid
 
 ### Manual Setup (UI Alternative)
 
-If you prefer to set up the cluster, libraries, and data through the Databricks UI instead of using `databricks-setup`, see the complete step-by-step guide in **[MANUAL_SETUP.md](docs/MANUAL_SETUP.md)**.
+If you prefer to set up the data and permissions through the Databricks UI instead of using `databricks-setup`, see the complete step-by-step guide in **[MANUAL_SETUP.md](docs/MANUAL_SETUP.md)**.
 
 ## Step 3: Add Workshop Participants
 
-The `user-mngmnt` CLI (in `user_mngmnt/`) manages membership of the `aircraft_workshop_group` account-level group. It reads participant emails from a CSV file and adds them to the group so they receive the read-only catalog access and cluster attach permissions.
+The `databricks-setup add-users` command manages participant onboarding. It reads emails from a CSV file and for each participant:
 
-This is a separate tool from `databricks-setup` because user management has a different lifecycle — instructors may add or remove participants multiple times during a workshop without touching infrastructure.
+1. Creates a workspace account if they don't already exist
+2. Adds them to the `aircraft_workshop_group` group
+3. Creates a dedicated per-user cluster (`lab-<email_prefix>`)
+4. Waits for the cluster to start and installs all required libraries
 
-### 3.1 Prepare the CSV
+Each participant gets their own SINGLE_USER cluster, which gives them implicit compute access without needing shared cluster ACLs. The Neo4j Spark Connector requires Dedicated (Single User) access mode.
+
+### 3.1 Configure Account ID
+
+Ensure `DATABRICKS_ACCOUNT_ID` is set in `lab_setup/.env`. This is required for account-level group management. Find your account ID at [https://accounts.cloud.databricks.com](https://accounts.cloud.databricks.com).
+
+### 3.2 Prepare the CSV
 
 Edit `lab_setup/users.csv` with participant email addresses:
 
@@ -230,34 +238,42 @@ carol@example.com,Carol Williams
 
 The `email` column is required. The `name` column is optional and ignored by the tool — it exists for human readability. Users that don't already exist in the workspace will be automatically created (invited via SCIM).
 
-### 3.2 Add Users
+### 3.3 Add Users
 
 ```bash
-cd lab_setup/user_mngmnt
-uv run user-mngmnt add
+cd lab_setup/auto_scripts
+uv run databricks-setup add-users
 ```
 
-The tool reads the Databricks profile from `lab_setup/.env`, looks up each email in the workspace, creates any users that don't exist, skips those already in the group, and adds the rest in a single batched SCIM operation. A summary table is printed:
+This reads `lab_setup/users.csv`, creates workspace accounts, adds users to the group, creates per-user clusters (e.g., `lab-alice`, `lab-bob`), and installs libraries on each.
 
-| Status | Count |
-|---|---|
-| Added to group | 12 |
-| Created in workspace | 2 |
-| Already member | 3 |
-| Failed to create | 0 |
-| Total in CSV | 17 |
-
-### 3.3 List and Remove
+To add users to the group without creating clusters (e.g., if you'll create clusters later):
 
 ```bash
-# List current group members
-uv run user-mngmnt list
-
-# Remove users listed in the CSV from the group
-uv run user-mngmnt remove
+uv run databricks-setup add-users --skip-clusters
 ```
 
-All commands use the `DATABRICKS_PROFILE` from `lab_setup/.env` and target the `aircraft_workshop_group` group. Use `--file` (`-f`) to override the CSV path if needed.
+### 3.4 List Users
+
+```bash
+uv run databricks-setup list-users
+```
+
+Shows all group members with their email, display name, cluster name, and cluster state.
+
+### 3.5 Remove Users
+
+```bash
+uv run databricks-setup remove-users
+```
+
+Removes users listed in `lab_setup/users.csv` from the group and permanently deletes their per-user clusters. To remove from the group while keeping clusters:
+
+```bash
+uv run databricks-setup remove-users --keep-clusters
+```
+
+All commands read from `lab_setup/users.csv` and use the `DATABRICKS_PROFILE` from `lab_setup/.env`.
 
 ---
 
@@ -270,15 +286,13 @@ Create a handout or slide with:
 | Resource | Value |
 |----------|-------|
 | Databricks Workspace URL | `https://your-workspace.cloud.databricks.com` |
-| Cluster Name | `aircraft-workshop-cluster` |
-| Notebook DBC File | `aircraft_etl_to_neo4j.dbc` (provide download link) |
 | Data Volume Path | `/Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/` |
 | Genie Space ID | `{your-genie-space-id}` (for Lab 7) |
 
 ### Quick Start Instructions
 
 1. Sign in to Databricks with your workshop credentials
-2. Navigate to Compute and ensure the cluster is running
+2. Navigate to Compute — your dedicated cluster (`lab-<your-name>`) should be running
 3. Download the `aircraft_etl_to_neo4j.dbc` file
 4. Go to Workspace > your personal folder
 5. Right-click > Import > upload the DBC file
@@ -312,9 +326,9 @@ Then re-run `databricks auth login`.
 ### Common Issues
 
 **"Spark Connector not found" error**
-- Verify cluster is in Dedicated (Single User) mode
-- Check library installation status
-- Restart cluster after adding library
+- Verify the participant's cluster is in Dedicated (Single User) mode
+- Check library installation status on the cluster
+- Restart the cluster after adding the library
 
 **"Connection refused" to Neo4j**
 - Verify URI format: `neo4j+s://` for Aura
@@ -345,14 +359,33 @@ Then re-run `databricks auth login`.
 
 **Participant cannot create a cluster or SQL warehouse**
 - This is expected — Track C removes compute-creation entitlements from all non-admin users
-- Participants should use the pre-created workshop cluster
+- Participants should use their dedicated per-user cluster (created by `add-users`)
 - Admins always retain these entitlements and are not affected
 
 **Participant cannot see the catalog or query tables**
-- Verify the user is a member of the `aircraft_workshop_group` group: `uv run user-mngmnt list`
-- If not listed, add their email to `lab_setup/users.csv` and run `uv run user-mngmnt add`
+- Verify the user is a member of the `aircraft_workshop_group` group: `uv run databricks-setup list-users`
+- If not listed, add their email to `lab_setup/users.csv` and re-run `uv run databricks-setup add-users`
 - Check that `databricks-setup setup` completed Track C successfully (look for "Permissions lockdown complete" in the output)
 - Verify `aircraft_workshop_group` has **Source = "Account"** in Settings > Identity and access > Groups (workspace-local groups are invisible to Unity Catalog)
+
+**Participant's cluster is not running**
+- Run `uv run databricks-setup list-users` to check cluster states
+- If terminated, the participant can start it from the Compute page
+- Re-running `databricks-setup add-users` will restart any terminated clusters
+
+---
+
+## CLI Command Reference
+
+```
+databricks-setup setup                         # Upload data, create tables, lock down permissions
+databricks-setup cleanup [--yes]               # Delete data, tables, catalog, and revert permissions
+databricks-setup add-users [--skip-clusters]   # Create users, add to group, create per-user clusters
+databricks-setup remove-users [--keep-clusters] # Remove from group, delete per-user clusters
+databricks-setup list-users                    # Show group members and cluster status
+```
+
+All user commands read from `lab_setup/users.csv`.
 
 ---
 
@@ -368,8 +401,8 @@ The setup CLI uploads **25 files** to the Volume:
 
 ## Cost Considerations
 
-- **Cluster:** Single-node clusters are sufficient for this small dataset
-- **Auto-termination:** Set to 30-60 minutes to avoid idle costs
+- **Clusters:** Each participant gets a single-node cluster; plan for one m5.xlarge per user
+- **Auto-termination:** Set to 30 minutes by default to avoid idle costs
 - **Storage:** Volume storage for CSV files is negligible (~25 MB total)
 - **Delta Lake:** The lakehouse tables add minimal storage overhead
 - **Genie:** Genie queries consume compute resources; monitor usage during workshop
@@ -378,7 +411,7 @@ The setup CLI uploads **25 files** to the Volume:
 
 ## Cleanup
 
-To tear down everything the setup created (permissions, lakehouse tables, volume, schemas, and catalog) while keeping the compute cluster:
+To tear down data and permissions (lakehouse tables, volume, schemas, catalog, and notebook folder):
 
 ```bash
 cd lab_setup/auto_scripts
@@ -388,6 +421,12 @@ uv run databricks-setup cleanup
 
 # Skip confirmation
 uv run databricks-setup cleanup --yes
+```
+
+To remove per-user clusters:
+
+```bash
+uv run databricks-setup remove-users
 ```
 
 Cleanup revokes catalog grants for `aircraft_workshop_group` but does **not** delete the group (it is account-level and persists across setup/cleanup cycles). It also does **not** restore compute-creation entitlements on the `users` group — that is a deliberate admin action. A reminder is printed with instructions to re-add them manually if needed.

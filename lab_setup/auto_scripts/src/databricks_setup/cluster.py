@@ -6,7 +6,7 @@ and per-user cluster lifecycle.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service.compute import (
@@ -241,8 +241,6 @@ def create_user_cluster(
     Returns:
         The cluster ID.
     """
-    from dataclasses import replace
-
     name = cluster_name_for_user(user_email)
     user_config = replace(config, name=name)
     return get_or_create_cluster(client, user_config, user_email)

@@ -3,7 +3,7 @@
 Track C of the setup process:
 
 1.  Remove compute-creation entitlements from the built-in ``users`` group.
-1b. Remove non-admin access from the Personal Compute cluster policy.
+1b. Disable the Personal Compute cluster policy (node_type_id forbidden).
 2.  Verify that the ``aircraft_workshop_group`` account-level group exists.
 3.  Grant read-only Unity Catalog privileges on the lab catalog.
 4.  Grant ``CAN_READ`` on the shared notebook folder.
@@ -14,6 +14,8 @@ clusters give the assigned user implicit access.
 
 from __future__ import annotations
 
+import json
+
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.errors import NotFound
 from databricks.sdk.service.catalog import (
@@ -22,10 +24,9 @@ from databricks.sdk.service.catalog import (
     SecurableType,
 )
 from databricks.sdk.service.compute import (
-    ClusterAccessControlRequest,
-    ClusterPermissionLevel,
     ClusterPolicyAccessControlRequest,
     ClusterPolicyPermissionLevel,
+    Policy,
 )
 from databricks.sdk.service.iam import (
     AccessControlRequest,
@@ -45,6 +46,16 @@ from .utils import print_header
 # Policy family ID for the built-in Personal Compute cluster policy.
 _PERSONAL_COMPUTE_POLICY_FAMILY = "personal-vm"
 
+# Override applied to the Personal Compute policy to make it unusable.
+# Setting node_type_id to "forbidden" prevents any node type from being
+# selected, so no cluster can be created with this policy.
+_PERSONAL_COMPUTE_LOCKDOWN_OVERRIDES = {
+    "node_type_id": {
+        "type": "forbidden",
+        "hidden": True,
+    },
+}
+
 # Entitlements to strip from the built-in 'users' group.
 _ENTITLEMENTS_TO_REMOVE = (
     "allow-cluster-create",
@@ -63,7 +74,7 @@ _CATALOG_PRIVILEGES = (
 
 
 # ---------------------------------------------------------------------------
-# Group helpers
+# Entitlement helpers
 # ---------------------------------------------------------------------------
 
 def _get_entitlement_values(group: Group) -> set[str]:
@@ -185,7 +196,7 @@ def lockdown_entitlements(client: WorkspaceClient) -> bool:
 # Step 1b: Personal Compute policy lockdown
 # ---------------------------------------------------------------------------
 
-def _find_personal_compute_policy(client: WorkspaceClient) -> str | None:
+def _find_personal_compute_policy(client: WorkspaceClient) -> Policy | None:
     """Find the built-in Personal Compute cluster policy.
 
     Matches on ``policy_family_id`` first, falling back to a name match
@@ -195,55 +206,75 @@ def _find_personal_compute_policy(client: WorkspaceClient) -> str | None:
         client: Databricks workspace client.
 
     Returns:
-        The policy_id if found, else None.
+        The Policy object if found, else None.
     """
     policies = list(client.cluster_policies.list())
 
     # Prefer the canonical policy_family_id match.
     for policy in policies:
         if getattr(policy, "policy_family_id", None) == _PERSONAL_COMPUTE_POLICY_FAMILY:
-            return policy.policy_id
+            return policy
 
     # Fall back to name match for older workspaces.
     for policy in policies:
         if policy.name == "Personal Compute":
-            return policy.policy_id
+            return policy
 
     return None
 
 
-def _get_non_admin_policy_acls(
-    client: WorkspaceClient,
-    policy_id: str,
-) -> list | None:
-    """Return non-admin ACL entries for a cluster policy, or None on error."""
+def _policy_edit_kwargs(policy: Policy) -> dict:
+    """Build base kwargs for ``cluster_policies.edit()`` preserving existing fields.
+
+    The edit API is a full replacement — omitted fields are cleared.
+    This helper captures the fields that must be preserved so callers
+    only need to add/override what they want to change.
+    """
+    kwargs: dict = {
+        "policy_id": policy.policy_id,
+        "name": policy.name,
+    }
+    if policy.description:
+        kwargs["description"] = policy.description
+    if policy.policy_family_id:
+        kwargs["policy_family_id"] = policy.policy_family_id
+        if policy.policy_family_definition_overrides:
+            kwargs["policy_family_definition_overrides"] = (
+                policy.policy_family_definition_overrides
+            )
+    elif policy.definition:
+        kwargs["definition"] = policy.definition
+    return kwargs
+
+
+def _is_policy_locked_down(policy: Policy) -> bool:
+    """Check whether lockdown overrides are already applied."""
+    if not policy.policy_family_definition_overrides:
+        return False
     try:
-        perms = client.cluster_policies.get_permissions(cluster_policy_id=policy_id)
-        return [
-            acl for acl in (perms.access_control_list or [])
-            if acl.group_name is not None and acl.group_name != "admins"
-        ]
-    except Exception as e:
-        log(f"  [yellow]Warning: Could not read policy permissions: {e}[/yellow]")
-        return None
+        overrides = json.loads(policy.policy_family_definition_overrides)
+    except (json.JSONDecodeError, TypeError):
+        return False
+    return overrides.get("node_type_id", {}).get("type") == "forbidden"
 
 
 def lockdown_personal_compute_policy(client: WorkspaceClient) -> bool:
-    """Remove all non-admin permissions from the Personal Compute cluster policy.
+    """Disable the Personal Compute cluster policy.
 
     Personal Compute is a built-in cluster policy
     (``policy_family_id="personal-vm"``) that allows users to create
     single-node clusters without needing the ``allow-cluster-create``
-    entitlement.  Clearing its ACL prevents non-admin users from seeing
-    or using the "Create with Personal Compute" button.
+    entitlement.
 
-    **Prerequisite**: The account-level Personal Compute setting must be
-    set to "Delegate" (not "Enable") in the Databricks Account Console
-    under Settings > Feature enablement.  With the default "Enable", all
-    users have access regardless of workspace-level policy ACLs.
+    This function applies two complementary restrictions:
 
-    This operation is idempotent — if no non-admin permissions exist the
-    step is reported as already locked down.
+    1. Overrides ``node_type_id`` to ``"forbidden"`` in the policy
+       definition, making it impossible to select a node type and
+       therefore impossible to create a cluster.
+    2. Clears non-admin ACLs so the policy is hidden from the UI.
+
+    This operation is idempotent — if the override is already present
+    the step is reported as already locked down.
 
     Args:
         client: Databricks workspace client.
@@ -253,49 +284,52 @@ def lockdown_personal_compute_policy(client: WorkspaceClient) -> bool:
     """
     log("Step 1b: Locking down Personal Compute policy...")
 
-    policy_id = _find_personal_compute_policy(client)
-    if policy_id is None:
+    found = _find_personal_compute_policy(client)
+    if found is None:
         log("  [yellow]Personal Compute policy not found — may be disabled "
             "at account level. Skipping.[/yellow]")
         return True
 
-    log(f"  Found Personal Compute policy (id={policy_id})")
+    log(f"  Found Personal Compute policy (id={found.policy_id})")
 
     # --- Check current state ------------------------------------------------
-    before = _get_non_admin_policy_acls(client, policy_id)
-    if before is not None and not before:
-        log("  [dim]Already locked down — no non-admin permissions.[/dim]")
+    full = client.cluster_policies.get(policy_id=found.policy_id)
+
+    if _is_policy_locked_down(full):
+        log("  [dim]Already locked down (node_type_id forbidden).[/dim]")
         return True
 
-    if before:
-        names = [acl.group_name for acl in before]
-        log(f"  Non-admin access: {', '.join(names)}")
+    # --- Apply lockdown overrides -------------------------------------------
+    try:
+        kwargs = _policy_edit_kwargs(full)
+        kwargs["policy_family_definition_overrides"] = json.dumps(
+            _PERSONAL_COMPUTE_LOCKDOWN_OVERRIDES
+        )
+        client.cluster_policies.edit(**kwargs)
+    except Exception as e:
+        log(f"  [red]Failed to edit Personal Compute policy: {e}[/red]")
+        return False
 
-    # --- Clear all non-admin ACLs -------------------------------------------
+    # --- Also clear non-admin ACLs ------------------------------------------
     try:
         client.cluster_policies.set_permissions(
-            cluster_policy_id=policy_id,
+            cluster_policy_id=full.policy_id,
             access_control_list=[],
         )
     except Exception as e:
-        log(f"  [red]Failed to clear Personal Compute policy permissions: {e}[/red]")
-        return False
+        log(f"  [yellow]Warning: Could not clear policy ACLs: {e}[/yellow]")
 
     # --- Verify -------------------------------------------------------------
-    after = _get_non_admin_policy_acls(client, policy_id)
-    if after is None:
-        # Could not verify, but the set_permissions call succeeded.
-        pass
-    elif after:
-        log("  [yellow]Warning: Non-admin ACL entries still present "
-            "after clearing.[/yellow]")
-    else:
-        log("  [green]Verified: no non-admin permissions on Personal "
-            "Compute policy.[/green]")
-
-    log("  [dim]Reminder: Ensure 'Personal Compute' is set to 'Delegate' "
-        "(not 'Enable') in Account Console > Settings > Feature "
-        "enablement.[/dim]")
+    try:
+        updated = client.cluster_policies.get(policy_id=full.policy_id)
+        if _is_policy_locked_down(updated):
+            log("  [green]Verified: node_type_id forbidden on Personal "
+                "Compute policy.[/green]")
+        else:
+            log("  [yellow]Warning: lockdown overrides not found after "
+                "edit.[/yellow]")
+    except Exception as e:
+        log(f"  [yellow]Warning: Could not verify policy: {e}[/yellow]")
 
     return True
 
@@ -402,68 +436,6 @@ def grant_catalog_read_only(
             log(f"  [green]Verified: all {len(_CATALOG_PRIVILEGES)} privileges present.[/green]")
     except Exception as e:
         log(f"  [yellow]Warning: Could not verify grants: {e}[/yellow]")
-
-    return True
-
-
-# ---------------------------------------------------------------------------
-# Step 4: Cluster permissions
-# ---------------------------------------------------------------------------
-
-def grant_cluster_attach(
-    client: WorkspaceClient,
-    cluster_id: str,
-    group_name: str,
-) -> bool:
-    """Grant CAN_ATTACH_TO on a cluster to a group.
-
-    Uses ``update_permissions`` (PATCH) which merges with existing ACLs.
-    The admin's ``CAN_MANAGE`` and other principals are left untouched.
-    Re-running with the same permission is a no-op.
-
-    Args:
-        client: Databricks workspace client.
-        cluster_id: ID of the cluster.
-        group_name: Group to receive the permission.
-
-    Returns:
-        True on success, False on error.
-    """
-    log(f"Step 4: Granting CAN_ATTACH_TO on cluster to '{group_name}'...")
-    log(f"  Cluster: {cluster_id}")
-
-    try:
-        client.clusters.update_permissions(
-            cluster_id=cluster_id,
-            access_control_list=[
-                ClusterAccessControlRequest(
-                    group_name=group_name,
-                    permission_level=ClusterPermissionLevel.CAN_ATTACH_TO,
-                ),
-            ],
-        )
-        log("  Done.")
-    except Exception as e:
-        log(f"  [red]Failed to set cluster permissions: {e}[/red]")
-        return False
-
-    # --- Verify ---
-    try:
-        perms = client.clusters.get_permissions(cluster_id=cluster_id)
-        found = False
-        for acl in perms.access_control_list or []:
-            if acl.group_name == group_name:
-                for p in acl.all_permissions or []:
-                    if p.permission_level == ClusterPermissionLevel.CAN_ATTACH_TO:
-                        found = True
-                        break
-
-        if found:
-            log(f"  [green]Verified: CAN_ATTACH_TO present for '{group_name}'.[/green]")
-        else:
-            log("  [yellow]Warning: CAN_ATTACH_TO not found in cluster ACL after grant.[/yellow]")
-    except Exception as e:
-        log(f"  [yellow]Warning: Could not verify cluster permissions: {e}[/yellow]")
 
     return True
 
@@ -632,13 +604,25 @@ def cleanup_permissions(client: WorkspaceClient, volume_config: VolumeConfig) ->
     except Exception as e:
         log(f"    [yellow]Skipped: {e}[/yellow]")
 
-    # Restore Personal Compute policy permissions
-    log("  Restoring Personal Compute policy permissions...")
-    policy_id = _find_personal_compute_policy(client)
-    if policy_id is not None:
+    # Restore Personal Compute policy
+    log("  Restoring Personal Compute policy...")
+    found = _find_personal_compute_policy(client)
+    if found is not None:
+        # Remove lockdown overrides
+        try:
+            full = client.cluster_policies.get(policy_id=found.policy_id)
+            kwargs = _policy_edit_kwargs(full)
+            # Reset overrides to empty — removes the node_type_id forbidden rule
+            kwargs["policy_family_definition_overrides"] = "{}"
+            client.cluster_policies.edit(**kwargs)
+            log("    Removed lockdown overrides.")
+        except Exception as e:
+            log(f"    [yellow]Skipped policy edit: {e}[/yellow]")
+
+        # Restore CAN_USE for 'users' group
         try:
             client.cluster_policies.set_permissions(
-                cluster_policy_id=policy_id,
+                cluster_policy_id=found.policy_id,
                 access_control_list=[
                     ClusterPolicyAccessControlRequest(
                         group_name="users",
@@ -648,16 +632,13 @@ def cleanup_permissions(client: WorkspaceClient, volume_config: VolumeConfig) ->
             )
             log("    Restored CAN_USE for 'users' group.")
         except Exception as e:
-            log(f"    [yellow]Skipped: {e}[/yellow]")
+            log(f"    [yellow]Skipped ACL restore: {e}[/yellow]")
     else:
         log("    Personal Compute policy not found — skipping.")
 
     # Note: the account-level group is NOT deleted — it is managed in the
     # Databricks Account Admin console and should persist across runs.
     log(f"  [dim]Account-level group '{WORKSHOP_GROUP}' is preserved (not deleted).[/dim]")
-
-    # Note: cluster ACL cleanup is not strictly needed — the cluster is
-    # typically deleted separately, and re-running setup re-applies the ACL.
 
     log()
     log("[yellow]Note: Entitlements on 'users' group were NOT restored.[/yellow]")
