@@ -16,7 +16,9 @@
 Complete these steps before the workshop begins:
 
 - [ ] Create Unity Catalog, Schema, and Volume (Step 1 — UI required)
-- [ ] Run `databricks-setup setup` to set up compute, upload data, and create tables (Step 2)
+- [ ] Create `aircraft_workshop_group` at the account level and add it to the workspace (Step 1.5)
+- [ ] Run `databricks-setup setup` to set up compute, data, tables, and permissions lockdown (Step 2)
+- [ ] Add participant emails to `users.csv` and run `user-mngmnt add` (Step 3)
 - [ ] Configure Databricks Genie Space (Lab 7)
 - [ ] Provide DBC file to participants (or host for download)
 - [ ] Test the complete workflow
@@ -70,11 +72,11 @@ Then re-run `databricks auth login`.
 
 ### Python and uv
 
-The setup CLI requires Python 3.11+ and [uv](https://docs.astral.sh/uv/):
+Both CLIs require Python 3.11+ and [uv](https://docs.astral.sh/uv/):
 
 ```bash
-cd lab_setup/auto_scripts
-uv sync
+cd lab_setup/auto_scripts && uv sync
+cd lab_setup/user_mngmnt && uv sync
 ```
 
 ---
@@ -127,12 +129,35 @@ This returns volume metadata if successful, or an error if any component is miss
 
 ---
 
+## Step 1.5: Create Account-Level Group
+
+Unity Catalog grants only work with **account-level** groups. Workspace-local groups (created via the SDK or workspace UI) are invisible to UC and will cause `Could not find principal` errors. This group must be created once at the account level.
+
+### 1.5.1 Create the Group in Account Admin
+
+1. Go to [https://accounts.cloud.databricks.com](https://accounts.cloud.databricks.com) > **User management** > **Groups**
+2. Click **Create group**
+3. Name it `aircraft_workshop_group`
+4. Click **Create**
+
+### 1.5.2 Add the Group to the Workspace
+
+1. In the Databricks workspace, go to **Settings** > **Identity and access** > **Groups**
+2. Click **Add group**
+3. Search for `aircraft_workshop_group` and add it from the account
+4. Verify the group shows with **Source = "Account"**
+
+> **Note:** This is a one-time step. The group persists across setup/cleanup cycles and is NOT deleted by `databricks-setup cleanup`.
+
+---
+
 ## Step 2: Automated Setup
 
-The `databricks-setup` CLI (in `auto_scripts/`) handles everything after catalog creation. It runs two sequential tracks:
+The `databricks-setup` CLI (in `auto_scripts/`) handles everything after catalog creation. It runs three sequential tracks:
 
 - **Track A:** Creates a dedicated Spark cluster with the Neo4j Spark Connector and all Python libraries
 - **Track B:** Uploads data files and creates Delta Lake tables via SQL Warehouse
+- **Track C:** Locks down permissions — removes compute-creation entitlements, verifies the `aircraft_workshop_group` account-level group exists, grants read-only catalog access, and sets cluster attach permissions
 
 ### 2.1 Configure Environment
 
@@ -190,7 +215,7 @@ All configuration is loaded from `lab_setup/.env` — there are no CLI arguments
 
 ### What it does
 
-Runs two tracks sequentially:
+Runs three tracks sequentially:
 
 **Track A — Cluster + Libraries:**
 1. Creates (or reuses) a single-node Spark cluster with Dedicated (Single User) access mode
@@ -202,7 +227,13 @@ Runs two tracks sequentially:
 2. Uploads CSV and Markdown data files to the volume
 3. Creates Delta Lake tables via the Statement Execution API
 
-If a cluster with the same name already exists, the CLI reuses it (starting it if terminated).
+**Track C — Permissions Lockdown:**
+1. Removes `allow-cluster-create` and `allow-instance-pool-create` entitlements from the built-in `users` group (blocks all non-admin users from creating compute)
+2. Verifies the `aircraft_workshop_group` account-level group exists in the workspace (see Step 1.5)
+3. Grants read-only Unity Catalog privileges on the lab catalog (`USE_CATALOG`, `USE_SCHEMA`, `SELECT`, `READ_VOLUME`, `BROWSE`)
+4. Grants `CAN_ATTACH_TO` on the workshop cluster to the `aircraft_workshop_group` group
+
+If a cluster with the same name already exists, the CLI reuses it (starting it if terminated). All operations are idempotent — safe to re-run.
 
 ### Cluster defaults
 
@@ -227,7 +258,7 @@ If you prefer to set up the cluster, libraries, and data through the Databricks 
 
 ### Cleanup
 
-To tear down everything the setup created (lakehouse tables, volume, schemas, and catalog) while keeping the compute cluster:
+To tear down everything the setup created (permissions, lakehouse tables, volume, schemas, and catalog) while keeping the compute cluster:
 
 ```bash
 cd lab_setup/auto_scripts
@@ -239,7 +270,68 @@ uv run databricks-setup cleanup
 uv run databricks-setup cleanup --yes
 ```
 
+Cleanup revokes catalog grants for `aircraft_workshop_group` but does **not** delete the group (it is account-level and persists across setup/cleanup cycles). It also does **not** restore compute-creation entitlements on the `users` group — that is a deliberate admin action. A reminder is printed with instructions to re-add them manually if needed.
+
 Each step is idempotent — safe to re-run if partially completed.
+
+---
+
+## Step 3: Add Workshop Participants
+
+The `user-mngmnt` CLI (in `user_mngmnt/`) manages membership of the `aircraft_workshop_group` account-level group. It reads participant emails from a CSV file and adds them to the group so they receive the read-only catalog access and cluster attach permissions.
+
+This is a separate tool from `databricks-setup` because user management has a different lifecycle — instructors may add or remove participants multiple times during a workshop without touching infrastructure.
+
+### 3.1 Prepare the CSV
+
+Edit `lab_setup/user_mngmnt/users.csv` with participant email addresses:
+
+```csv
+email,name
+alice@example.com,Alice Johnson
+bob@example.com,Bob Smith
+carol@example.com,Carol Williams
+```
+
+The `email` column is required. The `name` column is optional and ignored by the tool — it exists for human readability. Users must already exist in the Databricks workspace (this tool does not create accounts).
+
+### 3.2 Add Users
+
+```bash
+cd lab_setup/user_mngmnt
+uv run user-mngmnt add --file users.csv
+```
+
+The tool looks up each email in the workspace, skips any that are not found or are already members, and adds the rest in a single batched SCIM operation. A summary table is printed:
+
+| Status | Count |
+|---|---|
+| Added | 12 |
+| Already member | 3 |
+| Not found in workspace | 2 |
+| Total in CSV | 17 |
+
+### 3.3 List and Remove
+
+```bash
+# List current group members
+uv run user-mngmnt list
+
+# Remove users listed in the CSV from the group
+uv run user-mngmnt remove --file users.csv
+```
+
+### 3.4 Options
+
+All commands accept `--profile` (`-p`) for the Databricks CLI profile and `--group` (`-g`) to override the group name. Both also respect `DATABRICKS_PROFILE` and `GROUP_NAME` environment variables from `lab_setup/.env`.
+
+```bash
+# Use a specific profile
+uv run user-mngmnt add --file users.csv --profile my-workspace
+
+# Use a different group name
+uv run user-mngmnt list --group custom-group
+```
 
 ---
 
@@ -299,13 +391,24 @@ Create a handout or slide with:
 
 **Genie not generating correct SQL**
 - Ensure table comments are added (handled by `databricks-setup` CLI)
-- Verify table relationships are configured (Step 3.3)
+- Verify table relationships are configured in the Genie Space
 - Add more sample questions to guide the model
 
 **Lakehouse table creation fails**
 - Ensure CSV files are uploaded to the Volume first
 - Check file paths match exactly
 - Verify the SQL Warehouse has access to the Volume
+
+**Participant cannot create a cluster or SQL warehouse**
+- This is expected — Track C removes compute-creation entitlements from all non-admin users
+- Participants should use the pre-created workshop cluster
+- Admins always retain these entitlements and are not affected
+
+**Participant cannot see the catalog or query tables**
+- Verify the user is a member of the `aircraft_workshop_group` group: `uv run user-mngmnt list`
+- If not listed, add them: add their email to `users.csv` and run `uv run user-mngmnt add`
+- Check that `databricks-setup setup` completed Track C successfully (look for "Permissions lockdown complete" in the output)
+- Verify `aircraft_workshop_group` has **Source = "Account"** in Settings > Identity and access > Groups (workspace-local groups are invisible to Unity Catalog)
 
 ---
 

@@ -3,7 +3,7 @@
 Track C of the setup process:
 
 1. Remove compute-creation entitlements from the built-in ``users`` group.
-2. Create a ``workshop-users`` group (if it does not already exist).
+2. Verify that the ``aircraft_workshop_group`` account-level group exists.
 3. Grant read-only Unity Catalog privileges on the lab catalog.
 4. Grant ``CAN_ATTACH_TO`` on the workshop cluster.
 5. Verify the final state.
@@ -38,8 +38,9 @@ from .utils import print_header
 # Constants
 # ---------------------------------------------------------------------------
 
-# Hard-coded group name — the only group we lock down.
-WORKSHOP_GROUP = "workshop-users"
+# Account-level group name — must be created manually in the Databricks
+# Account Admin console before running Track C.
+WORKSHOP_GROUP = "aircraft_workshop_group"
 
 # Entitlements to strip from the built-in 'users' group.
 _ENTITLEMENTS_TO_REMOVE = (
@@ -194,39 +195,38 @@ def lockdown_entitlements(client: WorkspaceClient) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Step 2: Group creation
+# Step 2: Require account-level group
 # ---------------------------------------------------------------------------
 
-def get_or_create_group(client: WorkspaceClient, group_name: str) -> str | None:
-    """Find or create a workspace group.
+def require_workshop_group(client: WorkspaceClient, group_name: str) -> str | None:
+    """Verify that the account-level workshop group exists in the workspace.
+
+    This group must be created manually in the Databricks Account Admin
+    console and then added to the workspace.  Unity Catalog grants only
+    work with account-level groups — workspace-local groups are invisible
+    to UC and will cause "Could not find principal" errors.
 
     Args:
         client: Databricks workspace client.
-        group_name: Display name of the group.
+        group_name: Display name of the account-level group.
 
     Returns:
-        The group ID on success, None on error.
+        The group ID on success, None if the group is not found.
     """
-    log(f"Step 2: Finding or creating group '{group_name}'...")
+    log(f"Step 2: Verifying account-level group '{group_name}' exists...")
 
     existing = _find_group_by_name(client, group_name)
     if existing and existing.id:
-        log(f"  Group already exists (id={existing.id}).")
+        log(f"  Found group (id={existing.id}).")
         return existing.id
 
-    log(f"  Creating group '{group_name}'...")
-    try:
-        group = client.groups.create(display_name=group_name)
-    except Exception as e:
-        log(f"  [red]Failed to create group: {e}[/red]")
-        return None
-
-    if not group.id:
-        log("[red]Error: Group created but no ID returned.[/red]")
-        return None
-
-    log(f"  Created (id={group.id}).")
-    return group.id
+    log(f"  [red]Error: Group '{group_name}' not found in this workspace.[/red]")
+    log(f"  [red]This group must be created at the account level:[/red]")
+    log(f"  [red]  1. Go to https://accounts.cloud.databricks.com > User management > Groups[/red]")
+    log(f"  [red]  2. Create a group named '{group_name}'[/red]")
+    log(f"  [red]  3. In the workspace, go to Settings > Identity and access > Groups[/red]")
+    log(f"  [red]  4. Click 'Add group' and add '{group_name}' from the account[/red]")
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -263,7 +263,7 @@ def grant_catalog_read_only(
 
     try:
         client.grants.update(
-            securable_type=SecurableType.CATALOG,
+            securable_type=SecurableType.CATALOG.value,
             full_name=catalog_name,
             changes=[
                 PermissionsChange(
@@ -280,7 +280,7 @@ def grant_catalog_read_only(
     # --- Verify ---
     try:
         effective = client.grants.get(
-            securable_type=SecurableType.CATALOG,
+            securable_type=SecurableType.CATALOG.value,
             full_name=catalog_name,
         )
         granted: set[str] = set()
@@ -389,8 +389,8 @@ def run_permissions_lockdown(
 
     log()
 
-    # Step 2: Group creation
-    group_id = get_or_create_group(client, WORKSHOP_GROUP)
+    # Step 2: Require account-level group
+    group_id = require_workshop_group(client, WORKSHOP_GROUP)
     if group_id is None:
         return False
 
@@ -421,10 +421,11 @@ def run_permissions_lockdown(
 # ---------------------------------------------------------------------------
 
 def cleanup_permissions(client: WorkspaceClient, volume_config: VolumeConfig) -> None:
-    """Remove grants and delete the workshop-users group.
+    """Revoke catalog grants for the workshop group.
 
-    Does NOT restore entitlements — that is a deliberate admin action.
-    Each step is idempotent.
+    Does NOT delete the account-level group — it persists across
+    setup/cleanup cycles.  Does NOT restore entitlements — that is a
+    deliberate admin action.  Each step is idempotent.
 
     Args:
         client: Databricks workspace client.
@@ -436,7 +437,7 @@ def cleanup_permissions(client: WorkspaceClient, volume_config: VolumeConfig) ->
     log(f"  Revoking catalog grants for '{WORKSHOP_GROUP}'...")
     try:
         client.grants.update(
-            securable_type=SecurableType.CATALOG,
+            securable_type=SecurableType.CATALOG.value,
             full_name=volume_config.catalog,
             changes=[
                 PermissionsChange(
@@ -451,20 +452,12 @@ def cleanup_permissions(client: WorkspaceClient, volume_config: VolumeConfig) ->
     except Exception as e:
         log(f"    [yellow]Skipped: {e}[/yellow]")
 
-    # Delete the group
-    log(f"  Deleting group '{WORKSHOP_GROUP}'...")
-    group = _find_group_by_name(client, WORKSHOP_GROUP)
-    if group and group.id:
-        try:
-            client.groups.delete(id=group.id)
-            log("    Done.")
-        except NotFound:
-            log("    Already deleted.")
-    else:
-        log("    Group not found — skipping.")
+    # Note: the account-level group is NOT deleted — it is managed in the
+    # Databricks Account Admin console and should persist across runs.
+    log(f"  [dim]Account-level group '{WORKSHOP_GROUP}' is preserved (not deleted).[/dim]")
 
-    # Note: cluster ACL cleanup is not needed — deleting the group
-    # automatically removes its ACL entries.
+    # Note: cluster ACL cleanup is not strictly needed — the cluster is
+    # typically deleted separately, and re-running setup re-applies the ACL.
 
     log()
     log("[yellow]Note: Entitlements on 'users' group were NOT restored.[/yellow]")
