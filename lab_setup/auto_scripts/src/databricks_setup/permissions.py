@@ -286,7 +286,7 @@ def grant_catalog_read_only(
         granted: set[str] = set()
         for pa in effective.privilege_assignments or []:
             if pa.principal == group_name:
-                granted = {p.privilege.value for p in (pa.privileges or []) if p.privilege}
+                granted = {p.value for p in (pa.privileges or [])}
                 break
 
         missing = {p.value for p in _CATALOG_PRIVILEGES} - granted
