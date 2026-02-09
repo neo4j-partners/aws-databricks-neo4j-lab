@@ -26,6 +26,15 @@ INDEXES: list[tuple[str, str]] = [
     ("Chunk", "documentId"),
 ]
 
+# Constraints for entity types created by the `extract` command.
+EXTRACTION_CONSTRAINTS: list[tuple[str, str]] = [
+    ("FaultCode", "code"),
+    ("PartNumber", "number"),
+    ("OperatingLimit", "limitId"),
+    ("MaintenanceTask", "taskId"),
+    ("ATAChapter", "chapter"),
+]
+
 
 def create_constraints(driver: Driver) -> None:
     """Create uniqueness constraints (idempotent)."""
@@ -44,6 +53,15 @@ def create_indexes(driver: Driver) -> None:
             f"CREATE INDEX {index_name} IF NOT EXISTS FOR (n:{label}) ON (n.{prop})"
         )
         print(f"  [OK] Index: {label}.{prop}")
+
+
+def create_extraction_constraints(driver: Driver) -> None:
+    """Create uniqueness constraints for extracted entity types (idempotent)."""
+    for label, prop in EXTRACTION_CONSTRAINTS:
+        driver.execute_query(
+            f"CREATE CONSTRAINT IF NOT EXISTS FOR (n:{label}) REQUIRE n.{prop} IS UNIQUE"
+        )
+        print(f"  [OK] Constraint: {label}.{prop}")
 
 
 def create_embedding_indexes(driver: Driver, dimensions: int) -> None:

@@ -144,8 +144,9 @@ Unity Catalog grants only work with **account-level** groups. Workspace-local gr
 
 ## Step 2: Automated Setup
 
-The `databricks-setup` CLI (in `auto_scripts/`) handles everything after catalog creation. It runs two sequential tracks:
+The `databricks-setup` CLI (in `auto_scripts/`) handles everything after catalog creation. It runs three sequential tracks:
 
+- **Track A:** Creates/starts an admin cluster and installs libraries (Neo4j Spark Connector + Python packages)
 - **Track B:** Uploads data files, notebooks, and creates Delta Lake tables via SQL Warehouse
 - **Track C:** Locks down permissions — removes compute-creation entitlements, verifies the `aircraft_workshop_group` account-level group exists, grants read-only catalog access, and sets workspace folder read permissions
 
@@ -185,7 +186,12 @@ All configuration is loaded from `lab_setup/.env` — there are no CLI arguments
 
 ### What it does
 
-Runs two tracks sequentially:
+Runs three tracks sequentially:
+
+**Track A — Admin Cluster + Libraries:**
+1. Creates or reuses a dedicated admin Spark cluster
+2. Waits for the cluster to reach RUNNING state
+3. Installs Neo4j Spark Connector and Python packages
 
 **Track B — Data Upload + Lakehouse Tables:**
 1. Finds the configured SQL Warehouse
@@ -378,12 +384,17 @@ Then re-run `databricks auth login`.
 ## CLI Command Reference
 
 ```
-databricks-setup setup                         # Upload data, create tables, lock down permissions
+databricks-setup setup                         # Create admin cluster, upload data, create tables, lock down permissions
 databricks-setup cleanup [--yes]               # Delete data, tables, catalog, and revert permissions
 databricks-setup add-users [--skip-clusters]   # Create users, add to group, create per-user clusters
 databricks-setup remove-users [--keep-clusters] # Remove from group, delete per-user clusters
 databricks-setup list-users                    # Show group members and cluster status
 ```
+
+| Flag | Command | Effect |
+|------|---------|--------|
+| `--skip-clusters` | `add-users` | Only create accounts and add to group — skip per-user cluster creation |
+| `--keep-clusters` | `remove-users` | Remove from group but keep per-user clusters running |
 
 All user commands read from `lab_setup/users.csv`.
 

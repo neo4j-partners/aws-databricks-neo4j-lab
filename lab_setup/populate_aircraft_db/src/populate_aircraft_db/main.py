@@ -11,7 +11,12 @@ from neo4j import Driver, GraphDatabase
 
 from .config import Settings
 from .loader import clear_database, load_nodes, load_relationships, verify
-from .schema import create_constraints, create_embedding_indexes, create_indexes
+from .schema import (
+    create_constraints,
+    create_embedding_indexes,
+    create_extraction_constraints,
+    create_indexes,
+)
 
 app = typer.Typer(
     name="populate-aircraft-db",
@@ -139,6 +144,42 @@ def embed_cmd(
 
         print("\nCreating embedding indexes...")
         create_embedding_indexes(driver, dimensions)
+
+        verify(driver)
+
+    elapsed = time.monotonic() - start
+    print(f"\nDone in {_fmt_elapsed(elapsed)}.")
+
+
+@app.command("extract")
+def extract_cmd(
+    clean: bool = typer.Option(False, "--clean", help="Clear existing extracted entities first."),
+) -> None:
+    """Extract structured entities from maintenance manual chunks using OpenAI."""
+    from .extractor import clear_extracted, run_extraction
+
+    settings = Settings()  # type: ignore[call-arg]
+
+    if settings.openai_api_key is None:
+        raise typer.BadParameter(
+            "OPENAI_API_KEY is required for the extract command. Set it in .env or as an env var."
+        )
+
+    api_key = settings.openai_api_key.get_secret_value()
+    model = settings.openai_extraction_model
+    start = time.monotonic()
+
+    print(f"Connecting to {settings.neo4j_uri}...")
+    with _connect(settings) as driver:
+        if clean:
+            clear_extracted(driver)
+            print()
+
+        print("Creating constraints for extracted entities...")
+        create_extraction_constraints(driver)
+        print()
+
+        run_extraction(driver, api_key, model)
 
         verify(driver)
 

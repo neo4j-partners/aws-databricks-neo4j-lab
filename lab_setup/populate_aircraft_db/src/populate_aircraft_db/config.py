@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     openai_embedding_model: str = "text-embedding-3-small"
     openai_embedding_dimensions: int = 1536
 
+    # OpenAI chat model — used by the `extract` command.
+    openai_extraction_model: str = "gpt-4o-mini"
+
     @model_validator(mode="after")
     def _check_uri_scheme(self) -> Settings:
         if not self.neo4j_uri.startswith(("neo4j://", "neo4j+s://", "neo4j+ssc://", "bolt://", "bolt+s://", "bolt+ssc://")):
