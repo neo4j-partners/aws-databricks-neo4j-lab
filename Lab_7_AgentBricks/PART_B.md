@@ -6,19 +6,50 @@ In this part, you'll create a multi-agent supervisor that intelligently routes q
 
 ---
 
+## Why Two Data Sources?
+
+Aircraft intelligence requires two fundamentally different types of data, and each is best served by a purpose-built system:
+
+### Genie + Lakehouse: Built for Time-Series Data
+
+The Genie space queries **Unity Catalog tables** in the Databricks Lakehouse, which excels at high-volume, time-stamped sensor telemetry. With **345,600+ rows** of hourly readings across 90 days, the Lakehouse handles:
+
+- **Time-series aggregations** — rolling averages, daily trends, percentile calculations
+- **Statistical analysis** — standard deviation, anomaly detection, fleet-wide comparisons
+- **Columnar scans** — efficiently filtering and grouping millions of readings by date range, sensor type, or aircraft
+
+SQL and the Lakehouse architecture (Delta Lake, columnar storage, query optimization) are purpose-built for these analytical workloads. Genie translates natural language into SQL, giving users instant access to this data without writing queries.
+
+### Neo4j: Built for Rich Relational Data
+
+The Neo4j knowledge graph stores the **relationships and structure** of the aircraft fleet — how aircraft connect to systems, systems to components, components to maintenance events, flights to airports, and delays to root causes. Graph databases excel at:
+
+- **Multi-hop traversals** — "Which components in the hydraulics system of AC1001 had maintenance events that caused flight delays?"
+- **Relationship patterns** — finding connected entities across 8+ node types and 13 relationship types
+- **Topology queries** — understanding the hierarchy from aircraft down to individual sensors
+- **Path analysis** — tracing cause-and-effect chains through the graph
+
+Tabular databases require expensive JOINs across many tables for these queries, while Neo4j traverses relationships natively in milliseconds.
+
+### The Multi-Agent Supervisor: Combining Both
+
+The supervisor you'll build in this lab routes each question to the right data source — **time-series questions go to Genie, relationship questions go to Neo4j** — and for complex questions that span both, it queries each system sequentially and synthesizes a combined answer. For example, "Find aircraft with high EGT and show their maintenance history" first gets high-EGT aircraft from the Lakehouse, then retrieves their maintenance events from the graph.
+
+---
+
 ## Prerequisites
 
 Before starting, ensure you have:
 - Completed **Part A** (Genie space for sensor analytics)
-- Neo4j MCP connection configured in Unity Catalog
-- Neo4j database populated with the **full** aircraft graph from Lab 5 — you must have run **both** notebooks:
-  - `01_aircraft_etl_to_neo4j.ipynb` (core topology)
-  - `02_load_neo4j_full.ipynb` (adds Sensors, Flights, Airports, Delays, MaintenanceEvents, Removals)
 - Access to the Unity Catalog: `aws-databricks-neo4j-lab.lakehouse` (tables) and `aws-databricks-neo4j-lab.lab-schema` (volume)
+
+> **Note on the Neo4j MCP connection:** This lab uses a **pre-configured Neo4j MCP connection** that has already been set up by the workshop administrators. The MCP server points to the **administrator's Neo4j Aura instance** (not your individual Aura instance from Lab 1), because it contains the **complete dataset** — all 20 aircraft, 80 systems, 320 components, 160 sensors, 300 maintenance events, 800 flights, and 300 delays. This ensures every participant has access to the full graph regardless of which Lab 5 notebooks they completed.
 
 ---
 
 ## Step 1: Verify Neo4j MCP Connection
+
+The Neo4j MCP connection has been **pre-configured** by the workshop administrators. In this step you'll verify that it's available and working in your workspace.
 
 ### 1.1 Check Unity Catalog Connections
 
@@ -27,7 +58,7 @@ Before starting, ensure you have:
 3. Locate the Neo4j MCP connection (typically named `neo4j_mcp`)
 4. Verify the connection status shows as configured
 
-> **Note:** The MCP connection uses Unity Catalog HTTP connections for secure authentication. Users need `USE CONNECTION` permission to access the MCP server tools.
+> **Note:** This MCP connection points to the administrator's Neo4j Aura instance, which contains the full Aircraft Digital Twin dataset. You do not need to configure this yourself — it has been set up ahead of time so that all participants share the same complete graph data.
 
 ### 1.2 Verify MCP Tools Are Available
 
@@ -401,12 +432,13 @@ print(response.json())
 
 ## Summary
 
-You've created a multi-agent system that:
+You've created a multi-agent system that combines two purpose-built data platforms:
 
-- **Routes intelligently** between sensor analytics and graph queries
-- **Combines data sources** for complex questions
-- **Uses natural language** without requiring SQL or Cypher knowledge
-- **Leverages strengths** of each underlying system
+- **Genie + Lakehouse for time-series data** — SQL-powered analytics over 345,600+ sensor readings, ideal for aggregations, trends, and statistical analysis
+- **Neo4j for rich relational data** — graph-powered traversals across aircraft topology, maintenance events, flights, and delays, ideal for relationship queries and multi-hop navigation
+- **Intelligent routing** — the supervisor directs each question to the right data source automatically
+- **Cross-source synthesis** — complex questions that span both systems are answered by querying each sequentially and combining the results
+- **Natural language access** — users ask questions without needing SQL or Cypher knowledge
 
 ### Architecture Recap
 
@@ -416,12 +448,15 @@ User Question
      v
 Multi-Agent Supervisor
      |
-     +---> "sensor readings?" ---> Genie Space ---> Unity Catalog
-     |                                              aws-databricks-neo4j-lab.lakehouse
-     |                                              (SQL Analytics)
+     +---> "sensor readings?" ---> Genie Space ---> Unity Catalog (Lakehouse)
+     |        time-series              SQL           aws-databricks-neo4j-lab.lakehouse
+     |        aggregations                           345,600+ sensor readings
+     |        trend analysis
      |
-     +---> "relationships?" ---> Neo4j MCP ---> Knowledge Graph
-     |                                          (Cypher Queries)
+     +---> "relationships?" ---> Neo4j MCP ---> Knowledge Graph (Aura)
+     |        topology               Cypher       8 node types, 13 relationship types
+     |        maintenance                         admin's pre-configured instance
+     |        flights/delays
      |
      +---> "both needed?" ---> Sequential calls to both agents
                                |
@@ -431,12 +466,12 @@ Multi-Agent Supervisor
 
 ### Data Sources
 
-| Source | Location | Query Language |
-|--------|----------|----------------|
-| Sensor Telemetry | `aws-databricks-neo4j-lab.lakehouse.sensor_readings` | SQL |
-| Aircraft Metadata | `aws-databricks-neo4j-lab.lakehouse.aircraft` | SQL |
-| Knowledge Graph | Neo4j Aura (via MCP) | Cypher |
-| Graph Data Origin | `/Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/` | - |
+| Source | Location | Query Language | Best For |
+|--------|----------|----------------|----------|
+| Sensor Telemetry | `aws-databricks-neo4j-lab.lakehouse.sensor_readings` | SQL | Time-series analytics, trends, aggregations |
+| Aircraft Metadata | `aws-databricks-neo4j-lab.lakehouse.aircraft` | SQL | Fleet-wide comparisons, filtering |
+| Knowledge Graph | Neo4j Aura (admin instance, via MCP) | Cypher | Relationships, topology, graph traversals |
+| Graph Data Origin | `/Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/` | - | - |
 
 ---
 

@@ -12,7 +12,12 @@ Participants start with a guided overview of AWS Bedrock and AgentCore, then wor
 
 ### Dataset
 
-The workshop uses a comprehensive **Aircraft Digital Twin** dataset that models a complete aviation fleet over 90 operational days, including:
+The workshop uses a comprehensive **Aircraft Digital Twin** dataset that models a complete aviation fleet over 90 operational days. The data is split across two platforms, each chosen for the workload it handles best:
+
+- **Databricks Lakehouse** stores the **time-series sensor telemetry** — 345,600+ hourly readings across 90 days. Columnar storage and SQL make the Lakehouse ideal for aggregations, trend analysis, and statistical comparisons over large volumes of timestamped data.
+- **Neo4j Aura** stores the **richly connected relational data** — aircraft topology, component hierarchies, maintenance events, flights, delays, and airport routes. A graph database handles multi-hop relationship traversals natively, avoiding the expensive JOINs a tabular database would require for queries like "Which components caused flight delays?"
+
+Together the dataset includes:
 
 - **20 Aircraft** with tail numbers, models, and operators
 - **80 Systems** (Engines, Avionics, Hydraulics) per aircraft
@@ -40,6 +45,12 @@ The workshop uses a comprehensive **Aircraft Digital Twin** dataset that models 
 If you are **attending a workshop**, the Databricks environment (cluster, libraries, data, and tables) has already been configured for you — skip straight to the labs.
 
 If you are **running this on your own** or are a **lab administrator** preparing the environment for participants, see the [Lab Admin Setup Guide](lab_setup/README.md) for instructions on creating the cluster, installing libraries, uploading data, and configuring Databricks Genie.
+
+### Neo4j Instances
+
+Each participant receives their own **personal Neo4j Aura instance** for hands-on work — loading data via the Spark Connector (Lab 5), building vector indexes (Lab 6), and exploring the graph in the Aura console (Lab 8). Depending on how far you get in Lab 5, your personal instance may contain a subset of the full dataset.
+
+In addition, the workshop administrators have set up a **shared Neo4j Aura instance** that contains the **complete Aircraft Digital Twin dataset** (all nodes, relationships, and indexes). A Neo4j MCP server has been pre-configured against this shared instance. Labs that use the MCP server — such as the AgentBricks multi-agent supervisor (Lab 7) and the AWS AgentCore agent (Lab 4) — connect to the shared instance so that every participant works with the full graph regardless of their personal instance's state.
 
 ---
 
@@ -108,9 +119,16 @@ In this phase you'll construct a knowledge graph in Neo4j and layer semantic sea
 
 ### Phase 4: Multi-Agent Aircraft Analytics with AgentBricks (75 min)
 
-*Create an AI/BI Genie space for sensor analytics and build a multi-agent supervisor that intelligently routes questions to the right data source — Genie for time-series telemetry or Neo4j MCP for graph relationships.*
+*Create an AI/BI Genie space for sensor analytics and build a multi-agent supervisor that combines the Databricks Lakehouse with the Neo4j knowledge graph — two purpose-built systems for two fundamentally different types of data.*
 
 - [Lab 7 - AgentBricks](Lab_7_AgentBricks/README.md) - No-code multi-agent system using Databricks AgentBricks
+
+**Why two data sources?** Aircraft intelligence requires both **time-series telemetry** and **rich relational data**, and each is best served by a purpose-built platform:
+
+- **Genie + Lakehouse** excels at time-series sensor data — 345,600+ hourly readings stored in Delta Lake columnar format, optimized for aggregations, trend analysis, percentile calculations, and fleet-wide statistical comparisons over time. SQL is the natural language for these analytical workloads, and Genie translates natural language into SQL automatically.
+- **Neo4j** excels at richly connected relational data — aircraft topology, component hierarchies, maintenance event chains, flight-to-airport routes, and delay root causes. These queries traverse multiple relationships (e.g., "Which components in the hydraulics system had maintenance events that caused flight delays?") and would require expensive multi-table JOINs in a relational database, but Neo4j handles them natively.
+
+The **multi-agent supervisor** routes each question to the right system and, for complex questions spanning both, queries each sequentially and synthesizes a combined answer.
 
 #### Part A: Genie Space for Sensor Analytics (~30 min)
 - Create an AI/BI Genie space over sensor telemetry tables in Unity Catalog
@@ -121,7 +139,7 @@ In this phase you'll construct a knowledge graph in Neo4j and layer semantic sea
 #### Part B: Multi-Agent Supervisor (~45 min)
 - Build a supervisor agent that coordinates two specialized sub-agents
 - Add the **Neo4j MCP agent** for graph relationship queries (topology, maintenance, flights)
-- Add the **Genie space agent** for sensor analytics (readings, trends, fleet comparisons)
+- Add the **Genie space agent** for time-series sensor analytics (readings, trends, fleet comparisons)
 - Configure routing rules so the supervisor directs questions to the right agent
 - Test single-agent routing and combined multi-agent queries
 - Deploy as a serving endpoint for programmatic access
@@ -134,12 +152,15 @@ User Question
      v
 Multi-Agent Supervisor
      |
-     +---> "sensor readings?" ---> Genie Space ---> Unity Catalog
-     |                                              aws-databricks-neo4j-lab.lakehouse
-     |                                              (SQL Analytics)
+     +---> "sensor readings?" ---> Genie Space ---> Unity Catalog (Lakehouse)
+     |        time-series              SQL           aws-databricks-neo4j-lab.lakehouse
+     |        aggregations                           345,600+ sensor readings
+     |        trend analysis
      |
-     +---> "relationships?" ---> Neo4j MCP ---> Knowledge Graph
-     |                                          (Cypher Queries)
+     +---> "relationships?" ---> Neo4j MCP ---> Knowledge Graph (Aura)
+     |        topology               Cypher       8 node types, 13 relationship types
+     |        maintenance                         pre-configured admin instance
+     |        flights/delays
      |
      +---> "both needed?" ---> Sequential calls to both agents
                                |

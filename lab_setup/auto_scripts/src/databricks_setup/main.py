@@ -269,6 +269,7 @@ def _run_setup() -> None:
     result.lockdown_ok = run_permissions_lockdown(
         client,
         volume_config=config.volume,
+        warehouse_config=config.warehouse,
         notebook_config=config.notebook,
     )
 
@@ -320,6 +321,7 @@ def _run_cleanup(*, yes: bool) -> None:
     run_cleanup(
         client, warehouse_id, config.volume, config.warehouse.timeout_seconds,
         notebook_config=config.notebook,
+        warehouse_config=config.warehouse,
     )
 
 

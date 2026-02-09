@@ -37,7 +37,7 @@ These four tables form a join chain — `sensor_readings` → `sensors` → `sys
 
 ### 2.2 Connect Your Data
 
-After clicking **New Genie space**, the **Connect your data** dialog appears. Select `sensor_readings` from `aws-databricks-neo4j-lab.lakehouse`.
+After clicking **New Genie space**, the **Connect your data** dialog appears. Select All Catalogs ->  `aws-databricks-neo4j-lab`  -> `lakehouse` -> then select `sensor_readings`, `aircraft`, `sensors`, `systems`.
 
 ![Connect your data dialog](images/genie_connect_data.png)
 
