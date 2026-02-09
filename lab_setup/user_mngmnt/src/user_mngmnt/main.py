@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 
 import typer
-from databricks.sdk import WorkspaceClient
+from databricks.sdk import AccountClient, WorkspaceClient
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.table import Table
@@ -44,18 +44,35 @@ _ENV_FILE = _LAB_SETUP_DIR / ".env"
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _get_client() -> WorkspaceClient:
-    """Create a WorkspaceClient using the profile from lab_setup/.env."""
+def _load_env() -> None:
+    """Load lab_setup/.env and validate required vars."""
     if not _ENV_FILE.exists():
         console.print(f"[red]Error: .env file not found at {_ENV_FILE}[/red]")
-        console.print("[red]Copy .env.example to .env and fill in DATABRICKS_PROFILE.[/red]")
+        console.print("[red]Copy .env.example to .env and fill in your values.[/red]")
         raise SystemExit(1)
-
     load_dotenv(_ENV_FILE)
+
+
+def _get_workspace_client() -> WorkspaceClient:
+    """Create a WorkspaceClient using the profile from lab_setup/.env."""
+    _load_env()
     profile = os.getenv("DATABRICKS_PROFILE")
     if profile:
         return WorkspaceClient(profile=profile)
     return WorkspaceClient()
+
+
+def _get_account_client() -> AccountClient:
+    """Create an AccountClient for account-level group management."""
+    _load_env()
+    account_id = os.getenv("DATABRICKS_ACCOUNT_ID")
+    if not account_id:
+        console.print("[red]Error: DATABRICKS_ACCOUNT_ID not set in .env[/red]")
+        raise SystemExit(1)
+    return AccountClient(
+        host="https://accounts.cloud.databricks.com",
+        account_id=account_id,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -71,13 +88,14 @@ def add(
     ),
 ) -> None:
     """Add users from a CSV file to the workshop group."""
-    client = _get_client()
+    ws = _get_workspace_client()
+    acct = _get_account_client()
     emails = parse_csv(file)
     console.print(f"Read {len(emails)} unique email(s) from {file}")
 
-    grp = require_group(client, GROUP_NAME)
+    grp = require_group(ws, GROUP_NAME)
     group_id: str = grp.id  # type: ignore[assignment]
-    existing_members = get_group_member_ids(client, group_id)
+    existing_members = get_group_member_ids(acct, group_id)
 
     added = 0
     already = 0
@@ -86,11 +104,10 @@ def add(
     to_add: list[str] = []
 
     for email in emails:
-        user = find_workspace_user(client, email)
+        user = find_workspace_user(ws, email)
         if user is None or user.id is None:
-            # User doesn't exist — create them
             try:
-                user = create_workspace_user(client, email)
+                user = create_workspace_user(ws, email)
                 console.print(f"  [cyan]Created workspace user: {email}[/cyan]")
                 created += 1
             except Exception as exc:
@@ -106,7 +123,7 @@ def add(
 
     if to_add:
         try:
-            add_members_to_group(client, group_id, to_add)
+            add_members_to_group(acct, group_id, to_add)
             added = len(to_add)
         except Exception as exc:
             console.print(f"[red]Error adding members: {exc}[/red]")
@@ -133,13 +150,14 @@ def remove(
     ),
 ) -> None:
     """Remove users listed in a CSV file from the workshop group."""
-    client = _get_client()
+    ws = _get_workspace_client()
+    acct = _get_account_client()
     emails = parse_csv(file)
     console.print(f"Read {len(emails)} unique email(s) from {file}")
 
-    grp = require_group(client, GROUP_NAME)
+    grp = require_group(ws, GROUP_NAME)
     group_id: str = grp.id  # type: ignore[assignment]
-    existing_members = get_group_member_ids(client, group_id)
+    existing_members = get_group_member_ids(acct, group_id)
 
     removed = 0
     not_found = 0
@@ -147,7 +165,7 @@ def remove(
     to_remove: list[str] = []
 
     for email in emails:
-        user = find_workspace_user(client, email)
+        user = find_workspace_user(ws, email)
         if user is None or user.id is None:
             console.print(f"  [yellow]Not found in workspace: {email}[/yellow]")
             not_found += 1
@@ -161,7 +179,7 @@ def remove(
 
     if to_remove:
         try:
-            remove_members_from_group(client, group_id, to_remove)
+            remove_members_from_group(acct, group_id, to_remove)
             removed = len(to_remove)
         except Exception as exc:
             console.print(f"[red]Error removing members: {exc}[/red]")
@@ -181,11 +199,12 @@ def remove(
 @app.command(name="list")
 def list_members() -> None:
     """List current members of the workshop group."""
-    client = _get_client()
-    grp = require_group(client, GROUP_NAME)
+    ws = _get_workspace_client()
+    acct = _get_account_client()
+    grp = require_group(ws, GROUP_NAME)
     group_id: str = grp.id  # type: ignore[assignment]
 
-    member_ids = get_group_member_ids(client, group_id)
+    member_ids = get_group_member_ids(acct, group_id)
 
     if not member_ids:
         console.print(f"Group '{GROUP_NAME}' has no members.")
@@ -194,7 +213,7 @@ def list_members() -> None:
     rows: list[tuple[str, str]] = []
     for uid in member_ids:
         try:
-            user = client.users.get(id=uid)
+            user = ws.users.get(id=uid)
             rows.append((
                 user.user_name or "(no email)",
                 user.display_name or "",
