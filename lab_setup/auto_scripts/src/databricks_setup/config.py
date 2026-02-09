@@ -208,6 +208,7 @@ class Config:
     notebook: NotebookConfig = field(default_factory=NotebookConfig)
     user_email: str | None = None
     databricks_profile: str | None = None
+    account_id: str | None = None
 
     @classmethod
     def load(cls) -> Config:
@@ -230,6 +231,10 @@ class Config:
         # Databricks profile
         if val := os.getenv("DATABRICKS_PROFILE"):
             config.databricks_profile = val
+
+        # Account ID (for user management)
+        if val := os.getenv("DATABRICKS_ACCOUNT_ID"):
+            config.account_id = val
 
         return config
 
@@ -260,7 +265,6 @@ class Config:
 class SetupResult:
     """Outcome of the setup tracks."""
 
-    cluster_id: str = ""
     tables_ok: bool = True
     notebooks_ok: bool = True
     lockdown_ok: bool = True

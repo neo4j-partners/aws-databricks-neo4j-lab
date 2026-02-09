@@ -2,11 +2,14 @@
 
 Track C of the setup process:
 
-1. Remove compute-creation entitlements from the built-in ``users`` group.
-2. Verify that the ``aircraft_workshop_group`` account-level group exists.
-3. Grant read-only Unity Catalog privileges on the lab catalog.
-4. Grant ``CAN_ATTACH_TO`` on the workshop cluster.
-5. Grant ``CAN_READ`` on the shared notebook folder.
+1.  Remove compute-creation entitlements from the built-in ``users`` group.
+1b. Remove non-admin access from the Personal Compute cluster policy.
+2.  Verify that the ``aircraft_workshop_group`` account-level group exists.
+3.  Grant read-only Unity Catalog privileges on the lab catalog.
+4.  Grant ``CAN_READ`` on the shared notebook folder.
+
+Note: Cluster CAN_ATTACH_TO is no longer needed — per-user SINGLE_USER
+clusters give the assigned user implicit access.
 """
 
 from __future__ import annotations
@@ -21,6 +24,8 @@ from databricks.sdk.service.catalog import (
 from databricks.sdk.service.compute import (
     ClusterAccessControlRequest,
     ClusterPermissionLevel,
+    ClusterPolicyAccessControlRequest,
+    ClusterPolicyPermissionLevel,
 )
 from databricks.sdk.service.iam import (
     AccessControlRequest,
@@ -31,19 +36,14 @@ from databricks.sdk.service.iam import (
     PermissionLevel,
 )
 
-from .cluster import find_cluster
-from .config import ClusterConfig, NotebookConfig, VolumeConfig
+from .config import NotebookConfig, VolumeConfig
+from .groups import WORKSHOP_GROUP, find_group
 from .log import log
 from .notebooks import get_workspace_folder_id
 from .utils import print_header
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-
-# Account-level group name — must be created manually in the Databricks
-# Account Admin console before running Track C.
-WORKSHOP_GROUP = "aircraft_workshop_group"
+# Policy family ID for the built-in Personal Compute cluster policy.
+_PERSONAL_COMPUTE_POLICY_FAMILY = "personal-vm"
 
 # Entitlements to strip from the built-in 'users' group.
 _ENTITLEMENTS_TO_REMOVE = (
@@ -65,22 +65,6 @@ _CATALOG_PRIVILEGES = (
 # ---------------------------------------------------------------------------
 # Group helpers
 # ---------------------------------------------------------------------------
-
-def _find_group_by_name(client: WorkspaceClient, display_name: str) -> Group | None:
-    """Find a workspace group by display name.
-
-    Args:
-        client: Databricks workspace client.
-        display_name: Exact group name to search for.
-
-    Returns:
-        The Group object if found, else None.
-    """
-    results = list(client.groups.list(filter=f'displayName eq "{display_name}"'))
-    if results:
-        return results[0]
-    return None
-
 
 def _get_entitlement_values(group: Group) -> set[str]:
     """Extract current entitlement values from a group.
@@ -146,7 +130,7 @@ def lockdown_entitlements(client: WorkspaceClient) -> bool:
     log("Step 1: Locking down entitlements on 'users' group...")
 
     # --- Find the built-in 'users' group --------------------------------
-    users_group = _find_group_by_name(client, "users")
+    users_group = find_group(client, "users")
     if users_group is None or users_group.id is None:
         log("[red]Error: Could not find the built-in 'users' group.[/red]")
         return False
@@ -198,6 +182,125 @@ def lockdown_entitlements(client: WorkspaceClient) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Step 1b: Personal Compute policy lockdown
+# ---------------------------------------------------------------------------
+
+def _find_personal_compute_policy(client: WorkspaceClient) -> str | None:
+    """Find the built-in Personal Compute cluster policy.
+
+    Matches on ``policy_family_id`` first, falling back to a name match
+    on ``"Personal Compute"`` for older workspaces.
+
+    Args:
+        client: Databricks workspace client.
+
+    Returns:
+        The policy_id if found, else None.
+    """
+    policies = list(client.cluster_policies.list())
+
+    # Prefer the canonical policy_family_id match.
+    for policy in policies:
+        if getattr(policy, "policy_family_id", None) == _PERSONAL_COMPUTE_POLICY_FAMILY:
+            return policy.policy_id
+
+    # Fall back to name match for older workspaces.
+    for policy in policies:
+        if policy.name == "Personal Compute":
+            return policy.policy_id
+
+    return None
+
+
+def _get_non_admin_policy_acls(
+    client: WorkspaceClient,
+    policy_id: str,
+) -> list | None:
+    """Return non-admin ACL entries for a cluster policy, or None on error."""
+    try:
+        perms = client.cluster_policies.get_permissions(cluster_policy_id=policy_id)
+        return [
+            acl for acl in (perms.access_control_list or [])
+            if acl.group_name is not None and acl.group_name != "admins"
+        ]
+    except Exception as e:
+        log(f"  [yellow]Warning: Could not read policy permissions: {e}[/yellow]")
+        return None
+
+
+def lockdown_personal_compute_policy(client: WorkspaceClient) -> bool:
+    """Remove all non-admin permissions from the Personal Compute cluster policy.
+
+    Personal Compute is a built-in cluster policy
+    (``policy_family_id="personal-vm"``) that allows users to create
+    single-node clusters without needing the ``allow-cluster-create``
+    entitlement.  Clearing its ACL prevents non-admin users from seeing
+    or using the "Create with Personal Compute" button.
+
+    **Prerequisite**: The account-level Personal Compute setting must be
+    set to "Delegate" (not "Enable") in the Databricks Account Console
+    under Settings > Feature enablement.  With the default "Enable", all
+    users have access regardless of workspace-level policy ACLs.
+
+    This operation is idempotent — if no non-admin permissions exist the
+    step is reported as already locked down.
+
+    Args:
+        client: Databricks workspace client.
+
+    Returns:
+        True on success, False on error.
+    """
+    log("Step 1b: Locking down Personal Compute policy...")
+
+    policy_id = _find_personal_compute_policy(client)
+    if policy_id is None:
+        log("  [yellow]Personal Compute policy not found — may be disabled "
+            "at account level. Skipping.[/yellow]")
+        return True
+
+    log(f"  Found Personal Compute policy (id={policy_id})")
+
+    # --- Check current state ------------------------------------------------
+    before = _get_non_admin_policy_acls(client, policy_id)
+    if before is not None and not before:
+        log("  [dim]Already locked down — no non-admin permissions.[/dim]")
+        return True
+
+    if before:
+        names = [acl.group_name for acl in before]
+        log(f"  Non-admin access: {', '.join(names)}")
+
+    # --- Clear all non-admin ACLs -------------------------------------------
+    try:
+        client.cluster_policies.set_permissions(
+            cluster_policy_id=policy_id,
+            access_control_list=[],
+        )
+    except Exception as e:
+        log(f"  [red]Failed to clear Personal Compute policy permissions: {e}[/red]")
+        return False
+
+    # --- Verify -------------------------------------------------------------
+    after = _get_non_admin_policy_acls(client, policy_id)
+    if after is None:
+        # Could not verify, but the set_permissions call succeeded.
+        pass
+    elif after:
+        log("  [yellow]Warning: Non-admin ACL entries still present "
+            "after clearing.[/yellow]")
+    else:
+        log("  [green]Verified: no non-admin permissions on Personal "
+            "Compute policy.[/green]")
+
+    log("  [dim]Reminder: Ensure 'Personal Compute' is set to 'Delegate' "
+        "(not 'Enable') in Account Console > Settings > Feature "
+        "enablement.[/dim]")
+
+    return True
+
+
+# ---------------------------------------------------------------------------
 # Step 2: Require account-level group
 # ---------------------------------------------------------------------------
 
@@ -218,16 +321,16 @@ def require_workshop_group(client: WorkspaceClient, group_name: str) -> str | No
     """
     log(f"Step 2: Verifying account-level group '{group_name}' exists...")
 
-    existing = _find_group_by_name(client, group_name)
+    existing = find_group(client, group_name)
     if existing and existing.id:
         log(f"  Found group (id={existing.id}).")
         return existing.id
 
     log(f"  [red]Error: Group '{group_name}' not found in this workspace.[/red]")
-    log(f"  [red]This group must be created at the account level:[/red]")
-    log(f"  [red]  1. Go to https://accounts.cloud.databricks.com > User management > Groups[/red]")
+    log("  [red]This group must be created at the account level:[/red]")
+    log("  [red]  1. Go to https://accounts.cloud.databricks.com > User management > Groups[/red]")
     log(f"  [red]  2. Create a group named '{group_name}'[/red]")
-    log(f"  [red]  3. In the workspace, go to Settings > Identity and access > Groups[/red]")
+    log("  [red]  3. In the workspace, go to Settings > Identity and access > Groups[/red]")
     log(f"  [red]  4. Click 'Add group' and add '{group_name}' from the account[/red]")
     return None
 
@@ -358,7 +461,7 @@ def grant_cluster_attach(
         if found:
             log(f"  [green]Verified: CAN_ATTACH_TO present for '{group_name}'.[/green]")
         else:
-            log(f"  [yellow]Warning: CAN_ATTACH_TO not found in cluster ACL after grant.[/yellow]")
+            log("  [yellow]Warning: CAN_ATTACH_TO not found in cluster ACL after grant.[/yellow]")
     except Exception as e:
         log(f"  [yellow]Warning: Could not verify cluster permissions: {e}[/yellow]")
 
@@ -366,7 +469,7 @@ def grant_cluster_attach(
 
 
 # ---------------------------------------------------------------------------
-# Step 5: Workspace folder permissions
+# Step 4: Workspace folder permissions
 # ---------------------------------------------------------------------------
 
 def grant_workspace_folder_read(
@@ -386,12 +489,12 @@ def grant_workspace_folder_read(
     Returns:
         True on success, False on error.
     """
-    log(f"Step 5: Granting CAN_READ on workspace folder to '{group_name}'...")
+    log(f"Step 4: Granting CAN_READ on workspace folder to '{group_name}'...")
     log(f"  Folder: {workspace_folder}")
 
     folder_id = get_workspace_folder_id(client, workspace_folder)
     if folder_id is None:
-        log(f"  [yellow]Workspace folder not found — skipping.[/yellow]")
+        log("  [yellow]Workspace folder not found — skipping.[/yellow]")
         return True  # Non-fatal: notebooks may not have been uploaded
 
     try:
@@ -427,7 +530,7 @@ def grant_workspace_folder_read(
         if found:
             log(f"  [green]Verified: CAN_READ present for '{group_name}'.[/green]")
         else:
-            log(f"  [yellow]Warning: CAN_READ not found in folder ACL after grant.[/yellow]")
+            log("  [yellow]Warning: CAN_READ not found in folder ACL after grant.[/yellow]")
     except Exception as e:
         log(f"  [yellow]Warning: Could not verify folder permissions: {e}[/yellow]")
 
@@ -440,15 +543,16 @@ def grant_workspace_folder_read(
 
 def run_permissions_lockdown(
     client: WorkspaceClient,
-    cluster_config: ClusterConfig,
     volume_config: VolumeConfig,
     notebook_config: NotebookConfig | None = None,
 ) -> bool:
-    """Run all Track C steps: lockdown, group, grants, cluster ACL, folder ACL.
+    """Run all Track C steps: lockdown, group, grants, folder ACL.
+
+    Per-user SINGLE_USER clusters give the assigned user implicit access,
+    so cluster ACL grants are no longer needed here.
 
     Args:
         client: Databricks workspace client.
-        cluster_config: Cluster configuration (name loaded from .env).
         volume_config: Volume configuration identifying the catalog to lock down.
         notebook_config: Notebook configuration (for workspace folder permissions).
 
@@ -459,6 +563,12 @@ def run_permissions_lockdown(
 
     # Step 1: Entitlement lockdown
     if not lockdown_entitlements(client):
+        return False
+
+    log()
+
+    # Step 1b: Personal Compute policy lockdown
+    if not lockdown_personal_compute_policy(client):
         return False
 
     log()
@@ -476,18 +586,7 @@ def run_permissions_lockdown(
 
     log()
 
-    # Step 4: Cluster permissions
-    info = find_cluster(client, cluster_config.name)
-    if info is None:
-        log(f"[red]Error: Cluster '{cluster_config.name}' not found.[/red]")
-        return False
-
-    if not grant_cluster_attach(client, info.cluster_id, WORKSHOP_GROUP):
-        return False
-
-    log()
-
-    # Step 5: Workspace folder permissions
+    # Step 4: Workspace folder permissions
     if notebook_config is not None:
         if not grant_workspace_folder_read(client, notebook_config.workspace_folder, WORKSHOP_GROUP):
             return False
@@ -502,7 +601,7 @@ def run_permissions_lockdown(
 # ---------------------------------------------------------------------------
 
 def cleanup_permissions(client: WorkspaceClient, volume_config: VolumeConfig) -> None:
-    """Revoke catalog grants for the workshop group.
+    """Revoke catalog grants and restore Personal Compute policy access.
 
     Does NOT delete the account-level group — it persists across
     setup/cleanup cycles.  Does NOT restore entitlements — that is a
@@ -532,6 +631,26 @@ def cleanup_permissions(client: WorkspaceClient, volume_config: VolumeConfig) ->
         log("    Catalog already deleted — skipping.")
     except Exception as e:
         log(f"    [yellow]Skipped: {e}[/yellow]")
+
+    # Restore Personal Compute policy permissions
+    log("  Restoring Personal Compute policy permissions...")
+    policy_id = _find_personal_compute_policy(client)
+    if policy_id is not None:
+        try:
+            client.cluster_policies.set_permissions(
+                cluster_policy_id=policy_id,
+                access_control_list=[
+                    ClusterPolicyAccessControlRequest(
+                        group_name="users",
+                        permission_level=ClusterPolicyPermissionLevel.CAN_USE,
+                    ),
+                ],
+            )
+            log("    Restored CAN_USE for 'users' group.")
+        except Exception as e:
+            log(f"    [yellow]Skipped: {e}[/yellow]")
+    else:
+        log("    Personal Compute policy not found — skipping.")
 
     # Note: the account-level group is NOT deleted — it is managed in the
     # Databricks Account Admin console and should persist across runs.

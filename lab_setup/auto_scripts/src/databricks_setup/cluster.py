@@ -1,7 +1,12 @@
 """Cluster management for Databricks setup.
 
-Handles cluster creation, starting, and waiting for ready state.
+Handles cluster creation, starting, waiting for ready state,
+and per-user cluster lifecycle.
 """
+
+from __future__ import annotations
+
+from dataclasses import dataclass
 
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service.compute import (
@@ -16,6 +21,7 @@ from databricks.sdk.service.compute import (
 from .config import ClusterConfig
 from .log import log
 from .models import ClusterInfo
+from .users import cluster_name_for_user
 from .utils import poll_until
 
 
@@ -198,3 +204,77 @@ def get_or_create_cluster(
 
     log("  Not found - creating new cluster...")
     return create_cluster(client, config, user_email)
+
+
+# ---------------------------------------------------------------------------
+# Per-user cluster helpers
+# ---------------------------------------------------------------------------
+
+_USER_CLUSTER_PREFIX = "lab-"
+
+
+@dataclass
+class UserClusterInfo:
+    """Summary of a per-user cluster."""
+
+    cluster_id: str
+    cluster_name: str
+    state: State
+    assigned_user: str
+
+
+def create_user_cluster(
+    client: WorkspaceClient,
+    config: ClusterConfig,
+    user_email: str,
+) -> str:
+    """Create (or reuse) a per-user cluster named ``lab-<prefix>``.
+
+    Uses :func:`get_or_create_cluster` under the hood with a copy of
+    *config* whose name is set to the per-user cluster name.
+
+    Args:
+        client: Databricks workspace client.
+        config: Base cluster configuration (name will be overridden).
+        user_email: Email of the user who will own the cluster.
+
+    Returns:
+        The cluster ID.
+    """
+    from dataclasses import replace
+
+    name = cluster_name_for_user(user_email)
+    user_config = replace(config, name=name)
+    return get_or_create_cluster(client, user_config, user_email)
+
+
+def delete_cluster(client: WorkspaceClient, cluster_id: str) -> None:
+    """Permanently delete a cluster."""
+    log(f"  Deleting cluster {cluster_id}...")
+    client.clusters.permanent_delete(cluster_id)
+    log("    Done.")
+
+
+def find_user_clusters(client: WorkspaceClient) -> list[UserClusterInfo]:
+    """Find all clusters whose name starts with ``lab-``.
+
+    Returns:
+        List of :class:`UserClusterInfo` for matching clusters.
+    """
+    results: list[UserClusterInfo] = []
+    for c in client.clusters.list():
+        if (
+            c.cluster_name
+            and c.cluster_name.startswith(_USER_CLUSTER_PREFIX)
+            and c.cluster_id
+            and c.state
+        ):
+            results.append(
+                UserClusterInfo(
+                    cluster_id=c.cluster_id,
+                    cluster_name=c.cluster_name,
+                    state=c.state,
+                    assigned_user=c.single_user_name or "",
+                )
+            )
+    return results

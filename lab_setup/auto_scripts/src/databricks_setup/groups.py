@@ -6,6 +6,8 @@ modified via the workspace API) and WorkspaceClient for group lookup.
 
 from __future__ import annotations
 
+import os
+
 from databricks.sdk import AccountClient, WorkspaceClient
 from databricks.sdk.service.iam import (
     Group,
@@ -13,9 +15,12 @@ from databricks.sdk.service.iam import (
     PatchOp,
     PatchSchema,
 )
-from rich.console import Console
 
-console = Console()
+from .log import log
+
+# Account-level group name — must be created manually in the Databricks
+# Account Admin console before running Track C.
+WORKSHOP_GROUP = "aircraft_workshop_group"
 
 _BATCH_SIZE = 50
 
@@ -29,18 +34,29 @@ def find_group(client: WorkspaceClient, group_name: str) -> Group | None:
 
 
 def require_group(client: WorkspaceClient, group_name: str) -> Group:
-    """Look up a group and exit if it does not exist."""
+    """Look up a group and raise if it does not exist."""
     group = find_group(client, group_name)
     if group is None or group.id is None:
-        console.print(
-            f"[red]Error: Group '{group_name}' not found in this workspace.[/red]"
+        raise RuntimeError(
+            f"Group '{group_name}' not found in this workspace. "
+            "Create it at https://accounts.cloud.databricks.com > "
+            "User management > Groups, then add it to the workspace."
         )
-        console.print(
-            "[red]Create it at https://accounts.cloud.databricks.com > "
-            "User management > Groups, then add it to the workspace.[/red]"
-        )
-        raise SystemExit(1)
     return group
+
+
+def get_account_client() -> AccountClient:
+    """Create an AccountClient for account-level group management.
+
+    Requires ``DATABRICKS_ACCOUNT_ID`` in the environment.
+    """
+    account_id = os.getenv("DATABRICKS_ACCOUNT_ID")
+    if not account_id:
+        raise RuntimeError("DATABRICKS_ACCOUNT_ID not set in environment")
+    return AccountClient(
+        host="https://accounts.cloud.databricks.com",
+        account_id=account_id,
+    )
 
 
 def get_group_member_ids(acct: AccountClient, group_id: str) -> set[str]:
@@ -70,6 +86,7 @@ def add_members_to_group(
             ],
             schemas=[PatchSchema.URN_IETF_PARAMS_SCIM_API_MESSAGES_2_0_PATCH_OP],
         )
+        log(f"  Added batch of {len(batch)} member(s) to group.")
 
 
 def remove_members_from_group(
