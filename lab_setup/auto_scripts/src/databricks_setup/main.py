@@ -6,11 +6,13 @@ clusters, and tearing down workshop resources.
 
 from __future__ import annotations
 
+import threading
 import time
 import traceback
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import typer
 from rich.table import Table
@@ -28,7 +30,7 @@ from .cluster import (
     get_or_create_cluster,
     wait_for_cluster_running,
 )
-from .config import Config, SetupResult
+from .config import ClusterConfig, Config, LibraryConfig, SetupResult
 from .data_upload import upload_data_files, verify_upload
 from .groups import (
     WORKSHOP_GROUP,
@@ -40,12 +42,13 @@ from .groups import (
 )
 from .lakehouse_tables import create_lakehouse_tables
 from .libraries import ensure_libraries_installed
-from .log import Level, close_log_file, init_log_file, log, log_to_file
+from .log import Level, close_log_file, init_log_file, log, log_context, log_to_file
 from .notebooks import upload_notebooks, verify_notebook_upload
 from .permissions import run_permissions_lockdown
 from .users import (
     cluster_name_for_user,
     create_workspace_user,
+    email_prefix,
     find_workspace_user,
     parse_csv,
     preview_csv,
@@ -378,7 +381,12 @@ def _run_cleanup(*, yes: bool) -> None:
 
 @dataclass
 class _AddUsersStats:
-    """Counters collected across the add-users phases."""
+    """Thread-safe counters collected across the add-users phases.
+
+    User/group counters are only mutated from the main thread (Phase 1),
+    so they use plain ``+=``.  Cluster counters are mutated from worker
+    threads (Phase 2) and must use :meth:`increment`.
+    """
 
     users_created: int = 0
     users_existed: int = 0
@@ -388,6 +396,25 @@ class _AddUsersStats:
     clusters_created: int = 0
     clusters_skipped: int = 0
     clusters_failed: int = 0
+    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False, compare=False)
+
+    _COUNTER_FIELDS: ClassVar[frozenset[str]] = frozenset({
+        "users_created", "users_existed", "users_failed",
+        "group_added", "group_already",
+        "clusters_created", "clusters_skipped", "clusters_failed",
+    })
+
+    def increment(self, field_name: str, amount: int = 1) -> None:
+        """Atomically increment a counter field (safe from worker threads).
+
+        Raises ``KeyError`` immediately if *field_name* is not a declared
+        counter, so typos are caught on the first call instead of silently
+        creating a new attribute.
+        """
+        if field_name not in self._COUNTER_FIELDS:
+            raise KeyError(f"Unknown counter: {field_name!r}")
+        with self._lock:
+            setattr(self, field_name, getattr(self, field_name) + amount)
 
 
 def _confirm_csv(csv_path: Path) -> list[str]:
@@ -454,18 +481,66 @@ def _ensure_workspace_users(
     return user_emails_ok
 
 
-def _provision_clusters(
+def _provision_single_user(
     client: WorkspaceClient,
-    cluster_config: object,
-    library_config: object,
-    user_emails: list[str],
+    cluster_config: ClusterConfig,
+    library_config: LibraryConfig,
+    email: str,
     stats: _AddUsersStats,
 ) -> None:
-    """Create per-user clusters, wait for them, and install libraries."""
+    """Full pipeline for one user: create cluster -> wait -> install libs.
+
+    Runs in a worker thread.  All exceptions are caught and logged;
+    failures increment ``stats.clusters_failed``.
+
+    A :func:`log_context` prefix (e.g. ``[retroryan]``) is set for the
+    duration so every log line from downstream code (cluster polling,
+    library installation) is identifiable.
+    """
+    prefix = f"[{email_prefix(email)}]"
+    with log_context(prefix):
+        try:
+            cid = create_user_cluster(client, cluster_config, email)
+        except Exception as exc:
+            log(f"[red]Failed to create cluster: {exc}[/red]")
+            stats.increment("clusters_failed")
+            return
+
+        try:
+            wait_for_cluster_running(client, cid)
+        except Exception as exc:
+            log(f"[red]Cluster did not reach RUNNING: {exc}[/red]")
+            stats.increment("clusters_failed")
+            return
+
+        try:
+            log(f"Installing libraries on {cid}...")
+            ensure_libraries_installed(client, cid, library_config)
+            stats.increment("clusters_created")
+        except Exception as exc:
+            log(f"[red]Library install failed: {exc}[/red]")
+            stats.increment("clusters_failed")
+
+
+def _provision_clusters(
+    client: WorkspaceClient,
+    cluster_config: ClusterConfig,
+    library_config: LibraryConfig,
+    user_emails: list[str],
+    stats: _AddUsersStats,
+    *,
+    max_workers: int = 4,
+) -> None:
+    """Create per-user clusters, wait for them, and install libraries.
+
+    Each user's full pipeline (create -> wait -> install) runs as an
+    independent unit of work inside a thread pool, controlled by
+    *max_workers*.
+    """
     print_header("Checking Clusters")
 
     existing_clusters = {uc.cluster_name: uc for uc in find_user_clusters(client)}
-    needs_work: list[tuple[str, str]] = []
+    needs_work: list[str] = []
 
     for email in user_emails:
         cname = cluster_name_for_user(email)
@@ -476,12 +551,7 @@ def _provision_clusters(
             stats.clusters_skipped += 1
             continue
 
-        try:
-            cid = create_user_cluster(client, cluster_config, email)  # type: ignore[arg-type]
-            needs_work.append((email, cid))
-        except Exception as exc:
-            log(f"  [red]Failed to create cluster for {email}: {exc}[/red]")
-            stats.clusters_failed += 1
+        needs_work.append(email)
 
     if stats.clusters_skipped:
         log(f"  ({stats.clusters_skipped} cluster(s) already running — skipped)")
@@ -490,22 +560,22 @@ def _provision_clusters(
         return
 
     log()
-    log(f"Waiting for {len(needs_work)} cluster(s) to start...")
-    for email, cid in needs_work:
-        try:
-            wait_for_cluster_running(client, cid)
-            stats.clusters_created += 1
-        except (RuntimeError, TimeoutError) as exc:
-            log(f"  [red]Cluster for {email} did not reach RUNNING: {exc}[/red]")
-            stats.clusters_failed += 1
+    log(f"Provisioning {len(needs_work)} cluster(s) with {max_workers} worker(s)...")
 
-    print_header("Installing Libraries")
-    for email, cid in needs_work:
-        log(f"  {email} ({cid})...")
-        try:
-            ensure_libraries_installed(client, cid, library_config)  # type: ignore[arg-type]
-        except Exception as exc:
-            log(f"  [red]Library install failed for {email}: {exc}[/red]")
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futures = {
+            pool.submit(
+                _provision_single_user,
+                client, cluster_config, library_config, email, stats,
+            ): email
+            for email in needs_work
+        }
+        for future in as_completed(futures):
+            email = futures[future]
+            exc = future.exception()
+            if exc is not None:
+                log(f"  [red]Unexpected error for {email}: {exc}[/red]")
+                stats.increment("clusters_failed")
 
 
 def _print_add_users_summary(stats: _AddUsersStats, *, skip_clusters: bool) -> None:
@@ -537,7 +607,10 @@ def _run_add_users(*, skip_clusters: bool) -> None:
         log()
         log("[dim]Skipping cluster creation (--skip-clusters).[/dim]")
     elif user_emails_ok:
-        _provision_clusters(client, config.cluster, config.library, user_emails_ok, stats)
+        _provision_clusters(
+            client, config.cluster, config.library, user_emails_ok, stats,
+            max_workers=config.parallel_workers,
+        )
 
     _print_add_users_summary(stats, skip_clusters=skip_clusters)
 

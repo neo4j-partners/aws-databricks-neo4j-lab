@@ -215,6 +215,7 @@ class Config:
     users_csv: Path | None = None
     user_email: str | None = None
     databricks_profile: str | None = None
+    parallel_workers: int = 4
 
     @classmethod
     def load(cls) -> Config:
@@ -241,6 +242,10 @@ class Config:
         # Databricks profile
         if val := os.getenv("DATABRICKS_PROFILE"):
             config.databricks_profile = val
+
+        # Parallelism
+        if val := os.getenv("PARALLEL_WORKERS"):
+            config.parallel_workers = max(1, int(val))
 
         return config
 

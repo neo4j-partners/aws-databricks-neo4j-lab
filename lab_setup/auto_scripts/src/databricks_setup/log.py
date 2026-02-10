@@ -10,10 +10,13 @@ receives everything (DEBUG and above).
 
 from __future__ import annotations
 
+import threading
+from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import datetime
 from enum import IntEnum
 from pathlib import Path
-from typing import IO, Any
+from typing import IO, Any, Iterator
 
 from rich.console import Console
 
@@ -35,6 +38,32 @@ _file_handle: IO[str] | None = None
 _file_console: Console | None = None
 _log_path: Path | None = None
 _terminal_level: Level = Level.INFO
+
+# Serialises terminal + file writes so concurrent threads cannot interleave.
+_log_lock = threading.Lock()
+
+# Per-thread prefix automatically prepended to string log messages.
+# Set via ``log_context()``; empty by default (no prefix).
+_log_prefix: ContextVar[str] = ContextVar("_log_prefix", default="")
+
+
+@contextmanager
+def log_context(prefix: str) -> Iterator[None]:
+    """Set a log prefix for the duration of the block.
+
+    Every ``log()`` and ``log_to_file()`` call inside the block will
+    have *prefix* prepended (dimmed) to the first string argument.
+    Typically used in worker threads so interleaved output is
+    identifiable::
+
+        with log_context("[retroryan]"):
+            log("State: PENDING")  # prints "[retroryan] State: PENDING"
+    """
+    token = _log_prefix.set(prefix)
+    try:
+        yield
+    finally:
+        _log_prefix.reset(token)
 
 
 def set_level(level: Level) -> None:
@@ -103,6 +132,19 @@ def _timestamp(level: Level) -> str:
     return now.strftime("[%H:%M:%S.") + f"{now.microsecond // 1000:03d}] [{tag}]"
 
 
+def _apply_prefix(args: tuple[Any, ...]) -> tuple[Any, ...]:
+    """Prepend the active ``log_context`` prefix to the first string arg.
+
+    The prefix is rendered dimmed.  Square brackets inside the prefix
+    are escaped so Rich doesn't interpret them as markup tags.
+    """
+    prefix = _log_prefix.get()
+    if prefix and args and isinstance(args[0], str):
+        safe = prefix.replace("[", r"\[")
+        return (f"[dim]{safe}[/dim] {args[0]}", *args[1:])
+    return args
+
+
 def _write_to_file(*args: Any, level: Level = Level.INFO, **kwargs: Any) -> None:
     """Write a timestamped line to the log file."""
     if _file_console is not None:
@@ -122,16 +164,24 @@ def log(
     (styled strings, ``Table``, ``Text``, etc.) are rendered with full
     colour on the terminal and as plain text in the log file.
 
+    When a :func:`log_context` prefix is active the prefix is prepended
+    (dimmed) to the first string argument.
+
+    Thread-safe: concurrent calls from multiple threads will not
+    interleave their output.
+
     Args:
         *args: Passed through to ``Console.print()``.
         level: Log level for this message.  Messages below
             ``_terminal_level`` are written only to the log file.
         **kwargs: Passed through to ``Console.print()``.
     """
-    if level >= _terminal_level:
-        console.print(*args, **kwargs)
+    with _log_lock:
+        prefixed = _apply_prefix(args)
+        if level >= _terminal_level:
+            console.print(*prefixed, **kwargs)
 
-    _write_to_file(*args, level=level, **kwargs)
+        _write_to_file(*prefixed, level=level, **kwargs)
 
 
 def log_to_file(*args: Any, level: Level = Level.INFO, **kwargs: Any) -> None:
@@ -139,4 +189,6 @@ def log_to_file(*args: Any, level: Level = Level.INFO, **kwargs: Any) -> None:
 
     Useful for verbose detail that would clutter the console.
     """
-    _write_to_file(*args, level=level, **kwargs)
+    with _log_lock:
+        prefixed = _apply_prefix(args)
+        _write_to_file(*prefixed, level=level, **kwargs)
