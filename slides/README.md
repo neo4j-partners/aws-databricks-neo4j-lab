@@ -2,6 +2,17 @@
 
 This folder contains presentation-ready slides extracted from the workshop lessons. All slides are formatted for [Marp](https://marp.app/), a markdown presentation tool.
 
+## 📖 Participant Reference Docs
+
+Condensed reference documents combining multiple slide decks into single-page markdown for easy review.
+
+| Document | Covers |
+|----------|--------|
+| [Overview & GenAI Foundations](docs/overview-and-genai-foundations.md) | Workshop overview, digital twins, GenAI limitations, traditional RAG, Context ROT, and the GraphRAG solution |
+| [Building Knowledge Graphs](docs/building-knowledge-graphs.md) | GraphRAG pipeline, schema design, chunking strategies, entity resolution, and vectors/semantic search |
+
+---
+
 ## 📊 Available Presentations
 
 All slides are organized by lab module for easy navigation.
@@ -184,17 +195,6 @@ All slides are organized by lab module for easy navigation.
    - Workshop Summary
    - What You Built
    - Next Steps
-
-## 📖 Participant Reference Docs
-
-Condensed reference documents combining multiple slide decks into single-page markdown for easy review.
-
-| Document | Covers |
-|----------|--------|
-| [Overview & GenAI Foundations](docs/overview-and-genai-foundations.md) | Workshop overview, digital twins, GenAI limitations, traditional RAG, Context ROT, and the GraphRAG solution |
-| [Building Knowledge Graphs](docs/building-knowledge-graphs.md) | GraphRAG pipeline, schema design, chunking strategies, entity resolution, and vectors/semantic search |
-
----
 
 ## 🚀 How to Use These Slides
 
