@@ -23,10 +23,11 @@ uv run populate-aircraft-db load
 | Command | Description |
 |---------|-------------|
 | `load` | Load all nodes and relationships from CSV files |
-| `enrich` | Chunk maintenance manuals, generate embeddings, extract entities, and cross-link to operational graph (uses SimpleKGPipeline) |
+| `enrich` | Chunk maintenance manuals, generate embeddings, extract OperatingLimit entities, and cross-link to operational graph (uses SimpleKGPipeline). Safe to re-run — clears enrichment data first. |
 | `samples` | Run sample queries showcasing the knowledge graph (read-only, no API keys needed) |
 | `verify` | Print node and relationship counts (read-only) |
 | `clean` | Delete all nodes and relationships |
+| `clean-enrichment` | Delete enrichment data (Documents, Chunks, OperatingLimits) while preserving the operational graph |
 
 All configuration is via `.env` — no command-line flags needed.
 
@@ -70,23 +71,20 @@ Settings are loaded from a `.env` file in the project root or from environment v
 
 CSV files are read from `lab_setup/aircraft_digital_twin_data/`.
 
-### `enrich` -- Document chunks, embeddings, and extracted entities
+### `enrich` -- Document chunks, embeddings, and operating limits
 
 Uses `neo4j-graphrag`'s `SimpleKGPipeline` to process three maintenance manuals (A320-200, A321neo, B737-800):
 
 1. **Chunking**: Splits text into ~800-character chunks with overlap
 2. **Embedding**: Generates OpenAI embeddings stored on Chunk nodes
-3. **Entity extraction**: Extracts five entity types using LLM:
-   - **FaultCode** -- fault codes with severity levels and immediate actions
-   - **PartNumber** -- part numbers with component names and ATA references
-   - **OperatingLimit** -- parameter limits per operating regime and aircraft type
-   - **MaintenanceTask** -- scheduled tasks with intervals and personnel requirements
-   - **ATAChapter** -- ATA chapter references
+3. **Entity extraction**: Extracts **OperatingLimit** entities (parameter limits per regime and aircraft type)
 4. **Entity resolution**: Deduplicates entities with matching `name` property (via APOC)
-5. **Cross-linking**: Connects extracted entities to the operational graph (e.g. Sensor → OperatingLimit, MaintenanceEvent → FaultCode)
+5. **Cross-linking**:
+   - **Document → Aircraft** (APPLIES_TO) — links each manual to fleet aircraft by model
+   - **Sensor → OperatingLimit** (HAS_LIMIT) — matches sensors to extracted operating limits by parameter name and aircraft type
 
 Creates indexes:
 - **Vector index:** `maintenanceChunkEmbeddings` on `Chunk.embedding`
 - **Fulltext index:** `maintenanceChunkText` on `Chunk.text`
 
-**Note:** Entity resolution requires APOC, which is available on Neo4j Aura by default.
+**Note:** Entity resolution requires APOC, which is available on Neo4j Aura by default. See `FIX_MANUALS.md` for known sensor name mismatches.

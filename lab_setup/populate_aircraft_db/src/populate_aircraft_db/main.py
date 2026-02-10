@@ -103,10 +103,25 @@ def clean_cmd() -> None:
     print("\nDone.")
 
 
+@app.command("clean-enrichment")
+def clean_enrichment_cmd() -> None:
+    """Clear enrichment data (Documents, Chunks, extracted entities) while preserving the operational graph."""
+    from .pipeline import clear_enrichment_data
+
+    settings = Settings()  # type: ignore[call-arg]
+
+    print(f"Connecting to {settings.neo4j_uri}...")
+    with _connect(settings) as driver:
+        clear_enrichment_data(driver)
+
+    print("\nDone.")
+
+
 @app.command("enrich")
 def enrich_cmd() -> None:
     """Chunk maintenance manuals, generate embeddings, and extract entities via SimpleKGPipeline."""
     from .pipeline import (
+        clear_enrichment_data,
         link_to_existing_graph,
         process_all_documents,
         validate_enrichment,
@@ -151,6 +166,10 @@ def enrich_cmd() -> None:
         # SimpleKGPipeline uses CREATE (not MERGE), so pre-existing uniqueness
         # constraints on entity labels cause batch write failures when the same
         # entity name appears in multiple chunks.
+        print()
+
+        print("Clearing existing enrichment data (safe re-run)...")
+        clear_enrichment_data(driver)
         print()
 
         if settings.enrich_sample_size:

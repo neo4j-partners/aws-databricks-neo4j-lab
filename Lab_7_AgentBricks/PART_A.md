@@ -39,6 +39,9 @@ These four tables form a join chain — `sensor_readings` → `sensors` → `sys
 
 After clicking **New Genie space**, the **Connect your data** dialog appears. Select All Catalogs ->  `aws-databricks-neo4j-lab`  -> `lakehouse` -> then select `sensor_readings`, `aircraft`, `sensors`, `systems`.
 
+> **Tip:** These tables form a join chain: `sensor_readings` -> `sensors` -> `systems` -> `aircraft`
+
+
 ![Connect your data dialog](images/genie_connect_data.png)
 
 > **Tip:** If you don't see the table under **Recent**, click **All** or use the search bar to find `aws-databricks-neo4j-lab`.
@@ -109,28 +112,6 @@ Show the trend of EGT temperatures over the 90-day period for aircraft N95040A
 ```
 Calculate the 7-day rolling average of vibration for Engine 1 on AC1001
 ```
-
----
-
-## Step 3: Add Remaining Data Sources
-
-Navigate to **Configure** > **Data** to add the remaining tables.
-
-You already added `sensor_readings` during creation. Now click **+ Add tables** and select the following from `aws-databricks-neo4j-lab.lakehouse`:
-
-1. **sensors**
-   - Sensor metadata (type, unit, location)
-   - Columns: `sensor_id`, `system_id`, `type`, `name`, `unit`
-
-2. **systems**
-   - Aircraft systems (engines, avionics, hydraulics)
-   - Columns: `system_id`, `aircraft_id`, `type`, `name`
-
-3. **aircraft**
-   - Fleet inventory and metadata
-   - Columns: `aircraft_id`, `tail_number`, `icao24`, `model`, `manufacturer`, `operator`
-
-> **Tip:** These tables form a join chain: `sensor_readings` -> `sensors` -> `systems` -> `aircraft`
 
 ---
 

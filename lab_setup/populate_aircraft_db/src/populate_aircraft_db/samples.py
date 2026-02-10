@@ -5,7 +5,7 @@ from __future__ import annotations
 from neo4j import Driver
 
 _W = 70
-_EXTRACTED_LABELS = ["FaultCode", "PartNumber", "OperatingLimit", "MaintenanceTask", "ATAChapter"]
+_EXTRACTED_LABELS = ["OperatingLimit"]
 
 
 # ---------------------------------------------------------------------------
@@ -131,7 +131,7 @@ def _system_hierarchy(driver: Driver) -> None:
 _FLIGHTS_Q = """\
 MATCH (f:Flight)-[:DEPARTS_FROM]->(dep:Airport),
       (f)-[:ARRIVES_AT]->(arr:Airport)
-WITH dep.code AS origin, arr.code AS dest, count(f) AS flights
+WITH dep.iata AS origin, arr.iata AS dest, count(f) AS flights
 RETURN origin, dest, flights
 ORDER BY flights DESC
 LIMIT $limit"""
@@ -155,12 +155,12 @@ def _flight_operations(driver: Driver, limit: int) -> None:
 # ---------------------------------------------------------------------------
 
 _MAINT_Q = """\
-MATCH (a:Aircraft)-[:HAS_EVENT]->(me:MaintenanceEvent)
+MATCH (me:MaintenanceEvent)-[:AFFECTS_AIRCRAFT]->(a:Aircraft)
 OPTIONAL MATCH (me)-[:AFFECTS_SYSTEM]->(s:System)
 RETURN a.tail_number AS aircraft, me.event_id AS event,
-       me.date AS date, me.type AS type, me.fault AS fault,
+       me.reported_at AS date, me.severity AS severity, me.fault AS fault,
        s.name AS system
-ORDER BY me.date DESC
+ORDER BY me.reported_at DESC
 LIMIT $limit"""
 
 
@@ -172,13 +172,13 @@ def _maintenance_events(driver: Driver, limit: int) -> None:
     _cypher(_MAINT_Q)
     rows, _, _ = driver.execute_query(_MAINT_Q, limit=limit)
     _table(
-        ["Aircraft", "Event ID", "Date", "Type", "Fault", "System"],
+        ["Aircraft", "Event ID", "Date", "Severity", "Fault", "System"],
         [
             [
                 r["aircraft"],
                 r["event"],
                 _val(r["date"])[:10],
-                r["type"],
+                r["severity"],
                 _val(r["fault"], 20),
                 _val(r["system"]),
             ]
@@ -300,36 +300,30 @@ def _extracted_entities(driver: Driver, limit: int) -> None:
 
 _CROSSLINKS = [
     (
-        "FaultCode \u2192 ATAChapter",
+        "Document \u2192 Aircraft",
         """\
-MATCH (fc:FaultCode)-[:CLASSIFIED_UNDER]->(ata:ATAChapter)
-RETURN fc.name AS source, ata.name AS target
+MATCH (d:Document)-[:APPLIES_TO]->(a:Aircraft)
+RETURN d.title AS source, a.tail_number AS target
 LIMIT $limit""",
-        ["FaultCode", "ATAChapter"],
-    ),
-    (
-        "MaintenanceEvent \u2192 FaultCode",
-        """\
-MATCH (me:MaintenanceEvent)-[:HAS_FAULT_CODE]->(fc:FaultCode)
-RETURN me.event_id AS source, fc.name AS target
-LIMIT $limit""",
-        ["Event ID", "FaultCode"],
-    ),
-    (
-        "Component \u2192 PartNumber",
-        """\
-MATCH (c:Component)-[:IDENTIFIED_BY]->(pn:PartNumber)
-RETURN c.name AS source, pn.name AS target
-LIMIT $limit""",
-        ["Component", "PartNumber"],
+        ["Document", "Aircraft"],
     ),
     (
         "Sensor \u2192 OperatingLimit",
         """\
 MATCH (s:Sensor)-[:HAS_LIMIT]->(ol:OperatingLimit)
-RETURN s.sensor_id AS source, s.type AS type, ol.name AS target
+RETURN s.sensor_id AS source, ol.name AS target
 LIMIT $limit""",
-        ["Sensor", "Type", "OperatingLimit"],
+        ["Sensor", "OperatingLimit"],
+    ),
+    (
+        "Provenance (OperatingLimit \u2192 Chunk \u2192 Document \u2192 Aircraft)",
+        """\
+MATCH (ol:OperatingLimit)-[:FROM_CHUNK]->(c:Chunk)-[:FROM_DOCUMENT]->(d:Document)
+      -[:APPLIES_TO]->(a:Aircraft)
+RETURN ol.name AS source, substring(c.text, 0, 60) AS chunk,
+       a.tail_number AS target
+LIMIT $limit""",
+        ["OperatingLimit", "Source Chunk", "Aircraft"],
     ),
 ]
 
@@ -348,10 +342,8 @@ def _cross_links(driver: Driver, limit: int) -> None:
             print("  (none)\n")
             continue
         any_results = True
-        if len(headers) == 2:
-            _table(headers, [[r["source"], r["target"]] for r in rows])
-        else:
-            _table(headers, [[r["source"], r["type"], r["target"]] for r in rows])
+        keys = list(rows[0].keys())
+        _table(headers, [[r[k] for k in keys] for r in rows])
     if not any_results:
         print("  (no cross-links \u2014 run 'enrich' first)\n")
 

@@ -11,7 +11,7 @@ from neo4j import Driver
 from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
 
 # Labels for extracted entity nodes (used by clear/verify logic).
-EXTRACTED_LABELS = ["FaultCode", "PartNumber", "OperatingLimit", "MaintenanceTask", "ATAChapter"]
+EXTRACTED_LABELS = ["OperatingLimit"]
 
 # ---------------------------------------------------------------------------
 # Document metadata registry
@@ -220,78 +220,22 @@ def process_all_documents(
 # ---------------------------------------------------------------------------
 
 
-def _diag(driver: Driver, label: str, props: list[str]) -> None:
-    """Print diagnostic sample of node properties for debugging cross-link matching."""
-    rows, _, _ = driver.execute_query(
-        f"MATCH (n:{label}) RETURN n LIMIT 3"
-    )
-    if not rows:
-        print(f"    [DIAG] No {label} nodes found — extraction may have failed")
-        return
-    total, _, _ = driver.execute_query(f"MATCH (n:{label}) RETURN count(n) AS c")
-    print(f"    [DIAG] {total[0]['c']} {label} nodes. Samples:")
-    for r in rows:
-        n = r["n"]
-        vals = ", ".join(f"{p}={n.get(p)!r}" for p in props)
-        print(f"      {vals}")
-
-
 def link_to_existing_graph(driver: Driver) -> None:
-    """Create relationships between extracted entities and existing graph nodes."""
+    """Create relationships between enrichment data and the operational graph."""
 
-    # FaultCode -[:CLASSIFIED_UNDER]-> ATAChapter (via ataChapter property)
-    _diag(driver, "FaultCode", ["name", "description", "ataChapter"])
-    _diag(driver, "ATAChapter", ["name", "title"])
+    # Document -[:APPLIES_TO]-> Aircraft (via document metadata aircraftType)
     records, _, _ = driver.execute_query("""
-        MATCH (fc:FaultCode) WHERE fc.ataChapter IS NOT NULL AND fc.ataChapter <> ''
-        MATCH (ata:ATAChapter {name: fc.ataChapter})
-        MERGE (fc)-[:CLASSIFIED_UNDER]->(ata)
+        MATCH (d:Document) WHERE d.aircraftType IS NOT NULL
+        MATCH (a:Aircraft {model: d.aircraftType})
+        MERGE (d)-[:APPLIES_TO]->(a)
         RETURN count(*) AS count
     """)
-    print(f"  [OK] {records[0]['count']} FaultCode -[:CLASSIFIED_UNDER]-> ATAChapter")
+    print(f"  [OK] {records[0]['count']} Document -[:APPLIES_TO]-> Aircraft")
 
-    # MaintenanceEvent -[:HAS_FAULT_CODE]-> FaultCode
-    # CSV fault values are descriptive ("Overheat"), while FaultCode.name is a code
-    # ("ENG-OVH-001"). Match via fc.description which contains the descriptive text.
-    _diag(driver, "MaintenanceEvent", ["event_id", "fault"])
-    records, _, _ = driver.execute_query("""
-        MATCH (me:MaintenanceEvent) WHERE me.fault IS NOT NULL AND me.fault <> ''
-        MATCH (fc:FaultCode)
-        WHERE toLower(fc.description) CONTAINS toLower(me.fault)
-        MERGE (me)-[:HAS_FAULT_CODE]->(fc)
-        RETURN count(*) AS count
-    """)
-    print(f"  [OK] {records[0]['count']} MaintenanceEvent -[:HAS_FAULT_CODE]-> FaultCode")
-
-    # PartNumber -[:CLASSIFIED_UNDER]-> ATAChapter
-    _diag(driver, "PartNumber", ["name", "componentName", "ataReference"])
-    records, _, _ = driver.execute_query("""
-        MATCH (pn:PartNumber) WHERE pn.ataReference IS NOT NULL AND pn.ataReference <> ''
-        WITH pn, split(pn.ataReference, '-')[0] AS chapter
-        MATCH (ata:ATAChapter {name: chapter})
-        MERGE (pn)-[:CLASSIFIED_UNDER]->(ata)
-        RETURN count(*) AS count
-    """)
-    print(f"  [OK] {records[0]['count']} PartNumber -[:CLASSIFIED_UNDER]-> ATAChapter")
-
-    # Component -[:IDENTIFIED_BY]-> PartNumber (name match)
-    _diag(driver, "Component", ["name"])
-    records, _, _ = driver.execute_query("""
-        MATCH (c:Component)
-        MATCH (pn:PartNumber)
-        WHERE toLower(c.name) = toLower(pn.componentName)
-        MERGE (c)-[:IDENTIFIED_BY]->(pn)
-        RETURN count(*) AS count
-    """)
-    print(f"  [OK] {records[0]['count']} Component -[:IDENTIFIED_BY]-> PartNumber")
-
-    # Sensor -[:HAS_LIMIT]-> OperatingLimit (match sensor type to parameter, scoped by aircraft model)
-    _diag(driver, "OperatingLimit", ["name", "aircraftType"])
-    _diag(driver, "Sensor", ["sensor_id", "type"])
-    _diag(driver, "Aircraft", ["tail_number", "model"])
+    # Sensor -[:HAS_LIMIT]-> OperatingLimit (match parameterName + aircraftType)
     records, _, _ = driver.execute_query("""
         MATCH (a:Aircraft)-[:HAS_SYSTEM]->(sys:System)-[:HAS_SENSOR]->(s:Sensor)
-        MATCH (ol:OperatingLimit {name: s.type, aircraftType: a.model})
+        MATCH (ol:OperatingLimit {parameterName: s.type, aircraftType: a.model})
         MERGE (s)-[:HAS_LIMIT]->(ol)
         RETURN count(*) AS count
     """)
@@ -358,45 +302,24 @@ def validate_enrichment(driver: Driver) -> None:
     if not rows:
         print("    [WARN] No chunks with embeddings found!")
 
-    # 2. Extracted entities by label
+    # 2. OperatingLimit entities
     rows, _, _ = driver.execute_query(f"""
-        UNWIND $labels AS label
-        CALL (label) {{
-            MATCH (n)
-            WHERE label IN labels(n)
-            RETURN n.name AS name, label AS entity_type
-            LIMIT {_SAMPLE_SIZE}
-        }}
-        RETURN entity_type, collect(name)[..{_SAMPLE_SIZE}] AS samples
-    """, labels=EXTRACTED_LABELS)
-    print(f"\n  Extracted entities:")
-    for r in rows:
-        names = ", ".join(str(n) for n in r["samples"])
-        print(f"    {r['entity_type']}: {names}")
-    if not rows:
-        print("    [WARN] No extracted entities found!")
-
-    # 3. Entity-to-chunk links (FROM_CHUNK)
-    rows, _, _ = driver.execute_query(f"""
-        MATCH (e)-[:FROM_CHUNK]->(c:Chunk)
-        WHERE any(l IN labels(e) WHERE l IN $labels)
-        RETURN labels(e)[0] AS entity_type, e.name AS name, elementId(c) AS chunk_id
+        MATCH (ol:OperatingLimit)
+        RETURN ol.name AS name, ol.parameterName AS param, ol.aircraftType AS aircraft
         LIMIT {_SAMPLE_SIZE}
-    """, labels=EXTRACTED_LABELS)
-    print(f"\n  Entity -> Chunk links ({len(rows)} samples):")
+    """)
+    print(f"\n  OperatingLimit entities ({len(rows)} samples):")
     for r in rows:
-        print(f"    {r['entity_type']}({r['name']}) -> Chunk({r['chunk_id'][:12]}...)")
+        print(f"    {r['name']}  param={r['param']}  aircraft={r['aircraft']}")
     if not rows:
-        print("    [WARN] No entity-to-chunk links found!")
+        print("    [WARN] No OperatingLimit entities found!")
 
-    # 4. Cross-links to operational graph
+    # 3. Cross-links to operational graph
     queries = [
-        ("FaultCode -[:CLASSIFIED_UNDER]-> ATAChapter",
-         f"MATCH (fc:FaultCode)-[:CLASSIFIED_UNDER]->(ata:ATAChapter) RETURN fc.name AS src, ata.name AS tgt LIMIT {_SAMPLE_SIZE}"),
-        ("MaintenanceEvent -[:HAS_FAULT_CODE]-> FaultCode",
-         f"MATCH (me:MaintenanceEvent)-[:HAS_FAULT_CODE]->(fc:FaultCode) RETURN me.event_id AS src, fc.name AS tgt LIMIT {_SAMPLE_SIZE}"),
+        ("Document -[:APPLIES_TO]-> Aircraft",
+         f"MATCH (d:Document)-[:APPLIES_TO]->(a:Aircraft) RETURN d.title AS src, a.tail_number AS tgt LIMIT {_SAMPLE_SIZE}"),
         ("Sensor -[:HAS_LIMIT]-> OperatingLimit",
-         f"MATCH (s:Sensor)-[:HAS_LIMIT]->(ol:OperatingLimit) RETURN s.sensor_id AS src, ol.name AS tgt LIMIT {_SAMPLE_SIZE}"),
+         f"MATCH (s:Sensor)-[:HAS_LIMIT]->(ol:OperatingLimit) RETURN s.type AS src, ol.name AS tgt LIMIT {_SAMPLE_SIZE}"),
     ]
     print(f"\n  Cross-links to operational graph:")
     for label, query in queries:
