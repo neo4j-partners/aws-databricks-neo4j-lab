@@ -70,6 +70,10 @@ Tabular databases can store the same data, but answering "Which components cause
 
 ---
 
+<style scoped>
+section { font-size: 95%; }
+</style>
+
 ## The Aircraft Digital Twin Dataset
 
 The workshop uses a comprehensive dataset modeling a complete aviation fleet over 90 operational days:
@@ -106,6 +110,10 @@ A multi-agent supervisor routes questions to the right database automatically.
 ![bg contain](../images/dual-database-architecture.png)
 
 ---
+
+<style scoped>
+section { font-size: 95%; }
+</style>
 
 ## Workshop Infrastructure: Shared Resources
 
