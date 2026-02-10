@@ -7,37 +7,36 @@ Standalone CLI tool that loads the Aircraft Digital Twin dataset into a Neo4j Au
 ```bash
 cd lab_setup/populate_aircraft_db
 
-# Create .env with your Neo4j credentials
-cat > .env <<EOF
-NEO4J_URI=neo4j+s://xxxxx.databases.neo4j.io
-NEO4J_USERNAME=neo4j
-NEO4J_PASSWORD=your-password
-OPENAI_API_KEY=sk-...          # required for enrich (embeddings + extraction)
-ANTHROPIC_API_KEY=sk-ant-...   # required for enrich (anthropic) only
-LLM_PROVIDER=openai            # or "anthropic"
-EOF
+# Create .env with your Neo4j credentials (see .env.example)
+cp .env.example .env
+# Edit .env with your credentials
 
 # Install and run
 uv sync                              # OpenAI only
 uv sync --extra anthropic            # include Anthropic support
-uv run populate-aircraft-db load --clean
+uv run populate-aircraft-db clean
+uv run populate-aircraft-db load
 ```
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `load [--clean]` | Load all nodes and relationships from CSV files |
-| `enrich [--clean] [--chunk-size N] [--chunk-overlap N] [--provider NAME]` | Chunk maintenance manuals, generate embeddings, extract entities, and cross-link to operational graph (uses SimpleKGPipeline) |
+| `load` | Load all nodes and relationships from CSV files |
+| `enrich` | Chunk maintenance manuals, generate embeddings, extract entities, and cross-link to operational graph (uses SimpleKGPipeline) |
+| `samples` | Run sample queries showcasing the knowledge graph (read-only, no API keys needed) |
 | `verify` | Print node and relationship counts (read-only) |
 | `clean` | Delete all nodes and relationships |
+
+All configuration is via `.env` — no command-line flags needed.
 
 ### Typical full-load sequence
 
 ```bash
-uv run populate-aircraft-db load --clean
-uv run populate-aircraft-db enrich                       # uses LLM_PROVIDER (default: openai)
-uv run populate-aircraft-db enrich --provider anthropic  # override per-run
+uv run populate-aircraft-db clean
+uv run populate-aircraft-db load
+uv run populate-aircraft-db enrich    # uses LLM_PROVIDER from .env (default: openai)
+uv run populate-aircraft-db samples   # run sample queries to explore the graph
 ```
 
 ## Configuration
@@ -56,6 +55,8 @@ Settings are loaded from a `.env` file in the project root or from environment v
 | `LLM_PROVIDER` | no | `openai` | LLM provider for extraction: `openai` or `anthropic` |
 | `ANTHROPIC_API_KEY` | for enrich (anthropic) | - | Anthropic API key |
 | `ANTHROPIC_EXTRACTION_MODEL` | no | `claude-sonnet-4-5-20250929` | Chat model for entity extraction (Anthropic) |
+| `CHUNK_SIZE` | no | `800` | Characters per chunk (enrich) |
+| `CHUNK_OVERLAP` | no | `100` | Overlap between chunks (enrich) |
 
 ## What Gets Loaded
 

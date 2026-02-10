@@ -58,19 +58,13 @@ def _connect(settings: Settings) -> Generator[Driver, None, None]:
 
 
 @app.command()
-def load(
-    clean: bool = typer.Option(False, "--clean", help="Clear the database before loading."),
-) -> None:
+def load() -> None:
     """Load all nodes and relationships into Neo4j."""
     settings = Settings()  # type: ignore[call-arg]
     start = time.monotonic()
 
     print(f"Connecting to {settings.neo4j_uri}...")
     with _connect(settings) as driver:
-        if clean:
-            clear_database(driver)
-            print()
-
         print("Creating constraints...")
         create_constraints(driver)
         print("\nCreating indexes...")
@@ -110,25 +104,16 @@ def clean_cmd() -> None:
 
 
 @app.command("enrich")
-def enrich_cmd(
-    clean: bool = typer.Option(False, "--clean", help="Clear existing enrichment data first."),
-    chunk_size: int = typer.Option(800, "--chunk-size", help="Characters per chunk."),
-    chunk_overlap: int = typer.Option(100, "--chunk-overlap", help="Overlap between chunks."),
-    provider: str = typer.Option(
-        "",
-        "--provider",
-        help="LLM provider: 'openai' or 'anthropic' (overrides LLM_PROVIDER env var).",
-    ),
-) -> None:
+def enrich_cmd() -> None:
     """Chunk maintenance manuals, generate embeddings, and extract entities via SimpleKGPipeline."""
     from .pipeline import (
-        clear_enrichment_data,
         link_to_existing_graph,
         process_all_documents,
+        validate_enrichment,
     )
 
     settings = Settings()  # type: ignore[call-arg]
-    chosen_provider = provider or settings.llm_provider
+    provider = settings.llm_provider
 
     # Always need OpenAI for embeddings
     if settings.openai_api_key is None:
@@ -140,9 +125,9 @@ def enrich_cmd(
 
     # LLM key depends on provider
     anthropic_key = None
-    if chosen_provider == "openai":
+    if provider == "openai":
         llm_model = settings.openai_extraction_model
-    elif chosen_provider == "anthropic":
+    elif provider == "anthropic":
         if settings.anthropic_api_key is None:
             raise typer.BadParameter(
                 "ANTHROPIC_API_KEY is required when using Anthropic. "
@@ -152,35 +137,31 @@ def enrich_cmd(
         llm_model = settings.anthropic_extraction_model
     else:
         raise typer.BadParameter(
-            f"Unknown provider: {chosen_provider!r}. Use 'openai' or 'anthropic'."
+            f"Unknown provider: {provider!r}. Use 'openai' or 'anthropic'."
         )
 
     start = time.monotonic()
 
     print(f"Connecting to {settings.neo4j_uri}...")
     with _connect(settings) as driver:
-        if clean:
-            clear_enrichment_data(driver)
-            print()
-
         print("Creating constraints and indexes...")
         create_constraints(driver)
         create_indexes(driver)
         create_extraction_constraints(driver)
         print()
 
-        print(f"Running SimpleKGPipeline (LLM: {chosen_provider}/{llm_model})...")
+        print(f"Running SimpleKGPipeline (LLM: {provider}/{llm_model})...")
         process_all_documents(
             driver,
             settings.data_dir,
-            provider=chosen_provider,
+            provider=provider,
             openai_api_key=openai_key,
             anthropic_api_key=anthropic_key,
             llm_model=llm_model,
             embedding_model=settings.openai_embedding_model,
             embedding_dimensions=settings.openai_embedding_dimensions,
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap,
+            chunk_size=settings.chunk_size,
+            chunk_overlap=settings.chunk_overlap,
         )
 
         print("\nCreating embedding indexes...")
@@ -190,9 +171,22 @@ def enrich_cmd(
         link_to_existing_graph(driver)
 
         verify(driver)
+        validate_enrichment(driver)
 
     elapsed = time.monotonic() - start
     print(f"\nDone in {_fmt_elapsed(elapsed)}.")
+
+
+@app.command("samples")
+def samples_cmd() -> None:
+    """Run sample queries showcasing the knowledge graph (read-only)."""
+    from .samples import run_all_samples
+
+    settings = Settings()  # type: ignore[call-arg]
+
+    print(f"Connecting to {settings.neo4j_uri}...")
+    with _connect(settings) as driver:
+        run_all_samples(driver)
 
 
 if __name__ == "__main__":

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from neo4j import Driver
+from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
 
 # Labels for extracted entity nodes (used by clear/verify logic).
 EXTRACTED_LABELS = ["FaultCode", "PartNumber", "OperatingLimit", "MaintenanceTask", "ATAChapter"]
@@ -52,30 +53,19 @@ DOCUMENTS: list[DocumentMeta] = [
 # ---------------------------------------------------------------------------
 
 
-class DimensionAwareOpenAIEmbeddings:
-    """OpenAIEmbeddings subclass that always passes ``dimensions`` to the API.
+class DimensionAwareOpenAIEmbeddings(OpenAIEmbeddings):
+    """OpenAIEmbeddings that always passes ``dimensions`` to the API.
 
-    The ``TextChunkEmbedder`` component calls ``embed_query(text)`` without
-    a ``dimensions`` kwarg, so we override to inject it.
+    The pipeline's ``TextChunkEmbedder`` calls ``embed_query(text)`` without
+    a ``dimensions`` kwarg, so we override to inject it automatically.
     """
 
     def __init__(self, dimensions: int, **kwargs: Any) -> None:
-        from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
-
-        self._inner = OpenAIEmbeddings(**kwargs)
+        super().__init__(**kwargs)
         self._dimensions = dimensions
 
     def embed_query(self, text: str, **kwargs: Any) -> list[float]:
-        return self._inner.embed_query(text, dimensions=self._dimensions, **kwargs)
-
-    async def async_embed_query(self, text: str, **kwargs: Any) -> list[float]:
-        # OpenAIEmbeddings doesn't have a native async, but the pipeline may
-        # call async_embed_query via the TextChunkEmbedder. Fall back to sync
-        # in a thread so we don't block the event loop.
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(
-            None, lambda: self.embed_query(text, **kwargs)
-        )
+        return super().embed_query(text, dimensions=self._dimensions, **kwargs)
 
 
 # ---------------------------------------------------------------------------
@@ -109,7 +99,11 @@ def _create_pipeline(
 
         llm = OpenAILLM(
             model_name=llm_model,
-            model_params={"temperature": 0, "response_format": {"type": "json_object"}},
+            model_params={
+                "max_tokens": 2000,
+                "temperature": 0,
+                "response_format": {"type": "json_object"},
+            },
             api_key=openai_api_key,
         )
     elif provider == "anthropic":
@@ -143,7 +137,7 @@ def _create_pipeline(
     return SimpleKGPipeline(
         llm=llm,
         driver=driver,
-        embedder=embedder,  # type: ignore[arg-type]
+        embedder=embedder,
         schema=schema,
         text_splitter=splitter,
         from_pdf=False,
@@ -292,3 +286,78 @@ def clear_enrichment_data(driver: Driver) -> None:
                 break
 
     print(f"  [OK] Cleared {deleted_total} enrichment nodes.")
+
+
+# ---------------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------------
+
+_SAMPLE_SIZE = 5
+
+
+def validate_enrichment(driver: Driver) -> None:
+    """Run sample queries to verify embeddings, entities, and cross-links."""
+
+    print(f"\nValidation (sample size {_SAMPLE_SIZE}):")
+
+    # 1. Chunks with embeddings linked to documents
+    rows, _, _ = driver.execute_query(f"""
+        MATCH (c:Chunk)-[:FROM_DOCUMENT]->(d:Document)
+        WHERE c.embedding IS NOT NULL
+        RETURN d.documentId AS doc, c.id AS chunk_id, size(c.embedding) AS dims
+        LIMIT {_SAMPLE_SIZE}
+    """)
+    print(f"\n  Chunks with embeddings -> Document ({len(rows)} samples):")
+    for r in rows:
+        print(f"    {r['chunk_id'][:12]}...  dims={r['dims']}  doc={r['doc']}")
+    if not rows:
+        print("    [WARN] No chunks with embeddings found!")
+
+    # 2. Extracted entities by label
+    rows, _, _ = driver.execute_query(f"""
+        UNWIND $labels AS label
+        CALL (label) {{
+            MATCH (n)
+            WHERE label IN labels(n)
+            RETURN n.name AS name, label AS entity_type
+            LIMIT {_SAMPLE_SIZE}
+        }}
+        RETURN entity_type, collect(name)[..{_SAMPLE_SIZE}] AS samples
+    """, labels=EXTRACTED_LABELS)
+    print(f"\n  Extracted entities:")
+    for r in rows:
+        names = ", ".join(str(n) for n in r["samples"])
+        print(f"    {r['entity_type']}: {names}")
+    if not rows:
+        print("    [WARN] No extracted entities found!")
+
+    # 3. Entity-to-chunk links (FROM_CHUNK)
+    rows, _, _ = driver.execute_query(f"""
+        MATCH (e)-[:FROM_CHUNK]->(c:Chunk)
+        WHERE any(l IN labels(e) WHERE l IN $labels)
+        RETURN labels(e)[0] AS entity_type, e.name AS name, c.id AS chunk_id
+        LIMIT {_SAMPLE_SIZE}
+    """, labels=EXTRACTED_LABELS)
+    print(f"\n  Entity -> Chunk links ({len(rows)} samples):")
+    for r in rows:
+        print(f"    {r['entity_type']}({r['name']}) -> Chunk({r['chunk_id'][:12]}...)")
+    if not rows:
+        print("    [WARN] No entity-to-chunk links found!")
+
+    # 4. Cross-links to operational graph
+    queries = [
+        ("FaultCode -[:CLASSIFIED_UNDER]-> ATAChapter",
+         f"MATCH (fc:FaultCode)-[:CLASSIFIED_UNDER]->(ata:ATAChapter) RETURN fc.name AS src, ata.name AS tgt LIMIT {_SAMPLE_SIZE}"),
+        ("MaintenanceEvent -[:CLASSIFIED_AS]-> FaultCode",
+         f"MATCH (me:MaintenanceEvent)-[:CLASSIFIED_AS]->(fc:FaultCode) RETURN me.event_id AS src, fc.name AS tgt LIMIT {_SAMPLE_SIZE}"),
+        ("Sensor -[:HAS_LIMIT]-> OperatingLimit",
+         f"MATCH (s:Sensor)-[:HAS_LIMIT]->(ol:OperatingLimit) RETURN s.sensor_id AS src, ol.name AS tgt LIMIT {_SAMPLE_SIZE}"),
+    ]
+    print(f"\n  Cross-links to operational graph:")
+    for label, query in queries:
+        rows, _, _ = driver.execute_query(query)
+        if rows:
+            pairs = ", ".join(f"{r['src']}->{r['tgt']}" for r in rows)
+            print(f"    {label}: {pairs}")
+        else:
+            print(f"    {label}: (none)")

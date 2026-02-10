@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     anthropic_api_key: Optional[SecretStr] = None
     anthropic_extraction_model: str = "claude-sonnet-4-5-20250929"
 
+    # Chunking settings for the `enrich` command.
+    chunk_size: int = 800
+    chunk_overlap: int = 100
+
     @model_validator(mode="after")
     def _check_uri_scheme(self) -> Settings:
         if not self.neo4j_uri.startswith(("neo4j://", "neo4j+s://", "neo4j+ssc://", "bolt://", "bolt+s://", "bolt+ssc://")):
