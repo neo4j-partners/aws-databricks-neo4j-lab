@@ -17,7 +17,7 @@ The workshop uses a comprehensive **Aircraft Digital Twin** dataset that models 
 - **Databricks Lakehouse** stores the **time-series sensor telemetry** — 345,600+ hourly readings across 90 days. Columnar storage and SQL make the Lakehouse ideal for aggregations, trend analysis, and statistical comparisons over large volumes of timestamped data.
 - **Neo4j Aura** stores the **richly connected relational data** — aircraft topology, component hierarchies, maintenance events, flights, delays, and airport routes. A graph database handles multi-hop relationship traversals natively, avoiding the expensive JOINs a tabular database would require for queries like "Which components caused flight delays?"
 
-Together the dataset includes:
+Together the dataset includes (see [Data Architecture](docs/DATA_ARCHITECTURE.md) for full schema details):
 
 ![Dual Database Architecture](docs/images/dual-database-architecture.png)
 
@@ -30,7 +30,7 @@ Together the dataset includes:
 - **300 Maintenance Events** with fault severity and corrective actions
 - **12 Airports** in the route network
 
-### Key Technologies
+### Key Technologies used in the Workshop
 
 | Technology | Purpose |
 |------------|---------|
@@ -44,6 +44,20 @@ Together the dataset includes:
 | **GraphRAG** | Graph-enhanced retrieval combining vector search with graph traversal |
 | **Neo4j Spark Connector** | ETL from Databricks to Neo4j |
 | **Model Context Protocol (MCP)** | Standard for connecting AI models to data sources |
+
+### Workshop Infrastructure
+
+The workshop uses a mix of shared and personal resources. Shared resources are pre-configured by administrators so participants can focus on the labs; personal resources give each participant their own environment to work in.
+
+| Resource | Description | Shared / Personal |
+|----------|-------------|-------------------|
+| **Reference Aura Instance** | Fully populated Neo4j Aura database with the complete Aircraft Digital Twin — all 9 node types, 12 relationship types, maintenance manual chunks, vector embeddings, and extracted operating-limit entities | Shared |
+| **Neo4j MCP Server** | Neo4j MCP server deployed to AWS AgentCore, connected to the Reference Aura Instance | Shared |
+| **AgentCore Sample Agent** | Pre-deployed AgentCore agent that calls the Neo4j MCP server for natural language graph queries (Lab 4) | Shared |
+| **Personal Aura Instance** | Each participant receives their own Neo4j Aura database to load data into during the ETL labs and explore independently | Personal |
+| **Databricks Data & Tables** | CSV data files in a Unity Catalog Volume and pre-created Lakehouse tables (`aircraft`, `systems`, `sensors`, `sensor_readings`) | Shared |
+| **Databricks MCP Connection** | External MCP server registered in Unity Catalog, pointing to the AgentCore-hosted Neo4j MCP server | Shared |
+| **Databricks Workspace** | Each participant clones notebooks and runs them on a shared cluster to ETL CSV data into their personal Aura instance and build agents | Personal |
 
 ---
 
