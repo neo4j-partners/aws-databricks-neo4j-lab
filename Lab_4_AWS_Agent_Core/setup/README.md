@@ -2,6 +2,14 @@
 
 This directory contains the complete source code and deployment tooling for the multi-agent orchestrator that lab participants interact with in Lab 4. Lab admins should deploy this agent before the workshop.
 
+## Architecture Overview
+
+![MCP Architecture](../../docs/images/mcp-architecture.png)
+
+The orchestrator agent runs on **AgentCore Runtime** and uses a LangGraph StateGraph to route user questions to specialist agents (Maintenance or Operations). Each specialist queries a Neo4j Aura graph database — containing an Aircraft Digital Twin dataset — through a **Neo4j MCP Server** also hosted on AgentCore Runtime. All communication between the orchestrator and the MCP server flows through the **AgentCore Gateway**, which handles tool discovery and JWT-based authentication via **Amazon Cognito** (OAuth2 machine-to-machine). The end-to-end flow is: client request &#8594; orchestrator agent &#8594; Gateway &#8594; Neo4j MCP Server &#8594; Neo4j Aura.
+
+---
+
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
