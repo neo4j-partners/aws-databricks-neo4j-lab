@@ -19,7 +19,7 @@ Copy and paste these queries into the [Neo4j Aura Query interface](https://conso
 | `LIMIT n` | Cap the number of returned rows |
 | `WITH` | Pipe results from one query part to the next — like a SQL CTE |
 | `CASE WHEN ... THEN ... ELSE ... END` | Conditional expression for computed columns |
-| `size(list)` | Returns the number of elements in a list |
+| `EXISTS { }` | Existential subquery — checks whether a pattern exists without returning it |
 | `CALL db.schema.visualization()` | Built-in procedure that returns the graph's node labels, relationship types, and properties |
 | Multi-hop patterns | Chain relationships in a single `MATCH` to traverse several hops at once, e.g. `(a)-[:R1]->(b)-[:R2]->(c)` |
 
@@ -183,6 +183,7 @@ ORDER BY Count DESC
 
 ```sql
 MATCH (a:Aircraft {tail_number: 'N95040A'})-[:HAS_SYSTEM]->(s:System)-[:HAS_SENSOR]->(sn:Sensor)
+WHERE s.type IS NOT NULL AND sn.type IS NOT NULL
 RETURN s.name AS System,
        s.type AS SystemType,
        sn.name AS Sensor,
@@ -191,7 +192,7 @@ RETURN s.name AS System,
 ORDER BY s.type, sn.type
 ```
 
-> **Concepts**: three-hop pattern from aircraft through system to sensor. The tabular output shows every sensor installed on one aircraft, grouped by system.
+> **Concepts**: three-hop pattern from aircraft through system to sensor. `WHERE ... IS NOT NULL` ensures sorted properties have values — always filter nulls before `ORDER BY`.
 
 ### Systems by sensor density
 
@@ -261,7 +262,9 @@ ORDER BY TotalEvents DESC
 
 ```sql
 MATCH (m:MaintenanceEvent)
-WHERE m.severity = 'CRITICAL' AND m.corrective_action IS NOT NULL
+WHERE m.severity = 'CRITICAL'
+  AND m.corrective_action IS NOT NULL
+  AND m.reported_at IS NOT NULL
 RETURN m.fault AS Fault,
        m.corrective_action AS CorrectiveAction,
        m.reported_at AS ReportedAt
@@ -316,6 +319,7 @@ ORDER BY FlightCount DESC
 
 ```sql
 MATCH (a:Aircraft {tail_number: 'N95040A'})-[:OPERATES_FLIGHT]->(f:Flight)
+WHERE f.scheduled_departure IS NOT NULL
 OPTIONAL MATCH (f)-[:DEPARTS_FROM]->(dep:Airport)
 OPTIONAL MATCH (f)-[:ARRIVES_AT]->(arr:Airport)
 RETURN f.flight_number AS Flight,
@@ -326,12 +330,13 @@ RETURN f.flight_number AS Flight,
 ORDER BY f.scheduled_departure
 ```
 
-> **Concepts**: combines `MATCH` and `OPTIONAL MATCH` to pull in origin/destination airports. Uses airport IATA codes for readability.
+> **Concepts**: combines `MATCH` and `OPTIONAL MATCH` to pull in origin/destination airports. The `WHERE` null check on `scheduled_departure` satisfies the sort — always filter nulls before `ORDER BY`.
 
 ### Most delayed flights
 
 ```sql
 MATCH (a:Aircraft)-[:OPERATES_FLIGHT]->(f:Flight)-[:HAS_DELAY]->(d:Delay)
+WHERE d.minutes IS NOT NULL
 RETURN a.tail_number AS Aircraft,
        f.flight_number AS Flight,
        d.cause AS DelayCause,
@@ -340,7 +345,7 @@ ORDER BY d.minutes DESC
 LIMIT 10
 ```
 
-> **Concepts**: three-hop pattern joining aircraft, flight, and delay. Sorting by delay minutes surfaces the worst disruptions.
+> **Concepts**: three-hop pattern joining aircraft, flight, and delay. `WHERE d.minutes IS NOT NULL` ensures the sort property has values — always filter nulls before `ORDER BY`.
 
 ### Aircraft with the most total delay
 
@@ -363,11 +368,12 @@ ORDER BY TotalDelayMinutes DESC
 
 ```sql
 MATCH (ap:Airport)
+WHERE ap.country IS NOT NULL AND ap.city IS NOT NULL
 RETURN ap.iata AS IATA, ap.name AS Name, ap.city AS City, ap.country AS Country
 ORDER BY ap.country, ap.city
 ```
 
-> **Concepts**: simple node scan with property projection — inventory of all airports in the graph.
+> **Concepts**: simple node scan with property projection. `WHERE ... IS NOT NULL` on sorted columns prevents undefined ordering — always filter nulls before `ORDER BY`.
 
 ### Busiest airports by departures
 

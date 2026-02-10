@@ -40,6 +40,7 @@ RETURN d.documentId AS DocumentId,
 
 ```sql
 MATCH (c:Chunk)-[:FROM_DOCUMENT]->(d:Document)
+WHERE c.index IS NOT NULL
 RETURN c.index AS ChunkIndex,
        substring(c.text, 0, 120) AS Preview,
        d.documentId AS Document
@@ -47,12 +48,13 @@ ORDER BY c.index
 LIMIT 10
 ```
 
-> **Concepts**: `substring()` truncates long text for readable output. `ORDER BY c.index` preserves the original document order.
+> **Concepts**: `substring()` truncates long text for readable output. `WHERE c.index IS NOT NULL` filters nulls before sorting — always required when using `ORDER BY`.
 
 ### Walk the chunk chain
 
 ```sql
 MATCH (c:Chunk)-[:FROM_DOCUMENT]->(d:Document)
+WHERE c.index IS NOT NULL
 OPTIONAL MATCH (c)-[:NEXT_CHUNK]->(next:Chunk)
 RETURN c.index AS ChunkIndex,
        substring(c.text, 0, 80) AS Preview,
@@ -61,14 +63,15 @@ ORDER BY c.index
 LIMIT 10
 ```
 
-> **Concepts**: `OPTIONAL MATCH` on `NEXT_CHUNK` keeps the last chunk in the chain (which has no successor). This shows the linked-list structure that preserves reading order.
+> **Concepts**: `OPTIONAL MATCH` on `NEXT_CHUNK` keeps the last chunk in the chain (which has no successor). `WHERE c.index IS NOT NULL` ensures clean sorting. This shows the linked-list structure that preserves reading order.
 
 ### Find the first and last chunks
 
 ```sql
 MATCH (c:Chunk)-[:FROM_DOCUMENT]->(d:Document)
-WHERE NOT EXISTS { (:Chunk)-[:NEXT_CHUNK]->(c) }
-   OR NOT EXISTS { (c)-[:NEXT_CHUNK]->(:Chunk) }
+WHERE c.index IS NOT NULL
+  AND (NOT EXISTS { (:Chunk)-[:NEXT_CHUNK]->(c) }
+       OR NOT EXISTS { (c)-[:NEXT_CHUNK]->(:Chunk) })
 RETURN c.index AS ChunkIndex,
        CASE
          WHEN NOT EXISTS { (:Chunk)-[:NEXT_CHUNK]->(c) } THEN 'FIRST'
@@ -85,6 +88,11 @@ ORDER BY c.index
 ## Vector Similarity Search
 
 > **Prerequisite:** These queries require the `maintenanceChunkEmbeddings` vector index and embeddings on Chunk nodes, created in notebook 03.
+>
+> **Setup:** Before running vector queries, set your OpenAI API key as a parameter in the Neo4j Query interface:
+> ```sql
+> :param token => 'sk-...'
+> ```
 
 ### Search for engine troubleshooting procedures
 
@@ -95,7 +103,8 @@ CALL db.index.vector.queryNodes(
   5,
   genai.vector.encode(
     'How do I troubleshoot engine vibration?',
-    'AllMiniLmL6V2'
+    'OpenAI',
+    { token: $token, model: 'text-embedding-3-small', dimensions: 1536 }
   )
 )
 YIELD node, score
@@ -105,7 +114,7 @@ RETURN score,
 ORDER BY score DESC
 ```
 
-> **Concepts**: `db.index.vector.queryNodes()` searches the named vector index and returns matching nodes ranked by cosine similarity. `genai.vector.encode()` generates an embedding from query text using the Aura built-in model.
+> **Concepts**: `db.index.vector.queryNodes()` searches the named vector index and returns matching nodes ranked by cosine similarity. `genai.vector.encode()` generates an embedding from query text using the OpenAI API. The `dimensions` must match the index (1536).
 
 ### Search for hydraulic system limits
 
@@ -115,7 +124,8 @@ CALL db.index.vector.queryNodes(
   3,
   genai.vector.encode(
     'What are the hydraulic system pressure limits?',
-    'AllMiniLmL6V2'
+    'OpenAI',
+    { token: $token, model: 'text-embedding-3-small', dimensions: 1536 }
   )
 )
 YIELD node, score
@@ -135,7 +145,8 @@ CALL db.index.vector.queryNodes(
   3,
   genai.vector.encode(
     'EGT limits during takeoff',
-    'AllMiniLmL6V2'
+    'OpenAI',
+    { token: $token, model: 'text-embedding-3-small', dimensions: 1536 }
   )
 )
 YIELD node, score
@@ -196,7 +207,8 @@ CALL db.index.vector.queryNodes(
   3,
   genai.vector.encode(
     'engine vibration diagnostic procedure',
-    'AllMiniLmL6V2'
+    'OpenAI',
+    { token: $token, model: 'text-embedding-3-small', dimensions: 1536 }
   )
 )
 YIELD node, score
@@ -220,7 +232,8 @@ CALL db.index.vector.queryNodes(
   3,
   genai.vector.encode(
     'engine fuel pump maintenance',
-    'AllMiniLmL6V2'
+    'OpenAI',
+    { token: $token, model: 'text-embedding-3-small', dimensions: 1536 }
   )
 )
 YIELD node, score
