@@ -147,10 +147,17 @@ def enrich_cmd() -> None:
         print("Creating constraints and indexes...")
         create_constraints(driver)
         create_indexes(driver)
-        create_extraction_constraints(driver)
+        # NOTE: extraction constraints are created AFTER the pipeline runs.
+        # SimpleKGPipeline uses CREATE (not MERGE), so pre-existing uniqueness
+        # constraints on entity labels cause batch write failures when the same
+        # entity name appears in multiple chunks.
         print()
 
-        print(f"Running SimpleKGPipeline (LLM: {provider}/{llm_model})...")
+        if settings.enrich_sample_size:
+            print(f"Running SimpleKGPipeline (LLM: {provider}/{llm_model},"
+                  f" sample_size={settings.enrich_sample_size} chunks/doc)...")
+        else:
+            print(f"Running SimpleKGPipeline (LLM: {provider}/{llm_model})...")
         process_all_documents(
             driver,
             settings.data_dir,
@@ -162,7 +169,11 @@ def enrich_cmd() -> None:
             embedding_dimensions=settings.openai_embedding_dimensions,
             chunk_size=settings.chunk_size,
             chunk_overlap=settings.chunk_overlap,
+            enrich_sample_size=settings.enrich_sample_size,
         )
+
+        print("\nCreating extraction constraints (post entity-resolution)...")
+        create_extraction_constraints(driver)
 
         print("\nCreating embedding indexes...")
         create_embedding_indexes(driver, settings.openai_embedding_dimensions)
@@ -186,7 +197,7 @@ def samples_cmd() -> None:
 
     print(f"Connecting to {settings.neo4j_uri}...")
     with _connect(settings) as driver:
-        run_all_samples(driver)
+        run_all_samples(driver, sample_size=settings.sample_size)
 
 
 if __name__ == "__main__":

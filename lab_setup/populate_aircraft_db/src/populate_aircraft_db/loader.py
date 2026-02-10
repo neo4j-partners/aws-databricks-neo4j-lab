@@ -344,20 +344,6 @@ def verify(driver: Driver) -> None:
             MATCH (n:MaintenanceEvent) RETURN 'MaintenanceEvent' as label, count(n) as count
             UNION ALL
             MATCH (n:Removal) RETURN 'Removal' as label, count(n) as count
-            UNION ALL
-            MATCH (n:Document) RETURN 'Document' as label, count(n) as count
-            UNION ALL
-            MATCH (n:Chunk) RETURN 'Chunk' as label, count(n) as count
-            UNION ALL
-            MATCH (n:FaultCode) RETURN 'FaultCode' as label, count(n) as count
-            UNION ALL
-            MATCH (n:PartNumber) RETURN 'PartNumber' as label, count(n) as count
-            UNION ALL
-            MATCH (n:OperatingLimit) RETURN 'OperatingLimit' as label, count(n) as count
-            UNION ALL
-            MATCH (n:MaintenanceTask) RETURN 'MaintenanceTask' as label, count(n) as count
-            UNION ALL
-            MATCH (n:ATAChapter) RETURN 'ATAChapter' as label, count(n) as count
         }
         RETURN label, count
         ORDER BY count DESC

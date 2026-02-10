@@ -57,6 +57,8 @@ Settings are loaded from a `.env` file in the project root or from environment v
 | `ANTHROPIC_EXTRACTION_MODEL` | no | `claude-sonnet-4-5-20250929` | Chat model for entity extraction (Anthropic) |
 | `CHUNK_SIZE` | no | `800` | Characters per chunk (enrich) |
 | `CHUNK_OVERLAP` | no | `100` | Overlap between chunks (enrich) |
+| `ENRICH_SAMPLE_SIZE` | no | `0` | Max chunks per document during enrich (`0` = no limit) |
+| `SAMPLE_SIZE` | no | `10` | Rows per section in the `samples` command |
 
 ## What Gets Loaded
 

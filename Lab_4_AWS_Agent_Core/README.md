@@ -83,6 +83,8 @@ User Question ────> │  │  Router  │                               
 
 In this section, you will explore the Neo4j MCP Server -- the foundational component that makes the graph database accessible to AI agents via the Model Context Protocol.
 
+> **Important:** Make sure your AWS Console is set to the **US West (Oregon) / `us-west-2`** region. You can verify this in the region selector at the top-right of the console. All AgentCore resources for this lab are deployed in `us-west-2`.
+
 ### Step 1: Navigate to Amazon Bedrock
 
 1. Sign in to the AWS Console

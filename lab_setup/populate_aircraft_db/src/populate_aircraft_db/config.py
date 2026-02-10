@@ -47,6 +47,12 @@ class Settings(BaseSettings):
     chunk_size: int = 800
     chunk_overlap: int = 100
 
+    # Limit chunks processed per document during enrich (0 = no limit).
+    enrich_sample_size: int = 0
+
+    # Number of rows to show per section in the `samples` command.
+    sample_size: int = 10
+
     @model_validator(mode="after")
     def _check_uri_scheme(self) -> Settings:
         if not self.neo4j_uri.startswith(("neo4j://", "neo4j+s://", "neo4j+ssc://", "bolt://", "bolt+s://", "bolt+ssc://")):

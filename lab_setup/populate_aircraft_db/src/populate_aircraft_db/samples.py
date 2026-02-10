@@ -62,7 +62,7 @@ def _val(v, max_len: int = 0) -> str:
 
 
 # ---------------------------------------------------------------------------
-# 1. Aircraft Fleet
+# 1. Aircraft Fleet (shows all — not limited by sample_size)
 # ---------------------------------------------------------------------------
 
 _FLEET_Q = """\
@@ -89,7 +89,7 @@ def _aircraft_fleet(driver: Driver) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 2. System-Component hierarchy
+# 2. System-Component hierarchy (shows one aircraft — structural limit)
 # ---------------------------------------------------------------------------
 
 _HIERARCHY_Q = """\
@@ -134,16 +134,16 @@ MATCH (f:Flight)-[:DEPARTS_FROM]->(dep:Airport),
 WITH dep.code AS origin, arr.code AS dest, count(f) AS flights
 RETURN origin, dest, flights
 ORDER BY flights DESC
-LIMIT 10"""
+LIMIT $limit"""
 
 
-def _flight_operations(driver: Driver) -> None:
+def _flight_operations(driver: Driver, limit: int) -> None:
     _header(
         "3. Flight Operations \u2014 Top Routes",
         "Most frequent routes by flight count.",
     )
     _cypher(_FLIGHTS_Q)
-    rows, _, _ = driver.execute_query(_FLIGHTS_Q)
+    rows, _, _ = driver.execute_query(_FLIGHTS_Q, limit=limit)
     _table(
         ["Origin", "Dest", "Flights"],
         [[r["origin"], r["dest"], r["flights"]] for r in rows],
@@ -161,16 +161,16 @@ RETURN a.tail_number AS aircraft, me.event_id AS event,
        me.date AS date, me.type AS type, me.fault AS fault,
        s.name AS system
 ORDER BY me.date DESC
-LIMIT 10"""
+LIMIT $limit"""
 
 
-def _maintenance_events(driver: Driver) -> None:
+def _maintenance_events(driver: Driver, limit: int) -> None:
     _header(
         "4. Maintenance Events",
         "Recent maintenance events with fault codes and affected systems.",
     )
     _cypher(_MAINT_Q)
-    rows, _, _ = driver.execute_query(_MAINT_Q)
+    rows, _, _ = driver.execute_query(_MAINT_Q, limit=limit)
     _table(
         ["Aircraft", "Event ID", "Date", "Type", "Fault", "System"],
         [
@@ -188,7 +188,7 @@ def _maintenance_events(driver: Driver) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 5. Sensors and readings
+# 5. Sensors
 # ---------------------------------------------------------------------------
 
 _SENSORS_Q = """\
@@ -196,16 +196,16 @@ MATCH (a:Aircraft)-[:HAS_SYSTEM]->(sys:System)-[:HAS_SENSOR]->(s:Sensor)
 RETURN a.tail_number AS aircraft, sys.name AS system,
        s.sensor_id AS sensor, s.type AS type, s.unit AS unit
 ORDER BY a.tail_number, sys.name
-LIMIT 12"""
+LIMIT $limit"""
 
 
-def _sensors(driver: Driver) -> None:
+def _sensors(driver: Driver, limit: int) -> None:
     _header(
         "5. Sensors",
         "Sensors installed across the fleet with their type and unit.",
     )
     _cypher(_SENSORS_Q)
-    rows, _, _ = driver.execute_query(_SENSORS_Q)
+    rows, _, _ = driver.execute_query(_SENSORS_Q, limit=limit)
     _table(
         ["Aircraft", "System", "Sensor ID", "Type", "Unit"],
         [[r["aircraft"], r["system"], r["sensor"], r["type"], r["unit"]] for r in rows],
@@ -228,14 +228,14 @@ ORDER BY d.documentId"""
 _CHAIN_Q = """\
 MATCH (c:Chunk)-[:FROM_DOCUMENT]->(d:Document)
 WITH d, c ORDER BY d.documentId, c.index
-WITH d, c LIMIT 5
+WITH d, c LIMIT $limit
 OPTIONAL MATCH (c)-[:NEXT_CHUNK]->(next:Chunk)
 RETURN d.documentId AS doc, c.index AS idx,
        substring(c.text, 0, 60) AS preview,
        next.index AS next_idx"""
 
 
-def _document_chunks(driver: Driver) -> None:
+def _document_chunks(driver: Driver, limit: int) -> None:
     _header(
         "6. Document-Chunk Structure",
         "Maintenance manuals loaded as Document \u2192 Chunk graphs with embedding stats.",
@@ -250,9 +250,9 @@ def _document_chunks(driver: Driver) -> None:
         [[r["doc_id"], r["aircraft"], r["chunks"], r["embedded"]] for r in rows],
     )
 
-    print("  Chunk chain (first 5):\n")
+    print(f"  Chunk chain (first {limit}):\n")
     _cypher(_CHAIN_Q)
-    rows, _, _ = driver.execute_query(_CHAIN_Q)
+    rows, _, _ = driver.execute_query(_CHAIN_Q, limit=limit)
     for r in rows:
         arrow = f" \u2192 Chunk {r['next_idx']}" if r["next_idx"] is not None else " (end)"
         print(f"    Chunk {r['idx']:>3} \u2502 {r['preview']}\u2026{arrow}")
@@ -268,18 +268,18 @@ UNWIND $labels AS label
 CALL (label) {
     MATCH (n) WHERE label IN labels(n)
     RETURN n.name AS name
-    LIMIT 5
+    LIMIT $limit
 }
 RETURN label AS entity_type, collect(name) AS samples"""
 
 
-def _extracted_entities(driver: Driver) -> None:
+def _extracted_entities(driver: Driver, limit: int) -> None:
     _header(
         "7. Extracted Entities",
         "Entity types extracted from maintenance manuals via SimpleKGPipeline.",
     )
     _cypher(_ENTITIES_Q)
-    rows, _, _ = driver.execute_query(_ENTITIES_Q, labels=_EXTRACTED_LABELS)
+    rows, _, _ = driver.execute_query(_ENTITIES_Q, labels=_EXTRACTED_LABELS, limit=limit)
     if not rows or all(len(r["samples"]) == 0 for r in rows):
         print("  (no extracted entities \u2014 run 'enrich' first)\n")
         return
@@ -304,15 +304,15 @@ _CROSSLINKS = [
         """\
 MATCH (fc:FaultCode)-[:CLASSIFIED_UNDER]->(ata:ATAChapter)
 RETURN fc.name AS source, ata.name AS target
-LIMIT 5""",
+LIMIT $limit""",
         ["FaultCode", "ATAChapter"],
     ),
     (
         "MaintenanceEvent \u2192 FaultCode",
         """\
-MATCH (me:MaintenanceEvent)-[:CLASSIFIED_AS]->(fc:FaultCode)
+MATCH (me:MaintenanceEvent)-[:HAS_FAULT_CODE]->(fc:FaultCode)
 RETURN me.event_id AS source, fc.name AS target
-LIMIT 5""",
+LIMIT $limit""",
         ["Event ID", "FaultCode"],
     ),
     (
@@ -320,7 +320,7 @@ LIMIT 5""",
         """\
 MATCH (c:Component)-[:IDENTIFIED_BY]->(pn:PartNumber)
 RETURN c.name AS source, pn.name AS target
-LIMIT 5""",
+LIMIT $limit""",
         ["Component", "PartNumber"],
     ),
     (
@@ -328,13 +328,13 @@ LIMIT 5""",
         """\
 MATCH (s:Sensor)-[:HAS_LIMIT]->(ol:OperatingLimit)
 RETURN s.sensor_id AS source, s.type AS type, ol.name AS target
-LIMIT 5""",
+LIMIT $limit""",
         ["Sensor", "Type", "OperatingLimit"],
     ),
 ]
 
 
-def _cross_links(driver: Driver) -> None:
+def _cross_links(driver: Driver, limit: int) -> None:
     _header(
         "8. Cross-Links: Knowledge Graph \u2194 Operational Graph",
         "Relationships connecting extracted entities to the operational aircraft graph.",
@@ -343,7 +343,7 @@ def _cross_links(driver: Driver) -> None:
     for title, query, headers in _CROSSLINKS:
         print(f"  {title}:")
         _cypher(query)
-        rows, _, _ = driver.execute_query(query)
+        rows, _, _ = driver.execute_query(query, limit=limit)
         if not rows:
             print("  (none)\n")
             continue
@@ -365,24 +365,24 @@ MATCH (seed:Chunk)
 WHERE seed.embedding IS NOT NULL
 WITH seed, rand() AS r ORDER BY r LIMIT 1
 CALL db.index.vector.queryNodes(
-    'maintenanceChunkEmbeddings', 6, seed.embedding
+    'maintenanceChunkEmbeddings', $top_k, seed.embedding
 ) YIELD node, score
 WHERE node <> seed
-WITH seed, node, score ORDER BY score DESC LIMIT 5
+WITH seed, node, score ORDER BY score DESC LIMIT $limit
 RETURN substring(seed.text, 0, 100) AS seed_text,
        score AS similarity,
        substring(node.text, 0, 100) AS match_text"""
 
 
-def _vector_similarity(driver: Driver) -> None:
+def _vector_similarity(driver: Driver, limit: int) -> None:
     _header(
         "9. Vector Similarity Search",
-        "Picks a random chunk and finds the 5 most similar chunks using the\n"
+        "Picks a random chunk and finds the most similar chunks using the\n"
         "  vector index (reuses stored embeddings \u2014 no API key needed).",
     )
     _cypher(_VECTOR_Q)
     try:
-        rows, _, _ = driver.execute_query(_VECTOR_Q)
+        rows, _, _ = driver.execute_query(_VECTOR_Q, limit=limit, top_k=limit + 1)
     except Exception:
         print("  (vector index not available \u2014 run 'enrich' first)\n")
         return
@@ -402,21 +402,22 @@ def _vector_similarity(driver: Driver) -> None:
 # ---------------------------------------------------------------------------
 
 
-def run_all_samples(driver: Driver) -> None:
+def run_all_samples(driver: Driver, sample_size: int = 10) -> None:
     """Run all sample queries with formatted output."""
     print(f"\n{'#' * _W}")
     print("  Aircraft Digital Twin \u2014 Sample Queries")
     print(f"{'#' * _W}")
+    print(f"\n  Sample size: {sample_size} rows per section\n")
 
     _aircraft_fleet(driver)
     _system_hierarchy(driver)
-    _flight_operations(driver)
-    _maintenance_events(driver)
-    _sensors(driver)
-    _document_chunks(driver)
-    _extracted_entities(driver)
-    _cross_links(driver)
-    _vector_similarity(driver)
+    _flight_operations(driver, sample_size)
+    _maintenance_events(driver, sample_size)
+    _sensors(driver, sample_size)
+    _document_chunks(driver, sample_size)
+    _extracted_entities(driver, sample_size)
+    _cross_links(driver, sample_size)
+    _vector_similarity(driver, sample_size)
 
     print(f"{'#' * _W}")
     print("  All samples complete.")
