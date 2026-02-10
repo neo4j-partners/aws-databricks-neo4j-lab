@@ -381,6 +381,7 @@ source = { editable = "." }
 dependencies = [
     { name = "neo4j" },
     { name = "neo4j-graphrag", extra = ["openai"] },
+    { name = "openai" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "rich" },
@@ -391,6 +392,7 @@ dependencies = [
 requires-dist = [
     { name = "neo4j", specifier = ">=5.0.0" },
     { name = "neo4j-graphrag", extras = ["openai"], specifier = ">=1.0.0" },
+    { name = "openai", specifier = ">=1.0.0" },
     { name = "pydantic", specifier = ">=2.7.0" },
     { name = "pydantic-settings", specifier = ">=2.0.0" },
     { name = "rich", specifier = ">=13.0.0" },

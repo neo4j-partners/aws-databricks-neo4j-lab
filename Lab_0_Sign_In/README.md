@@ -13,20 +13,14 @@ Enter your email, the event code from the information sheet, and the validation 
 
 Once the entered information is validated, you will receive your own AWS and Neo4j accounts. Please refrain from sharing this account information with fellow attendees, as it is specifically assigned to you. Remember to save this information, as you will need it until the end of the lab. These accounts will be terminated by the end of the day.
 
-## Improving the Labs
-As you work through these labs, we'd really appreciate your feedback. One way to help us improve is to open an issue by going [here](https://github.com/neo4j-partners/aws-databricks-neo4j-lab/issues). Outright bugs, usability suggestions, and general comments are all appreciated. Pull requests are great too!
-
 ## Sign into AWS
-We're going to sign into a new AWS account.  You may already have other AWS accounts.  If you use Chrome, you might consider using incognito mode for these exercises.  That's not mandatory though and other browsers work fine too.
-Our next step is to open the AWS console [here](https://console.aws.amazon.com/). 
+Once signed into OneBlink, you will see a link to the AWS sign-in console. Follow that link and the account number should be auto-populated.
+
+![](images/oneblink_signup.png)
 
 Select "IAM User."
 
 ![](images/01.png)
-
-Now enter the Account ID you were given and click "Next."
-
-![](images/02.png)
 
 Enter the IAM user name and Password you were given.  Click the check box for "Remember this account."  Click "Sign in."
 
@@ -42,3 +36,5 @@ At this point you can click through to dismiss any help dialogs. In the next lab
 
 Continue to [Lab 1 - Aura Setup](../Lab_1_Aura_Setup) to create your Neo4j Aura database and load the knowledge graph.
 
+## Improving the Labs
+As you work through these labs, we'd really appreciate your feedback. One way to help us improve is to open an issue by going [here](https://github.com/neo4j-partners/aws-databricks-neo4j-lab/issues). Outright bugs, usability suggestions, and general comments are all appreciated. Pull requests are great too!

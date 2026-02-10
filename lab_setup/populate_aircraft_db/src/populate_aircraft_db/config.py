@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import DirectoryPath, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -35,6 +35,13 @@ class Settings(BaseSettings):
 
     # OpenAI chat model — used by the `extract` command.
     openai_extraction_model: str = "gpt-4o-mini"
+
+    # LLM provider selection — "openai" or "anthropic".
+    llm_provider: Literal["openai", "anthropic"] = "openai"
+
+    # Anthropic — only required when llm_provider is "anthropic".
+    anthropic_api_key: Optional[SecretStr] = None
+    anthropic_extraction_model: str = "claude-sonnet-4-20250514"
 
     @model_validator(mode="after")
     def _check_uri_scheme(self) -> Settings:

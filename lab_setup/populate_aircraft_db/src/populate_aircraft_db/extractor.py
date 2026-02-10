@@ -1,9 +1,10 @@
-"""Entity extraction from maintenance manual chunks using OpenAI."""
+"""Entity extraction from maintenance manual chunks using LLM backends."""
 
 from __future__ import annotations
 
 import json
-from typing import Any
+import re
+from typing import Any, Protocol
 
 from neo4j import Driver
 
@@ -13,7 +14,8 @@ EXTRACTED_LABELS = ["FaultCode", "PartNumber", "OperatingLimit", "MaintenanceTas
 SYSTEM_PROMPT = (
     "You extract structured entities from aviation maintenance manuals. "
     "Always respond with valid JSON matching the requested schema. "
-    "Only extract entities that are explicitly stated in the text."
+    "Only extract entities that are explicitly stated in the text. "
+    "Return ONLY the JSON object — no markdown fences, no commentary, no extra text."
 )
 
 EXTRACTION_PROMPT = """\
@@ -83,41 +85,134 @@ EMPTY_RESULT: dict[str, list] = {
 # ---------------------------------------------------------------------------
 
 
-def fetch_chunks(driver: Driver) -> list[dict[str, Any]]:
-    """Fetch all Chunk nodes with their parent document metadata."""
-    records, _, _ = driver.execute_query("""
+def fetch_chunks(
+    driver: Driver,
+    document_id: str | None = None,
+    limit: int | None = None,
+) -> list[dict[str, Any]]:
+    """Fetch Chunk nodes with their parent document metadata.
+
+    Args:
+        document_id: If set, only fetch chunks for this document.
+        limit: If set, return at most this many chunks.
+    """
+    where = ""
+    params: dict[str, Any] = {}
+    if document_id:
+        where = "WHERE d.documentId = $docId"
+        params["docId"] = document_id
+
+    if limit:
+        limit_clause = "LIMIT $limit"
+        params["limit"] = int(limit)
+    else:
+        limit_clause = ""
+
+    records, _, _ = driver.execute_query(
+        f"""
         MATCH (c:Chunk)-[:FROM_DOCUMENT]->(d:Document)
+        {where}
         RETURN c.documentId AS documentId, c.index AS chunkIndex,
                c.text AS text, d.aircraftType AS aircraftType
         ORDER BY c.documentId, c.index
-    """)
+        {limit_clause}
+        """,
+        **params,
+    )
     return [dict(r) for r in records]
 
 
 # ---------------------------------------------------------------------------
-# OpenAI extraction
+# LLM caller abstraction
 # ---------------------------------------------------------------------------
 
 
-def extract_entities_from_chunk(
-    client: Any,
-    model: str,
-    text: str,
-) -> dict[str, list[dict]]:
-    """Call OpenAI to extract structured entities from a single chunk."""
-    try:
+class LLMCaller(Protocol):
+    """Thin callable: (system_prompt, user_prompt) -> raw response text."""
+
+    def __call__(self, system_prompt: str, user_prompt: str) -> str: ...
+
+
+def _make_openai_caller(api_key: str, model: str) -> LLMCaller:
+    from openai import OpenAI
+
+    client = OpenAI(api_key=api_key)
+
+    def _call(system_prompt: str, user_prompt: str) -> str:
         response = client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": EXTRACTION_PROMPT.format(text=text)},
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
             ],
             response_format={"type": "json_object"},
             temperature=0,
         )
-        content = response.choices[0].message.content
-        result = json.loads(content)
-        # Ensure all expected keys exist
+        return response.choices[0].message.content  # type: ignore[return-value]
+
+    return _call  # type: ignore[return-value]
+
+
+def _make_anthropic_caller(api_key: str, model: str) -> LLMCaller:
+    from anthropic import Anthropic
+
+    client = Anthropic(api_key=api_key)
+
+    def _call(system_prompt: str, user_prompt: str) -> str:
+        message = client.messages.create(
+            model=model,
+            max_tokens=4096,
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_prompt}],
+        )
+        return message.content[0].text  # type: ignore[union-attr]
+
+    return _call  # type: ignore[return-value]
+
+
+def make_llm_caller(provider: str, api_key: str, model: str) -> LLMCaller:
+    """Public factory: return an LLMCaller for the given provider."""
+    if provider == "openai":
+        return _make_openai_caller(api_key, model)
+    if provider == "anthropic":
+        return _make_anthropic_caller(api_key, model)
+    raise ValueError(f"Unknown LLM provider: {provider!r}")
+
+
+# ---------------------------------------------------------------------------
+# JSON response parsing
+# ---------------------------------------------------------------------------
+
+_FENCE_RE = re.compile(r"^```(?:json)?\s*\n?(.*?)\n?\s*```$", re.DOTALL)
+
+
+def _parse_json_response(content: str) -> dict:
+    """Parse JSON from LLM response, stripping markdown fences if present."""
+    text = content.strip()
+    m = _FENCE_RE.match(text)
+    if m:
+        text = m.group(1).strip()
+    try:
+        return json.loads(text)  # type: ignore[no-any-return]
+    except json.JSONDecodeError:
+        from json_repair import repair_json
+
+        return json.loads(repair_json(text))  # type: ignore[no-any-return]
+
+
+# ---------------------------------------------------------------------------
+# Entity extraction
+# ---------------------------------------------------------------------------
+
+
+def extract_entities_from_chunk(
+    llm_call: LLMCaller,
+    text: str,
+) -> dict[str, list[dict]]:
+    """Call an LLM to extract structured entities from a single chunk."""
+    try:
+        content = llm_call(SYSTEM_PROMPT, EXTRACTION_PROMPT.format(text=text))
+        result = _parse_json_response(content)
         for key in EMPTY_RESULT:
             if key not in result:
                 result[key] = []
@@ -530,29 +625,32 @@ def clear_extracted(driver: Driver) -> None:
 
 def run_extraction(
     driver: Driver,
-    api_key: str,
-    model: str,
+    llm_call: LLMCaller,
+    model_name: str,
+    limit: int | None = None,
+    document_id: str | None = None,
 ) -> None:
     """Full extraction pipeline: fetch chunks → extract → deduplicate → write → link."""
-    from openai import OpenAI
-
-    client = OpenAI(api_key=api_key)
-
     # 1. Fetch chunks
-    print("Fetching chunks from Neo4j...")
-    chunks = fetch_chunks(driver)
+    filter_msg = ""
+    if document_id:
+        filter_msg += f" (document={document_id})"
+    if limit:
+        filter_msg += f" (limit={limit})"
+    print(f"Fetching chunks from Neo4j...{filter_msg}")
+    chunks = fetch_chunks(driver, document_id=document_id, limit=limit)
     print(f"  Found {len(chunks)} chunks across all documents.")
     if not chunks:
         print("  No chunks found. Run 'embed' command first.")
         return
 
     # 2. Extract entities from each chunk
-    print(f"\nExtracting entities using {model}...")
+    print(f"\nExtracting entities using {model_name}...")
     all_extractions: list[dict] = []
     total = len(chunks)
 
     for i, chunk in enumerate(chunks, 1):
-        entities = extract_entities_from_chunk(client, model, chunk["text"])
+        entities = extract_entities_from_chunk(llm_call, chunk["text"])
         all_extractions.append({
             "documentId": chunk["documentId"],
             "chunkIndex": chunk["chunkIndex"],

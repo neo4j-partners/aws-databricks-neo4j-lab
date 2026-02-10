@@ -6,8 +6,11 @@ import time
 from collections.abc import Generator
 from contextlib import contextmanager
 
+import sys
+
 import typer
 from neo4j import Driver, GraphDatabase
+from neo4j.exceptions import ServiceUnavailable
 
 from .config import Settings
 from .loader import clear_database, load_nodes, load_relationships, verify
@@ -41,6 +44,13 @@ def _connect(settings: Settings) -> Generator[Driver, None, None]:
     )
     try:
         driver.verify_connectivity()
+    except (ServiceUnavailable, OSError) as exc:
+        driver.close()
+        print(f"[FAIL] Cannot connect to {settings.neo4j_uri}")
+        print(f"       {exc}")
+        print("\nCheck that the Neo4j instance is running and reachable.")
+        sys.exit(1)
+    try:
         print("[OK] Connected.\n")
         yield driver
     finally:
@@ -154,19 +164,40 @@ def embed_cmd(
 @app.command("extract")
 def extract_cmd(
     clean: bool = typer.Option(False, "--clean", help="Clear existing extracted entities first."),
+    limit: int = typer.Option(0, "--limit", help="Max chunks to process (0 = all)."),
+    document: str = typer.Option("", "--document", help="Only process chunks from this document ID."),
+    provider: str = typer.Option(
+        "",
+        "--provider",
+        help="LLM provider: 'openai' or 'anthropic' (overrides LLM_PROVIDER env var).",
+    ),
 ) -> None:
-    """Extract structured entities from maintenance manual chunks using OpenAI."""
-    from .extractor import clear_extracted, run_extraction
+    """Extract structured entities from maintenance manual chunks."""
+    from .extractor import clear_extracted, make_llm_caller, run_extraction
 
     settings = Settings()  # type: ignore[call-arg]
 
-    if settings.openai_api_key is None:
-        raise typer.BadParameter(
-            "OPENAI_API_KEY is required for the extract command. Set it in .env or as an env var."
-        )
+    chosen_provider = provider or settings.llm_provider
 
-    api_key = settings.openai_api_key.get_secret_value()
-    model = settings.openai_extraction_model
+    if chosen_provider == "openai":
+        if settings.openai_api_key is None:
+            raise typer.BadParameter(
+                "OPENAI_API_KEY is required when using OpenAI. Set it in .env or as an env var."
+            )
+        api_key = settings.openai_api_key.get_secret_value()
+        model = settings.openai_extraction_model
+    elif chosen_provider == "anthropic":
+        if settings.anthropic_api_key is None:
+            raise typer.BadParameter(
+                "ANTHROPIC_API_KEY is required when using Anthropic. "
+                "Set it in .env or as an env var."
+            )
+        api_key = settings.anthropic_api_key.get_secret_value()
+        model = settings.anthropic_extraction_model
+    else:
+        raise typer.BadParameter(f"Unknown provider: {chosen_provider!r}. Use 'openai' or 'anthropic'.")
+
+    llm_call = make_llm_caller(chosen_provider, api_key, model)
     start = time.monotonic()
 
     print(f"Connecting to {settings.neo4j_uri}...")
@@ -179,7 +210,13 @@ def extract_cmd(
         create_extraction_constraints(driver)
         print()
 
-        run_extraction(driver, api_key, model)
+        run_extraction(
+            driver,
+            llm_call,
+            model,
+            limit=limit or None,
+            document_id=document or None,
+        )
 
         verify(driver)
 

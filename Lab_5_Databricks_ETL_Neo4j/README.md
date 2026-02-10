@@ -54,6 +54,10 @@ Your workshop admin has added you to a shared Databricks workspace. You received
 
 > **Tip:** The passcode expires after a few minutes. If it expires, click **Resend code** on the sign-in page to get a new one.
 
+> **Note:** Sometimes after entering the passcode you may see an error like the one below. Simply refresh the page and you will be logged in.
+>
+> ![Databricks login error](images/DBX_LOGIN_ERRIR.png)
+
 
 ### Step 2: Verify Your Compute Cluster
 
@@ -96,17 +100,18 @@ A **notebook** in Databricks is an interactive document made up of cells that ca
 The lab notebooks are stored in a shared folder that all participants can see. You will clone (copy) them into your own workspace so you can edit and run them without affecting other participants.
 
 1. Click **Workspace** in the left sidebar.
-2. Expand **Shared > aws-databricks-neo4j-lab > labs**.
-3. Right-click on the `labs` folder and select **Clone**.
+2. Expand **Shared > aws-databricks-neo4j-lab**.
+3. Click on the **Lab_5_Databricks_ETL_Neo4j** folder.
+4. Right-click on the `Lab_5_Databricks_ETL_Neo4j` folder and select **Clone**.
 
-![Right-click the labs folder and select Clone](images/03_clone.png)
+![Right-click the folder and select Clone](images/03_clone.png)
 
 The Clone dialog lets you place a personal copy of the notebooks in your home directory.
 
-4. Update the **New name** to include your initials (e.g., `labs-rk`) so it is easy to identify.
-5. Select the **For you** tab.
-6. Choose your home directory as the destination.
-7. Click **Clone**.
+5. Update the **New name** to include your initials (e.g., `labs-rk`) so it is easy to identify.
+6. Select the **For you** tab.
+7. Choose your home directory as the destination.
+8. Click **Clone**.
 
 ![Clone dialog — rename and select your home directory](images/04_clone_labs.png)
 

@@ -146,13 +146,13 @@ class NotebookConfig:
         ("Lab_5_Databricks_ETL_Neo4j", (
             "01_aircraft_etl_to_neo4j.ipynb",
             "02_load_neo4j_full.ipynb",
-        ), "labs"),
+        ), "Lab_5_Databricks_ETL_Neo4j"),
         ("Lab_6_Semantic_Search", (
             "03_data_and_embeddings.ipynb",
             "04_graphrag_retrievers.ipynb",
             "05_hybrid_retrievers.ipynb",
             "data_utils.py",
-        ), "labs"),
+        ), "Lab_6_Semantic_Search"),
         ("lab_setup/neo4j_mcp_connection", (
             "neo4j_mcp_agent.py",
             "neo4j-mcp-agent-deploy.ipynb",
