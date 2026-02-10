@@ -47,6 +47,8 @@ Together the dataset includes (see [Data Architecture](docs/DATA_ARCHITECTURE.md
 
 ### Workshop Infrastructure
 
+<img src="docs/images/workshop-infrastructure.png" alt="Workshop Infrastructure" width="75%">
+
 The workshop uses a mix of shared and personal resources. Shared resources are pre-configured by administrators so participants can focus on the labs; personal resources give each participant their own environment to work in.
 
 | Resource | Description | Shared / Personal |
