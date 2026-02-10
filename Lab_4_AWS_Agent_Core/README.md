@@ -45,6 +45,10 @@ The [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) is an open 
 
 AgentCore Runtime supports hosting MCP servers as stateless streamable-HTTP endpoints, making them available to any MCP-compatible agent or client.
 
+### Neo4j MCP Server
+
+The [Neo4j MCP Server](https://github.com/neo4j/mcp) is an official, open-source MCP server that gives AI agents read and write access to a Neo4j graph database. It exposes tools for schema inspection and Cypher query execution, enabling agents to explore and query knowledge graphs through the standard MCP interface.
+
 ---
 
 ## Pre-Deployed Architecture
@@ -52,7 +56,7 @@ AgentCore Runtime supports hosting MCP servers as stateless streamable-HTTP endp
 This lab environment has been pre-configured with two components deployed to AgentCore:
 
 1. **Neo4j MCP Server** -- exposes the Aircraft Digital Twin graph as MCP tools ([see repo for more info](https://github.com/neo4j-partners/aws-starter/tree/main/neo4j-agentcore-mcp-server))
-2. **Multi-Agent Orchestrator** -- routes natural language questions to specialist agents that call those tools
+2. **Multi-Agent Orchestrator** -- routes natural language questions to specialist agents that call those tools ([see setup/ for source code](setup/))
 
 ```
                     ┌─────────────────────────────────────────────┐
