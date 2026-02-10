@@ -1,0 +1,407 @@
+Connecting to neo4j+s://c3eb7689.databases.neo4j.io...
+[OK] Connected.
+
+
+######################################################################
+  Aircraft Digital Twin — Sample Queries
+######################################################################
+
+  Sample size: 10 rows per section
+
+
+======================================================================
+  1. Aircraft Fleet Overview
+======================================================================
+
+  Each aircraft with its model, manufacturer, and system/component counts.
+
+  Cypher:
+    MATCH (a:Aircraft)
+    OPTIONAL MATCH (a)-[:HAS_SYSTEM]->(s:System)
+    OPTIONAL MATCH (s)-[:HAS_COMPONENT]->(c:Component)
+    WITH a, count(DISTINCT s) AS systems, count(DISTINCT c) AS components
+    RETURN a.tail_number AS tail, a.model AS model,
+           a.manufacturer AS mfr, systems, components
+    ORDER BY a.tail_number
+
+  Tail #    Model      Manufacturer   Systems   Components 
+  ────────  ─────────  ─────────────  ────────  ───────────
+  N13211H   E190       Embraer        4         16         
+  N15332P   E190       Embraer        4         16         
+  N26760M   B737-800   Boeing         4         16         
+  N30268B   A320-200   Airbus         4         16         
+  N32276J   A320-200   Airbus         4         16         
+  N37272D   E190       Embraer        4         16         
+  N44342Q   B737-800   Boeing         4         16         
+  N46224T   E190       Embraer        4         16         
+  N53032E   B737-800   Boeing         4         16         
+  N54980C   A321neo    Airbus         4         16         
+  N63098R   A320-200   Airbus         4         16         
+  N65164O   A321neo    Airbus         4         16         
+  N76758N   A320-200   Airbus         4         16         
+  N81338F   A320-200   Airbus         4         16         
+  N84110I   B737-800   Boeing         4         16         
+  N84703L   E190       Embraer        4         16         
+  N86057G   A321neo    Airbus         4         16         
+  N89365K   A321neo    Airbus         4         16         
+  N95040A   B737-800   Boeing         4         16         
+  N96107S   A321neo    Airbus         4         16         
+
+
+======================================================================
+  2. System → Component Hierarchy
+======================================================================
+
+  Full hierarchy for one aircraft showing Systems and their Components.
+
+  Cypher:
+    MATCH (a:Aircraft)-[:HAS_SYSTEM]->(s:System)-[:HAS_COMPONENT]->(c:Component)
+    WITH a, s, c ORDER BY s.name, c.name
+    WITH a, s, collect(c.name) AS comps ORDER BY s.name
+    WITH a, collect({system: s.name, components: comps}) AS systems
+    RETURN a.tail_number AS tail, a.model AS model, systems
+    LIMIT 1
+
+  Aircraft N95040A (B737-800)
+  ├── CFM56-7B #1
+  │   ├── Compressor Stage
+  │   ├── Fan Module
+  │   ├── High-Pressure Turbine
+  │   ├── Main Fuel Pump
+  │   └── Thrust Bearing
+  ├── CFM56-7B #2
+  │   ├── Compressor Stage
+  │   ├── Fan Module
+  │   ├── High-Pressure Turbine
+  │   ├── Main Fuel Pump
+  │   └── Thrust Bearing
+  ├── Generic Avionics Suite
+  │   ├── Air Data Computer
+  │   ├── Flight Management System
+  │   └── Navigation Receiver
+  └── Main Hydraulic System
+      ├── Flap Actuator
+      ├── Hydraulic Reservoir
+      └── Main Pump
+
+
+======================================================================
+  3. Flight Operations — Top Routes
+======================================================================
+
+  Most frequent routes by flight count.
+
+  Cypher:
+    MATCH (f:Flight)-[:DEPARTS_FROM]->(dep:Airport),
+          (f)-[:ARRIVES_AT]->(arr:Airport)
+    WITH dep.iata AS origin, arr.iata AS dest, count(f) AS flights
+    RETURN origin, dest, flights
+    ORDER BY flights DESC
+    LIMIT $limit
+
+  Origin   Dest   Flights 
+  ───────  ─────  ────────
+  JFK      PHX    14      
+  LAX      ATL    13      
+  ORD      SEA    13      
+  PHX      ORD    13      
+  BOS      DFW    11      
+  MSP      MIA    11      
+  JFK      SEA    10      
+  ORD      DFW    10      
+  PHX      SEA    10      
+  SEA      DFW    10      
+
+
+======================================================================
+  4. Maintenance Events
+======================================================================
+
+  Recent maintenance events with fault codes and affected systems.
+
+  Cypher:
+    MATCH (me:MaintenanceEvent)-[:AFFECTS_AIRCRAFT]->(a:Aircraft)
+    OPTIONAL MATCH (me)-[:AFFECTS_SYSTEM]->(s:System)
+    RETURN a.tail_number AS aircraft, me.event_id AS event,
+           me.reported_at AS date, me.severity AS severity, me.fault AS fault,
+           s.name AS system
+    ORDER BY me.reported_at DESC
+    LIMIT $limit
+
+  Aircraft   Event ID   Date         Severity   Fault                  System                 
+  ─────────  ─────────  ───────────  ─────────  ─────────────────────  ───────────────────────
+  N46224T    ME0248     2024-09-28   MAJOR      Sensor drift           Main Hydraulic System  
+  N81338F    ME0255     2024-09-28   MAJOR      Electrical fault       V2500 #1               
+  N13211H    ME0035     2024-09-28   CRITICAL   Vibration exceedance   GE CF34-10E #1         
+  N37272D    ME0045     2024-09-28   MINOR      Contamination          GE CF34-10E #2         
+  N30268B    ME0077     2024-09-27   MAJOR      Bearing wear           V2500 #2               
+  N54980C    ME0256     2024-09-27   CRITICAL   Fuel starvation        Generic Avionics Suite 
+  N32276J    ME0245     2024-09-26   CRITICAL   Overheat               V2500 #2               
+  N95040A    ME0047     2024-09-26   CRITICAL   Contamination          Main Hydraulic System  
+  N15332P    ME0202     2024-09-26   MINOR      Sensor drift           Main Hydraulic System  
+  N65164O    ME0294     2024-09-26   MAJOR      Leak                   Main Hydraulic System  
+
+
+======================================================================
+  5. Sensors
+======================================================================
+
+  Sensors installed across the fleet with their type and unit.
+
+  Cypher:
+    MATCH (a:Aircraft)-[:HAS_SYSTEM]->(sys:System)-[:HAS_SENSOR]->(s:Sensor)
+    RETURN a.tail_number AS aircraft, sys.name AS system,
+           s.sensor_id AS sensor, s.type AS type, s.unit AS unit
+    ORDER BY a.tail_number, sys.name
+    LIMIT $limit
+
+  Aircraft   System           Sensor ID         Type        Unit 
+  ─────────  ───────────────  ────────────────  ──────────  ─────
+  N13211H    GE CF34-10E #1   AC1008-S01-SN01   EGT         C    
+  N13211H    GE CF34-10E #1   AC1008-S01-SN02   Vibration   ips  
+  N13211H    GE CF34-10E #1   AC1008-S01-SN03   N1Speed     rpm  
+  N13211H    GE CF34-10E #1   AC1008-S01-SN04   FuelFlow    kg/s 
+  N13211H    GE CF34-10E #2   AC1008-S02-SN01   EGT         C    
+  N13211H    GE CF34-10E #2   AC1008-S02-SN02   Vibration   ips  
+  N13211H    GE CF34-10E #2   AC1008-S02-SN03   N1Speed     rpm  
+  N13211H    GE CF34-10E #2   AC1008-S02-SN04   FuelFlow    kg/s 
+  N15332P    GE CF34-10E #1   AC1016-S01-SN01   EGT         C    
+  N15332P    GE CF34-10E #1   AC1016-S01-SN02   Vibration   ips  
+
+
+======================================================================
+  6. Document-Chunk Structure
+======================================================================
+
+  Maintenance manuals loaded as Document → Chunk graphs with embedding stats.
+
+  Cypher:
+    MATCH (d:Document)
+    OPTIONAL MATCH (d)<-[:FROM_DOCUMENT]-(c:Chunk)
+    WITH d, count(c) AS chunks,
+         sum(CASE WHEN c.embedding IS NOT NULL THEN 1 ELSE 0 END) AS embedded
+    RETURN d.documentId AS doc_id, d.aircraftType AS aircraft,
+           d.title AS title, chunks, embedded
+    ORDER BY d.documentId
+
+  Document ID            Aircraft   Chunks   Embedded 
+  ─────────────────────  ─────────  ───────  ─────────
+  AMM-A320-2024-001      A320-200   43       43       
+  AMM-A321neo-2024-001   A321neo    58       58       
+  AMM-B737-2024-001      B737-800   53       53       
+
+  Chunk chain (first 10):
+
+  Cypher:
+    MATCH (c:Chunk)-[:FROM_DOCUMENT]->(d:Document)
+    WITH d, c ORDER BY d.documentId, c.index
+    WITH d, c LIMIT $limit
+    OPTIONAL MATCH (c)-[:NEXT_CHUNK]->(next:Chunk)
+    RETURN d.documentId AS doc, c.index AS idx,
+           substring(c.text, 0, 60) AS preview,
+           next.index AS next_idx
+
+    Chunk   0 │ # A320-200 Maintenance and Troubleshooting Manual
+
+**Documen… → Chunk 1
+    Chunk   1 │ revision of Airbus AMM documentation for authoritative guida… → Chunk 2
+    Chunk   2 │ Parameter | Value |
+|-----------|-------|
+| Aircraft Type | … → Chunk 3
+    Chunk   3 │ | AC1006 | N81338F | 53f91d | July 2019 |
+| AC1010 | N32276J… → Chunk 4
+    Chunk   4 │ monitored system groups:
+
+```
+AIRCRAFT (A320-200)
+│
+├── ENGI… → Chunk 5
+    Chunk   5 │ The A320-200 is powered by two International Aero Engines (I… → Chunk 6
+    Chunk   6 │ fleet, with the most common issues being overheat conditions… → Chunk 7
+    Chunk   7 │ integrates VOR, ILS localizer, glideslope, and marker beacon… → Chunk 8
+    Chunk   8 │ systems designated Green, Blue, and Yellow, each operating a… → Chunk 9
+    Chunk   9 │ Power)
+
+### 2.2 Engine Health Monitoring
+
+Each V2500 engine … → Chunk 10
+
+
+======================================================================
+  7. Extracted Entities
+======================================================================
+
+  Entity types extracted from maintenance manuals via SimpleKGPipeline.
+
+  Cypher:
+    UNWIND $labels AS label
+    CALL (label) {
+        MATCH (n) WHERE label IN labels(n)
+        RETURN n.name AS name
+        LIMIT $limit
+    }
+    RETURN label AS entity_type, collect(name) AS samples
+
+  OperatingLimit:
+    • IAE V2500-A1 Engine Limits - A320-200
+    • Hydraulic Power - A320-200
+    • Navigation - A320-200
+    • Powerplant - A320-200
+    • Engine - A320-200
+    • Engine Fuel and Control - A320-200
+    • Engine Indicating - A320-200
+    • EGT - A320-200
+
+
+======================================================================
+  8. Cross-Links: Knowledge Graph ↔ Operational Graph
+======================================================================
+
+  Relationships connecting extracted entities to the operational aircraft graph.
+
+  Document → Aircraft:
+  Cypher:
+    MATCH (d:Document)-[:APPLIES_TO]->(a:Aircraft)
+    RETURN d.title AS source, a.tail_number AS target
+    LIMIT $limit
+
+  Document                                          Aircraft 
+  ────────────────────────────────────────────────  ─────────
+  A320-200 Maintenance and Troubleshooting Manual   N30268B  
+  A320-200 Maintenance and Troubleshooting Manual   N81338F  
+  A320-200 Maintenance and Troubleshooting Manual   N32276J  
+  A320-200 Maintenance and Troubleshooting Manual   N76758N  
+  A320-200 Maintenance and Troubleshooting Manual   N63098R  
+  A321neo Maintenance and Troubleshooting Manual    N54980C  
+  A321neo Maintenance and Troubleshooting Manual    N86057G  
+  A321neo Maintenance and Troubleshooting Manual    N89365K  
+  A321neo Maintenance and Troubleshooting Manual    N65164O  
+  A321neo Maintenance and Troubleshooting Manual    N96107S  
+
+  Sensor → OperatingLimit:
+  Cypher:
+    MATCH (s:Sensor)-[:HAS_LIMIT]->(ol:OperatingLimit)
+    RETURN s.sensor_id AS source, ol.name AS target
+    LIMIT $limit
+
+  Sensor            OperatingLimit       
+  ────────────────  ─────────────────────
+  AC1001-S01-SN01   EGT - B737-800       
+  AC1001-S01-SN02   Vibration - B737-800 
+  AC1001-S01-SN03   N1Speed - B737-800   
+  AC1001-S01-SN04   FuelFlow - B737-800  
+  AC1001-S02-SN01   EGT - B737-800       
+  AC1001-S02-SN02   Vibration - B737-800 
+  AC1001-S02-SN03   N1Speed - B737-800   
+  AC1001-S02-SN04   FuelFlow - B737-800  
+  AC1002-S01-SN01   EGT - A320-200       
+  AC1002-S01-SN02   Vibration - A320-200 
+
+  Provenance (OperatingLimit → Chunk → Document → Aircraft):
+  Cypher:
+    MATCH (ol:OperatingLimit)-[:FROM_CHUNK]->(c:Chunk)-[:FROM_DOCUMENT]->(d:Document)
+          -[:APPLIES_TO]->(a:Aircraft)
+    RETURN ol.name AS source, substring(c.text, 0, 60) AS chunk,
+           a.tail_number AS target
+    LIMIT $limit
+
+  OperatingLimit                          Source Chunk                                        Aircraft 
+  ──────────────────────────────────────  ──────────────────────────────────────────────────  ─────────
+  IAE V2500-A1 Engine Limits - A320-200   # A320-200 Maintenance and Troubleshooting Manual…  N30268B  
+  —                                       revision of Airbus AMM documentation for authorit…  N30268B  
+  Hydraulic Power - A320-200              | AC1006 | N81338F | 53f91d | July 2019 |
+| AC101…  N30268B  
+  Navigation - A320-200                   | AC1006 | N81338F | 53f91d | July 2019 |
+| AC101…  N30268B  
+  Powerplant - A320-200                   | AC1006 | N81338F | 53f91d | July 2019 |
+| AC101…  N30268B  
+  Engine - A320-200                       | AC1006 | N81338F | 53f91d | July 2019 |
+| AC101…  N30268B  
+  Engine Fuel and Control - A320-200      | AC1006 | N81338F | 53f91d | July 2019 |
+| AC101…  N30268B  
+  Engine Indicating - A320-200            | AC1006 | N81338F | 53f91d | July 2019 |
+| AC101…  N30268B  
+  —                                       monitored system groups:
+
+```
+AIRCRAFT (A320-200)…  N30268B  
+  EGT - A320-200                          The A320-200 is powered by two International Aero…  N30268B  
+
+
+======================================================================
+  9. Vector Similarity Search
+======================================================================
+
+  Picks a random chunk and finds the most similar chunks using the
+  vector index (reuses stored embeddings — no API key needed).
+
+  Cypher:
+    MATCH (seed:Chunk)
+    WHERE seed.embedding IS NOT NULL
+    WITH seed, rand() AS r ORDER BY r LIMIT 1
+    CALL db.index.vector.queryNodes(
+        'maintenanceChunkEmbeddings', $top_k, seed.embedding
+    ) YIELD node, score
+    WHERE node <> seed
+    WITH seed, node, score ORDER BY score DESC LIMIT $limit
+    RETURN substring(seed.text, 0, 100) AS seed_text,
+           score AS similarity,
+           substring(node.text, 0, 100) AS match_text
+
+  Seed: "
+```
+
+---
+
+## 9. Scheduled Maintenance Tasks
+
+### 9.1 Engine Inspection Schedule
+
+| Task | Interval …"
+
+  Score     Similar chunk
+  ────────  ────────────────────────────────────────────────────────
+  0.9565                 └─► END: Sensor verification
+```
+
+---
+
+## 9. Scheduled Maintenance Tasks
+
+### 9.1 Engin…
+  0.9297    t |
+| Fuel filter replacement | 1,200 FH | 1.5 hr | 1 mechanic |
+| Engine mount inspection | A-check…
+  0.9239    blockage or multiple failures
+              Do not dispatch
+              └─► END: Extensive trouble…
+  0.9193     1 mechanic |
+| EMU data download | Weekly | 0.5 hr | 1 technician |
+
+### 9.2 Avionics Inspection Sc…
+  0.9005    Matrix cracking visible: Engineering review
+│   │   └─► Delamination suspected: Blade replacement
+│ …
+  0.8943    ion Schedule
+
+| Task | Interval | Duration | Personnel |
+|------|----------|----------|-----------|
+…
+  0.8675    ion Schedule
+
+| Task | Interval | Duration | Personnel |
+|------|----------|----------|-----------|
+…
+  0.8640    l check | Daily | 0.25 hr | 1 mechanic |
+| Fluid sampling | 600 FH | 0.5 hr | 1 mechanic |
+| System …
+  0.8478    A-check | 2.0 hr | 1 mechanic |
+| Actuator rigging check | C-check | 4.0 hr | 2 mechanics |
+| System…
+  0.8418    Engineering Support | engineering@regionalco.com | 24/7 |
+| Parts Supply | parts@regionalco.com | 24…
+
+######################################################################
+  All samples complete.
+######################################################################
+

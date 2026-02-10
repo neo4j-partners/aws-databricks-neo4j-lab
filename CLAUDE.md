@@ -10,8 +10,8 @@ This is a hands-on workshop teaching AI agents and GraphRAG using Neo4j, AWS, an
 
 - **Phase 1 (Labs 0-1)**: Environment setup — AWS console sign-in, Neo4j Aura database creation, backup restore
 - **Phase 2 (Lab 4)**: AWS AgentCore — Explore pre-deployed multi-agent orchestrator with Neo4j MCP
-- **Phase 3 (Labs 5-6)**: Databricks ETL + Semantic Search — Load Aircraft Digital Twin to Neo4j, add embeddings and GraphRAG retrievers
-- **Phase 4 (Lab 7)**: Databricks AgentBricks — Multi-agent supervisor combining Genie Space + Neo4j MCP
+- **Phase 3 (Labs 5-6)**: Databricks ETL + Multi-Agent Analytics — Load Aircraft Digital Twin to Neo4j, build multi-agent supervisor with Genie Space + Neo4j MCP
+- **Phase 4 (Lab 7)**: Semantic Search / GraphRAG — Add embeddings and GraphRAG retrievers
 - **Phase 5 (Lab 8)**: Neo4j Aura Agents — No-code agent with Cypher Templates and Text2Cypher
 
 ## Key Configuration
@@ -46,8 +46,17 @@ Two notebooks:
 
 Data is read from Unity Catalog Volume: `/Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/`
 
-### Lab 6 - Semantic Search / GraphRAG
-Location: `Lab_6_Semantic_Search/`
+### Lab 6 - AgentBricks
+Location: `Lab_6_AgentBricks/`
+
+Documentation-only lab (no notebooks):
+- `PART_A.md`: Create Genie Space for aircraft sensor analytics over Unity Catalog tables
+- `PART_B.md`: Create Multi-Agent Supervisor combining Genie Space + Neo4j MCP agent
+
+Data sources: `aws-databricks-neo4j-lab.lakehouse` (sensor tables) and Neo4j MCP connection
+
+### Lab 7 - Semantic Search / GraphRAG
+Location: `Lab_7_Semantic_Search/`
 
 Three notebooks + utility module:
 - `03_data_and_embeddings.ipynb`: Loads A320-200 Maintenance Manual, creates Document/Chunk nodes, generates embeddings, creates vector + fulltext indexes
@@ -65,15 +74,6 @@ Graph structure for chunked documents:
 ```
 (:Document) <-[:FROM_DOCUMENT]- (:Chunk) -[:NEXT_CHUNK]-> (:Chunk)
 ```
-
-### Lab 7 - AgentBricks
-Location: `Lab_7_AgentBricks/`
-
-Documentation-only lab (no notebooks):
-- `PART_A.md`: Create Genie Space for aircraft sensor analytics over Unity Catalog tables
-- `PART_B.md`: Create Multi-Agent Supervisor combining Genie Space + Neo4j MCP agent
-
-Data sources: `aws-databricks-neo4j-lab.lakehouse` (sensor tables) and Neo4j MCP connection
 
 ### Lab 8 - Aura Agents
 Location: `Lab_8_Aura_Agents/`

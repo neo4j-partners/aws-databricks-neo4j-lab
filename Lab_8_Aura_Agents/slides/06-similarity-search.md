@@ -1,4 +1,4 @@
-# Similarity Search Tool (Optional)
+# Similarity Search Tool
 
 ## Semantic Content Discovery
 
@@ -8,30 +8,30 @@ Similarity search finds content by **meaning**, not keywords.
 
 ```
 User Question: "How do I troubleshoot engine vibration?"
-    ↓
-Question → Embedding (vector)
-    ↓
-Find chunks with similar embeddings
-    ↓
+    |
+Question -> Embedding (OpenAI text-embedding-3-small)
+    |
+Find chunks with similar embeddings (vector index)
+    |
 Return semantically relevant maintenance procedures
 ```
 
 ## Configuration
 
-| Setting | Purpose |
-|---------|---------|
-| **Embedding Provider** | Must match embeddings in the index |
-| **Vector Index** | maintenanceChunkEmbeddings |
-| **Top K** | Number of results (e.g., 5) |
+| Setting | Value |
+|---------|-------|
+| **Embedding Provider** | OpenAI (same key used during `enrich`) |
+| **Vector Index** | `maintenanceChunkEmbeddings` on Chunk.embedding |
+| **Top K** | 5 results |
 
 ## Best For
 
-- "How do I troubleshoot...?"
-- "What are the limits for...?"
-- Procedural and specification questions
+- "How do I troubleshoot engine vibration?"
+- "What are the EGT limits during takeoff?"
+- "What is the engine inspection schedule?"
 
-> **Note:** Requires a compatible embedding provider. See the README for details.
+The graph contains ~154 embedded chunks from three maintenance manuals (A320-200, A321neo, B737-800).
 
 ---
 
-[← Previous](05-cypher-templates.md) | [Next: Text2Cypher →](07-text2cypher.md)
+[<- Previous](05-cypher-templates.md) | [Next: Text2Cypher ->](07-text2cypher.md)

@@ -2,30 +2,31 @@
 
 ## Step 3: Add Cypher Template Tools
 
-**Tool 1: get_aircraft_overview**
+**Tool 1: get_aircraft_overview** — Aircraft info, systems, maintenance events
 ```cypher
 MATCH (a:Aircraft {tail_number: $tail_number})
 OPTIONAL MATCH (a)-[:HAS_SYSTEM]->(s:System)
 OPTIONAL MATCH (s)-[:HAS_COMPONENT]->(c:Component)-[:HAS_EVENT]->(m:MaintenanceEvent)
-RETURN a.tail_number, a.model, a.operator,
-       collect(DISTINCT s.name) AS systems,
-       collect(DISTINCT {fault: m.fault, severity: m.severity})[0..10] AS events
+OPTIONAL MATCH (a)-[:OPERATES_FLIGHT]->(f:Flight)
+RETURN a.tail_number, a.model, a.manufacturer,
+       collect(DISTINCT s.name) AS systems, count(DISTINCT f) AS flights
 ```
 
-**Tool 2: find_shared_faults**
+**Tool 2: get_sensor_limits** — Operating limits from maintenance manuals
 ```cypher
-MATCH (a1:Aircraft {tail_number: $tail1})-[:HAS_SYSTEM]->()-[:HAS_COMPONENT]->()
-      -[:HAS_EVENT]->(m1:MaintenanceEvent),
-      (a2:Aircraft {tail_number: $tail2})-[:HAS_SYSTEM]->()-[:HAS_COMPONENT]->()
-      -[:HAS_EVENT]->(m2:MaintenanceEvent)
-WHERE m1.fault = m2.fault
-RETURN collect(DISTINCT m1.fault) AS shared_faults
+MATCH (a:Aircraft {tail_number: $tail_number})-[:HAS_SYSTEM]->(sys:System)
+      -[:HAS_SENSOR]->(s:Sensor)-[:HAS_LIMIT]->(ol:OperatingLimit)
+RETURN sys.name AS system, s.type AS sensor_type,
+       ol.name AS limit, ol.minValue AS min, ol.maxValue AS max
 ```
 
-## Step 4: Add Text2Cypher
+**Tool 3: find_shared_faults** — Faults two aircraft share
 
-For flexible, ad-hoc queries about aircraft, flights, delays, and more.
+## Step 4: Add Text2Cypher + Similarity Search
+
+- **Text2Cypher** for ad-hoc queries across the full graph
+- **Similarity Search** over maintenance manual chunks (OpenAI embeddings)
 
 ---
 
-[← Previous](08-lab-steps.md) | [Next: Testing Your Agent →](10-testing.md)
+[<- Previous](08-lab-steps.md) | [Next: Testing Your Agent ->](10-testing.md)

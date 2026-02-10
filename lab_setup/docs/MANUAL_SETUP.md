@@ -164,12 +164,12 @@ databricks fs cp lab_setup/aircraft_digital_twin_data/rels_flight_arrival.csv   
 databricks fs cp lab_setup/aircraft_digital_twin_data/rels_flight_delay.csv       "${VOLUME_PATH}/rels_flight_delay.csv" --overwrite
 databricks fs cp lab_setup/aircraft_digital_twin_data/rels_flight_departure.csv   "${VOLUME_PATH}/rels_flight_departure.csv" --overwrite
 
-# Lab 6 - Maintenance manuals
+# Lab 7 - Maintenance manuals
 databricks fs cp lab_setup/aircraft_digital_twin_data/MAINTENANCE_A320.md    "${VOLUME_PATH}/MAINTENANCE_A320.md" --overwrite
 databricks fs cp lab_setup/aircraft_digital_twin_data/MAINTENANCE_A321neo.md "${VOLUME_PATH}/MAINTENANCE_A321neo.md" --overwrite
 databricks fs cp lab_setup/aircraft_digital_twin_data/MAINTENANCE_B737.md    "${VOLUME_PATH}/MAINTENANCE_B737.md" --overwrite
 
-# Lab 7 - Sensor data
+# Lab 6 - Sensor data
 databricks fs cp lab_setup/aircraft_digital_twin_data/nodes_sensors.csv     "${VOLUME_PATH}/nodes_sensors.csv" --overwrite
 databricks fs cp lab_setup/aircraft_digital_twin_data/nodes_readings.csv    "${VOLUME_PATH}/nodes_readings.csv" --overwrite
 databricks fs cp lab_setup/aircraft_digital_twin_data/rels_system_sensor.csv "${VOLUME_PATH}/rels_system_sensor.csv" --overwrite
@@ -206,7 +206,7 @@ The volume should contain 25 files (22 CSV + 3 Markdown):
 ├── nodes_maintenance.csv
 ├── nodes_removals.csv
 │
-│  Nodes (Lab 7 sensors)
+│  Nodes (Lab 6 sensors)
 ├── nodes_sensors.csv
 ├── nodes_readings.csv          (23 MB, 345,600 rows)
 │
@@ -225,10 +225,10 @@ The volume should contain 25 files (22 CSV + 3 Markdown):
 ├── rels_flight_delay.csv
 ├── rels_flight_departure.csv
 │
-│  Relationships (Lab 7)
+│  Relationships (Lab 6)
 ├── rels_system_sensor.csv
 │
-│  Maintenance Manuals (Lab 6)
+│  Maintenance Manuals (Lab 7)
 ├── MAINTENANCE_A320.md
 ├── MAINTENANCE_A321neo.md
 └── MAINTENANCE_B737.md
@@ -238,7 +238,7 @@ The volume should contain 25 files (22 CSV + 3 Markdown):
 
 ## Step 5: Create Lakehouse Tables
 
-Create the Delta Lake tables needed for Databricks Genie (Lab 7) using the Python CLI:
+Create the Delta Lake tables needed for Databricks Genie (Lab 6) using the Python CLI:
 
 ```bash
 cd lab_setup/auto_scripts
@@ -293,7 +293,7 @@ The `aircraft_digital_twin_data/` directory contains:
 | `rels_flight_delay.csv` | 14 KB | ~300 | Flight-Delay links |
 | `rels_flight_departure.csv` | 20 KB | ~800 | Flight-Airport departures |
 
-**Sensor data (Lab 7):**
+**Sensor data (Lab 6):**
 
 | File | Size | Records | Description |
 |------|------|---------|-------------|
@@ -301,17 +301,17 @@ The `aircraft_digital_twin_data/` directory contains:
 | `nodes_readings.csv` | 23 MB | 345,600 | Hourly sensor readings (90 days) |
 | `rels_system_sensor.csv` | 6 KB | 160 | System-Sensor links |
 
-### Lab 6 - Maintenance Manuals
+### Lab 7 - Maintenance Manuals
 
-| File | Size | Description | Required for Lab 6 |
+| File | Size | Description | Required for Lab 7 |
 |------|------|-------------|-------------------|
 | `MAINTENANCE_A320.md` | ~30 KB | A320-200 Maintenance and Troubleshooting Manual | Yes (used in notebooks) |
 | `MAINTENANCE_A321neo.md` | ~41 KB | A321neo Maintenance and Troubleshooting Manual | Optional |
 | `MAINTENANCE_B737.md` | ~37 KB | B737-800 Maintenance and Troubleshooting Manual | Optional |
 
-**Note:** The Lab 6 notebooks use the A320-200 manual by default. The additional manuals (A321neo, B737) cover other aircraft models in the fleet and can be used for extended exercises or additional semantic search content.
+**Note:** The Lab 7 notebooks use the A320-200 manual by default. The additional manuals (A321neo, B737) cover other aircraft models in the fleet and can be used for extended exercises or additional semantic search content.
 
-### Lab 7 - Sensor Data Details
+### Lab 6 - Sensor Data Details
 
 The sensor data covers **90 days** of hourly readings (July 1 - September 29, 2024):
 

@@ -48,9 +48,9 @@ If you are **running this on your own** or are a **lab administrator** preparing
 
 ### Neo4j Instances
 
-Each participant receives their own **personal Neo4j Aura instance** for hands-on work — loading data via the Spark Connector (Lab 5), building vector indexes (Lab 6), and exploring the graph in the Aura console (Lab 8). Depending on how far you get in Lab 5, your personal instance may contain a subset of the full dataset.
+Each participant receives their own **personal Neo4j Aura instance** for hands-on work — loading data via the Spark Connector (Lab 5), building vector indexes (Lab 7), and exploring the graph in the Aura console (Lab 8). Depending on how far you get in Lab 5, your personal instance may contain a subset of the full dataset.
 
-In addition, the workshop administrators have set up a **shared Neo4j Aura instance** that contains the **complete Aircraft Digital Twin dataset** (all nodes, relationships, and indexes). A Neo4j MCP server has been pre-configured against this shared instance. Labs that use the MCP server — such as the AgentBricks multi-agent supervisor (Lab 7) and the AWS AgentCore agent (Lab 4) — connect to the shared instance so that every participant works with the full graph regardless of their personal instance's state.
+In addition, the workshop administrators have set up a **shared Neo4j Aura instance** that contains the **complete Aircraft Digital Twin dataset** (all nodes, relationships, and indexes). A Neo4j MCP server has been pre-configured against this shared instance. Labs that use the MCP server — such as the AgentBricks multi-agent supervisor (Lab 6) and the AWS AgentCore agent (Lab 4) — connect to the shared instance so that every participant works with the full graph regardless of their personal instance's state.
 
 ---
 
@@ -87,13 +87,13 @@ In addition, the workshop administrators have set up a **shared Neo4j Aura insta
 
 ---
 
-### Phase 3: Building a GraphRAG Pipeline with Databricks and Neo4j (90 min)
+### Phase 3: Databricks ETL & Multi-Agent Analytics (90 min)
 
-*Build a complete GraphRAG pipeline — from raw CSV data and maintenance documentation to a knowledge graph with semantic search capabilities.*
+*Load aircraft data into Neo4j and build a multi-agent supervisor that combines the Databricks Lakehouse with the Neo4j knowledge graph — two purpose-built systems for two fundamentally different types of data.*
 
-In this phase you'll construct a knowledge graph in Neo4j and layer semantic search on top of it. First, you'll use the Neo4j Spark Connector and Python driver to load structured aircraft data (fleet inventory, systems, flights, maintenance events) into a graph. Then you'll add unstructured data by chunking the A320-200 Maintenance Manual, generating vector embeddings with Databricks Foundation Model APIs, and creating a vector index in Neo4j. Finally, you'll query this combined graph using GraphRAG retrievers that blend vector similarity search with graph traversal — connecting maintenance procedures back to the aircraft topology.
+In this phase you'll construct a knowledge graph in Neo4j using the Spark Connector and Python driver, then build a multi-agent system that intelligently routes questions to either Databricks Genie (for sensor time-series analytics) or Neo4j MCP (for graph relationship queries).
 
-**Participant Experience:** Pre-configured environment with CSV files and maintenance documentation in Unity Catalog Volume and ready-to-run notebooks.
+**Participant Experience:** Pre-configured environment with CSV files in Unity Catalog Volume and ready-to-run notebooks.
 
 #### Part A: Databricks Workspace Access
 - Workspace credentials and cluster access
@@ -105,23 +105,8 @@ In this phase you'll construct a knowledge graph in Neo4j and layer semantic sea
 - Load full dataset (Sensors, Airports, Flights, Delays, Maintenance Events, Removals) via Python driver
 - Validate with Cypher queries and explore in Neo4j Aura
 
-#### Part C: Semantic Search & GraphRAG
-- [Lab 6 - Semantic Search](Lab_6_Semantic_Search/README.md)
-- Load the A320-200 Maintenance Manual into Neo4j as Document/Chunk nodes
-- Generate embeddings using Databricks Foundation Model APIs
-- Create a vector index for similarity search
-- Build GraphRAG retrievers combining vector search with graph traversal
-- Compare standard vector retrieval vs. graph-enhanced retrieval results
-
-**Data Location:** `/Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/`
-
----
-
-### Phase 4: Multi-Agent Aircraft Analytics with AgentBricks (75 min)
-
-*Create an AI/BI Genie space for sensor analytics and build a multi-agent supervisor that combines the Databricks Lakehouse with the Neo4j knowledge graph — two purpose-built systems for two fundamentally different types of data.*
-
-- [Lab 7 - AgentBricks](Lab_7_AgentBricks/README.md) - No-code multi-agent system using Databricks AgentBricks
+#### Part C: Multi-Agent Aircraft Analytics with AgentBricks
+- [Lab 6 - AgentBricks](Lab_6_AgentBricks/README.md) - No-code multi-agent system using Databricks AgentBricks
 
 **Why two data sources?** Aircraft intelligence requires both **time-series telemetry** and **rich relational data**, and each is best served by a purpose-built platform:
 
@@ -130,13 +115,13 @@ In this phase you'll construct a knowledge graph in Neo4j and layer semantic sea
 
 The **multi-agent supervisor** routes each question to the right system and, for complex questions spanning both, queries each sequentially and synthesizes a combined answer.
 
-#### Part A: Genie Space for Sensor Analytics (~30 min)
+#### Part C.1: Genie Space for Sensor Analytics (~30 min)
 - Create an AI/BI Genie space over sensor telemetry tables in Unity Catalog
 - Connect data sources: `sensor_readings`, `sensors`, `systems`, `aircraft`
 - Add sample questions and domain-specific instructions (sensor types, normal ranges, fleet info)
 - Test natural language to SQL queries for time-series aggregations and anomaly detection
 
-#### Part B: Multi-Agent Supervisor (~45 min)
+#### Part C.2: Multi-Agent Supervisor (~45 min)
 - Build a supervisor agent that coordinates two specialized sub-agents
 - Add the **Neo4j MCP agent** for graph relationship queries (topology, maintenance, flights)
 - Add the **Genie space agent** for time-series sensor analytics (readings, trends, fleet comparisons)
@@ -171,6 +156,21 @@ Multi-Agent Supervisor
 **Routing Examples:**
 - **Genie Agent:** Time-series aggregations, sensor anomaly detection, fleet comparisons, trend analysis
 - **Neo4j Agent:** Aircraft topology, component hierarchy, maintenance events, flight operations, delays
+
+**Data Location:** `/Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/`
+
+---
+
+### Phase 4: Semantic Search & GraphRAG (75 min)
+
+*Add semantic search capabilities to the knowledge graph — chunk maintenance documentation, generate vector embeddings, and build GraphRAG retrievers that blend similarity search with graph traversal.*
+
+- [Lab 7 - Semantic Search](Lab_7_Semantic_Search/README.md)
+- Load the A320-200 Maintenance Manual into Neo4j as Document/Chunk nodes
+- Generate embeddings using Databricks Foundation Model APIs
+- Create a vector index for similarity search
+- Build GraphRAG retrievers combining vector search with graph traversal
+- Compare standard vector retrieval vs. graph-enhanced retrieval results
 
 ---
 
@@ -298,8 +298,8 @@ LIMIT 10
 | Track | Labs | Duration | Description |
 |-------|------|----------|-------------|
 | **Console Tour Only** | Phases 1-2 | 2 hours | Explore AWS and Neo4j consoles without coding |
-| **ETL Focus** | Phases 1-3 | 2.5 hours | Learn Spark Connector and graph data modeling |
-| **Multi-Agent Focus** | Phases 1, 3-4 | 3 hours | Build AI agents with Databricks AgentBricks |
+| **ETL + Multi-Agent** | Phases 1-3 | 2.5 hours | Load data and build multi-agent systems with AgentBricks |
+| **Full Databricks** | Phases 1-4 | 3 hours | ETL, multi-agent analytics, and semantic search |
 | **Full Workshop** | All Phases | 4 hours | Complete hands-on experience |
 
 ---

@@ -19,7 +19,7 @@ Complete these steps before the workshop begins:
 - [ ] Create `aircraft_workshop_group` at the account level and add it to the workspace (Step 1.5)
 - [ ] Run `databricks-setup setup` to upload data, create tables, and lock down permissions (Step 2)
 - [ ] Add participant emails to `lab_setup/users.csv` and run `databricks-setup add-users` (Step 3)
-- [ ] Configure Databricks Genie Space (Lab 7)
+- [ ] Configure Databricks Genie Space (Lab 6)
 - [ ] Test the complete workflow
 - [ ] Document connection details for participants
 
@@ -293,7 +293,7 @@ Create a handout or slide with:
 |----------|-------|
 | Databricks Workspace URL | `https://your-workspace.cloud.databricks.com` |
 | Data Volume Path | `/Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/` |
-| Genie Space ID | `{your-genie-space-id}` (for Lab 7) |
+| Genie Space ID | `{your-genie-space-id}` (for Lab 6) |
 
 ### Quick Start Instructions
 
@@ -406,7 +406,7 @@ For the full file inventory with sizes, record counts, and sensor data details, 
 
 The setup CLI uploads **25 files** to the Volume:
 - **22 CSV files** from `aircraft_digital_twin_data/` (nodes and relationships for Labs 5 and 7)
-- **3 Markdown files** (maintenance manuals for Lab 6: A320, A321neo, B737)
+- **3 Markdown files** (maintenance manuals for Lab 7: A320, A321neo, B737)
 
 ---
 

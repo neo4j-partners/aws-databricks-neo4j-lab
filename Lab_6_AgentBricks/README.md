@@ -1,4 +1,4 @@
-# Lab 7 - Multi-Agent Aircraft Analytics with AgentBricks
+# Lab 6 - Multi-Agent Aircraft Analytics with AgentBricks
 
 In this lab, you'll build a multi-agent system using Databricks AgentBricks that combines **Genie** (for sensor time-series analytics) with **Neo4j MCP** (for graph relationship queries). This enables natural language questions that span both structured telemetry data and complex relationship traversals.
 
@@ -76,7 +76,7 @@ These tables should already be loaded from Lab 5 setup:
 
 ### Neo4j Knowledge Graph (Relationships)
 
-From Lab 5 (both notebooks) and Lab 6, your graph contains:
+From Lab 5 (both notebooks), your graph contains:
 
 | Node Type | Count | Purpose |
 |-----------|-------|---------|
@@ -173,10 +173,10 @@ The multi-agent approach lets users ask questions in natural language without kn
 
 ## Next Steps
 
-Continue to [Lab 8 - Aura Agents](../Lab_8_Aura_Agents) to build a no-code conversational agent using the Neo4j Aura Agents console.
+Continue to [Lab 7 - Semantic Search](../Lab_7_Semantic_Search) to add GraphRAG capabilities over maintenance documentation.
 
 After completing the workshop, you can:
-- Add more sub-agents (e.g., documentation search from Lab 6)
+- Add more sub-agents (e.g., documentation search from Lab 7)
 - Create custom tools for specific maintenance workflows
 - Deploy the agent as a production service
 - Integrate with external systems via additional MCP servers

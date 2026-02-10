@@ -1,122 +1,22 @@
 # Lab 8: Neo4j Aura Exploration & Aura Agents
 
-In this lab, you'll explore the aircraft digital twin knowledge graph directly in Neo4j Aura, then build an AI-powered agent using Aura Agents — all without writing any code.
+In this lab, you'll explore the Aircraft Digital Twin knowledge graph directly in Neo4j Aura, then build an AI-powered agent using Aura Agents — all without writing any code.
 
 ## Prerequisites
 
-- Completed **Lab 5** (Databricks ETL) — both notebooks to load the full aircraft graph
-- Completed **Lab 6** (Semantic Search) — to add Document/Chunk nodes with embeddings
-- Neo4j Aura credentials from Lab 1 (URI, username, password)
+- Neo4j Aura instance with data loaded via the `populate-aircraft-db` CLI tool:
+  - `load` command — 20 aircraft, 80 systems, 320 components, 320 sensors, 10 airports, 200 flights, delays, maintenance events, and removals
+  - `enrich` command — 3 maintenance manuals chunked with OpenAI embeddings, OperatingLimit entities extracted, and cross-links created
+- Neo4j Aura credentials (URI, username, password)
 
 ---
 
 ## Part A: Data Exploration in Aura
 
-Open [console.neo4j.io](https://console.neo4j.io), sign in, select your instance, and click **Query** to open the query interface. Use the queries below to explore the aircraft digital twin graph you built in Labs 5 and 6.
+Before building the agent, explore the graph to understand what's available. See **[EXPLORE.md](EXPLORE.md)** for guided Cypher queries covering:
 
-### Aircraft Topology
-
-Expand a single aircraft into its systems, components, and sensors to see the full hierarchy:
-
-```cypher
-// Visualize one aircraft's full hierarchy
-MATCH (a:Aircraft {tail_number: 'N95040A'})-[r1:HAS_SYSTEM]->(s:System)-[r2:HAS_COMPONENT]->(c:Component)
-RETURN a, r1, s, r2, c
-```
-
-```cypher
-// View sensors attached to an aircraft's systems
-MATCH (a:Aircraft {tail_number: 'N95040A'})-[:HAS_SYSTEM]->(s:System)-[:HAS_SENSOR]->(sen:Sensor)
-RETURN a.tail_number, s.name AS system, sen.type AS sensor_type, sen.unit
-```
-
-### Flight Operations
-
-Trace an aircraft's flight routes across the airport network, including delays and their causes:
-
-```cypher
-// Trace flights and delays for an aircraft
-MATCH (a:Aircraft {tail_number: 'N95040A'})-[:OPERATES_FLIGHT]->(f:Flight)
-OPTIONAL MATCH (f)-[:HAS_DELAY]->(d:Delay)
-OPTIONAL MATCH (f)-[:DEPARTS_FROM]->(dep:Airport)
-OPTIONAL MATCH (f)-[:ARRIVES_AT]->(arr:Airport)
-RETURN a, f, d, dep, arr
-```
-
-```cypher
-// Top 10 longest delays and their causes
-MATCH (a:Aircraft)-[:OPERATES_FLIGHT]->(f:Flight)-[:HAS_DELAY]->(d:Delay)
-RETURN a.tail_number, f.flight_number, d.cause, d.minutes
-ORDER BY d.minutes DESC
-LIMIT 10
-```
-
-### Maintenance History
-
-Find components with critical maintenance events and see which systems they affect:
-
-```cypher
-// Find components with critical maintenance events
-MATCH (c:Component)-[:HAS_EVENT]->(m:MaintenanceEvent {severity: 'Critical'})
-RETURN c.name AS component, m.fault AS fault, m.corrective_action AS action
-ORDER BY m.reported_at DESC LIMIT 10
-```
-
-```cypher
-// Full path from aircraft to maintenance event
-MATCH (a:Aircraft)-[:HAS_SYSTEM]->(s:System)-[:HAS_COMPONENT]->(c:Component)
-      -[:HAS_EVENT]->(m:MaintenanceEvent {severity: 'Critical'})
-RETURN a.tail_number, s.name AS system, c.name AS component, m.fault, m.reported_at
-ORDER BY m.reported_at DESC
-```
-
-### Component Removals
-
-Investigate removal records with time-since-new (TSN) and cycles-since-new (CSN) data:
-
-```cypher
-// View component removals with usage data
-MATCH (a:Aircraft)-[:HAS_REMOVAL]->(r:Removal)
-RETURN a.tail_number, r.reason, r.tsn AS time_since_new, r.csn AS cycles_since_new
-ORDER BY r.tsn DESC LIMIT 10
-```
-
-### Cross-Entity Patterns
-
-Discover which aircraft share the same maintenance faults, or which airports see the most delayed flights:
-
-```cypher
-// Aircraft that share the same fault type
-MATCH (a1:Aircraft)-[:HAS_SYSTEM]->()-[:HAS_COMPONENT]->()-[:HAS_EVENT]->(m1:MaintenanceEvent),
-      (a2:Aircraft)-[:HAS_SYSTEM]->()-[:HAS_COMPONENT]->()-[:HAS_EVENT]->(m2:MaintenanceEvent)
-WHERE a1 <> a2 AND m1.fault = m2.fault
-RETURN DISTINCT a1.tail_number, a2.tail_number, m1.fault
-LIMIT 20
-```
-
-```cypher
-// Airports with the most delayed arrivals
-MATCH (f:Flight)-[:HAS_DELAY]->(d:Delay), (f)-[:ARRIVES_AT]->(apt:Airport)
-RETURN apt.iata AS airport, apt.city, count(d) AS delay_count, round(avg(d.minutes), 1) AS avg_delay_minutes
-ORDER BY delay_count DESC
-```
-
-### Fleet Overview
-
-```cypher
-// Fleet summary by manufacturer
-MATCH (a:Aircraft)
-RETURN a.manufacturer AS manufacturer, a.model AS model, count(a) AS count
-ORDER BY count DESC
-```
-
-```cypher
-// Graph statistics — count all node types
-MATCH (n)
-WITH labels(n)[0] AS label
-RETURN label, count(*) AS nodeCount
-ORDER BY nodeCount DESC
-```
+- **Operational graph** — fleet overview, system-component hierarchy, sensors, flights, delays, maintenance events, removals
+- **Enrichment data** — document-chunk structure, OperatingLimit entities, cross-links (Document→Aircraft, Sensor→OperatingLimit, provenance chains)
 
 ---
 
@@ -132,11 +32,11 @@ ORDER BY nodeCount DESC
 
 ## Step 2: Configure Agent Details
 
-Configure your new agent with the following settings. It is critical that you give your agent a unique name so that it does not conflict with other users' agents in the shared environment. If you have an error try another unique name by adding your initials or a number:
+Configure your new agent with the following settings. Give your agent a unique name so it doesn't conflict with other users' agents. If you get an error, try another unique name by adding your initials or a number.
 
-**Unique Agent Name:** `ryans-aircraft-analyst`
+**Unique Agent Name:** `aircraft-analyst` (add your initials if needed)
 
-**Description:** An AI-powered aircraft analyst that helps users explore the Aircraft Digital Twin knowledge graph, analyze maintenance events, investigate component failures, and discover relationships across aircraft topology, flight operations, and maintenance history.
+**Description:** An AI-powered aircraft analyst that helps users explore the Aircraft Digital Twin knowledge graph, analyze maintenance events, investigate component failures, look up sensor operating limits, and discover relationships across aircraft topology, flight operations, and maintenance documentation.
 
 **Prompt Instructions:**
 ```
@@ -146,17 +46,19 @@ You help users understand:
 - Maintenance events: faults, severity levels, and corrective actions
 - Flight operations: routes, delays, and operator performance
 - Component removals: reasons, time-since-new, and cycles-since-new data
-- Cross-entity patterns: shared faults across aircraft, delay-prone airports
+- Sensor operating limits: parameter limits extracted from maintenance manuals
+- Maintenance documentation: chunked manuals with provenance tracking
+- Cross-entity patterns: shared faults across aircraft, delay-prone airports,
+  sensor-to-limit mappings
 
 Always provide specific data from the knowledge graph when answering questions.
-Include tail numbers, system names, and fault details when relevant.
+Include tail numbers, system names, sensor IDs, and fault details when relevant.
+When discussing operating limits, reference the source maintenance manual.
 ```
 
-**Target Instance:** Select your Neo4j Aura instance created in Lab 1.
+**Target Instance:** Select your Neo4j Aura instance.
 
 **External Available from an Endpoint:** Enabled
-
-![Agent Configuration](images/aura_agents.png)
 
 ## Step 3: Add Cypher Template Tools
 
@@ -166,15 +68,16 @@ Click **Add Tool** and select **Cypher Template** for each of the following tool
 
 **Tool Name:** `get_aircraft_overview`
 
-**Description:** Get comprehensive overview of an aircraft including its systems, recent maintenance events, and flight count.
+**Description:** Get comprehensive overview of an aircraft including its systems, components, sensors, recent maintenance events, and flight count.
 
-**Parameters:** `tail_number` (string) - The aircraft tail number to look up (e.g., "N95040A", "N30268B")
+**Parameters:** `tail_number` (string) - The aircraft tail number (e.g., "N95040A", "N30268B", "N54980C")
 
 **Cypher Query:**
 ```cypher
 MATCH (a:Aircraft {tail_number: $tail_number})
 OPTIONAL MATCH (a)-[:HAS_SYSTEM]->(s:System)
-OPTIONAL MATCH (s)-[:HAS_COMPONENT]->(c:Component)-[:HAS_EVENT]->(m:MaintenanceEvent)
+OPTIONAL MATCH (s)-[:HAS_COMPONENT]->(c:Component)
+OPTIONAL MATCH (c)-[:HAS_EVENT]->(m:MaintenanceEvent)
 OPTIONAL MATCH (a)-[:OPERATES_FLIGHT]->(f:Flight)
 WITH a,
      collect(DISTINCT s.name) AS systems,
@@ -190,7 +93,51 @@ RETURN
     recent_events AS maintenance_events
 ```
 
-### Tool 2: Find Aircraft with Shared Faults
+### Tool 2: Get Maintenance Summary
+
+**Tool Name:** `get_maintenance_summary`
+
+**Description:** Get a summary of maintenance events for a specific aircraft, grouped by severity. Shows event counts and sample faults for each severity level.
+
+**Parameters:** `tail_number` (string) - The aircraft tail number (e.g., "N95040A")
+
+**Cypher Query:**
+```cypher
+MATCH (a:Aircraft {tail_number: $tail_number})-[:HAS_SYSTEM]->(s:System)
+      -[:HAS_COMPONENT]->(c:Component)-[:HAS_EVENT]->(m:MaintenanceEvent)
+RETURN
+    m.severity AS severity,
+    count(m) AS event_count,
+    collect(DISTINCT m.fault)[0..5] AS sample_faults,
+    collect(DISTINCT c.name)[0..5] AS affected_components
+ORDER BY event_count DESC
+```
+
+### Tool 3: Get Sensor Operating Limits
+
+**Tool Name:** `get_sensor_limits`
+
+**Description:** Get the operating limits for sensors on a specific aircraft, including parameter ranges extracted from maintenance manuals. Shows what the safe operating ranges are for each sensor type.
+
+**Parameters:** `tail_number` (string) - The aircraft tail number (e.g., "N95040A")
+
+**Cypher Query:**
+```cypher
+MATCH (a:Aircraft {tail_number: $tail_number})-[:HAS_SYSTEM]->(sys:System)
+      -[:HAS_SENSOR]->(s:Sensor)-[:HAS_LIMIT]->(ol:OperatingLimit)
+RETURN
+    sys.name AS system,
+    s.sensor_id AS sensor,
+    s.type AS sensor_type,
+    s.unit AS unit,
+    ol.name AS limit_name,
+    ol.regime AS regime,
+    ol.minValue AS min_value,
+    ol.maxValue AS max_value
+ORDER BY sys.name, s.type
+```
+
+### Tool 4: Find Aircraft with Shared Faults
 
 **Tool Name:** `find_shared_faults`
 
@@ -213,24 +160,27 @@ RETURN
     size(shared_faults) AS num_shared_faults
 ```
 
-### Tool 3: Get Maintenance Summary
+### Tool 5: Find Maintenance Manual for Aircraft
 
-**Tool Name:** `get_maintenance_summary`
+**Tool Name:** `find_manual`
 
-**Description:** Get a summary of maintenance events for a specific aircraft, grouped by severity.
+**Description:** Find the maintenance manual that applies to a specific aircraft and show its document structure including chunk count and embedding coverage.
 
-**Parameters:** `tail_number` (string) - The aircraft tail number (e.g., "N95040A")
+**Parameters:** `tail_number` (string) - The aircraft tail number (e.g., "N30268B")
 
 **Cypher Query:**
 ```cypher
-MATCH (a:Aircraft {tail_number: $tail_number})-[:HAS_SYSTEM]->(s:System)
-      -[:HAS_COMPONENT]->(c:Component)-[:HAS_EVENT]->(m:MaintenanceEvent)
+MATCH (a:Aircraft {tail_number: $tail_number})<-[:APPLIES_TO]-(d:Document)
+OPTIONAL MATCH (d)<-[:FROM_DOCUMENT]-(c:Chunk)
+WITH a, d, count(c) AS chunks,
+     sum(CASE WHEN c.embedding IS NOT NULL THEN 1 ELSE 0 END) AS embedded
 RETURN
-    m.severity AS severity,
-    count(m) AS event_count,
-    collect(DISTINCT m.fault)[0..5] AS sample_faults,
-    collect(DISTINCT c.name)[0..5] AS affected_components
-ORDER BY event_count DESC
+    a.tail_number AS aircraft,
+    a.model AS model,
+    d.documentId AS document_id,
+    d.title AS title,
+    chunks,
+    embedded
 ```
 
 ## Step 4: Add Text2Cypher Tool
@@ -239,54 +189,59 @@ Click **Add Tool** and select **Text2Cypher** to enable natural language to Cyph
 
 **Tool Name:** `query_aircraft_graph`
 
-**Description:** Query the Aircraft Digital Twin knowledge graph using natural language. This tool translates user questions into Cypher queries to retrieve data about aircraft, their systems and components, maintenance events and fault history, flight operations and delays, airports, sensor metadata, and component removals. Use this for ad-hoc questions that require flexible data exploration beyond the pre-defined Cypher templates.
+**Description:** Query the Aircraft Digital Twin knowledge graph using natural language. This tool translates user questions into Cypher queries to retrieve data about aircraft, their systems and components, maintenance events and fault history, flight operations and delays, airports, sensor metadata, component removals, maintenance documentation (Documents and Chunks), extracted operating limits (OperatingLimit nodes), and cross-links between documentation and operational data. Use this for ad-hoc questions that require flexible data exploration beyond the pre-defined Cypher templates.
 
-## Step 5: Test the Agent
+## Step 5: Add Similarity Search Tool
+
+The graph includes OpenAI embeddings on Chunk nodes from the three maintenance manuals.
+
+1. Click **Add Tool** and select **Similarity Search**
+2. **Tool Name:** `search_maintenance_docs`
+3. **Description:** Search aircraft maintenance documentation semantically to find relevant procedures, troubleshooting steps, operating limits, and inspection schedules. The documentation covers A320-200, A321neo, and B737-800 maintenance and troubleshooting manuals.
+4. Configure the **OpenAI** embedding provider with the same API key used during `enrich`
+5. Select the `maintenanceChunkEmbeddings` vector index
+6. Set **Top K** to 5
+
+## Step 6: Test the Agent
 
 Test your agent with the sample questions below. After each test, observe:
 1. Which tool the agent selected and why
 2. The context retrieved from the knowledge graph
 3. How the agent synthesized the response
-4. Tool explanations showing the reasoning process
 
 ### Cypher Template Questions
 
-Try asking: **"Tell me about aircraft N95040A"**
+**"Tell me about aircraft N95040A"** — Uses `get_aircraft_overview`. You'll see it's a Boeing B737-800 with CFM56-7B engines, Generic Avionics Suite, and Main Hydraulic System.
 
-The agent recognizes this matches the `get_aircraft_overview` template and executes the pre-defined Cypher query with "N95040A" as the parameter. You'll see the aircraft's model, operator, systems, flight count, and recent maintenance events.
+**"What are the sensor operating limits for N30268B?"** — Uses `get_sensor_limits` to show EGT, Vibration, N1Speed, and FuelFlow limits for this A320-200, extracted from the maintenance manual.
 
-Other Cypher template questions to try:
-- "What faults do aircraft N95040A and N30268B share?" — Uses `find_shared_faults` to compare maintenance history between two aircraft.
-- "Show the maintenance summary for N54980C" — Uses `get_maintenance_summary` to show events grouped by severity.
+**"Show the maintenance summary for N54980C"** — Uses `get_maintenance_summary` to show events grouped by severity (CRITICAL, MAJOR, MINOR) for this A321neo.
+
+**"What faults do aircraft N95040A and N26760M share?"** — Uses `find_shared_faults` to compare maintenance history between two B737-800s.
+
+**"What maintenance manual applies to N30268B?"** — Uses `find_manual` to show the A320-200 Maintenance and Troubleshooting Manual with its chunk/embedding counts.
 
 ### Text2Cypher Questions
 
-Try asking: **"Which aircraft has the most critical maintenance events?"**
+**"Which aircraft has the most critical maintenance events?"** — Generates a Cypher query counting CRITICAL-severity events per aircraft.
 
-The agent translates this natural language question into a Cypher query that counts critical-severity maintenance events per aircraft and returns the highest.
+**"What are the top causes of flight delays?"** — Aggregates delay causes across all flights.
 
-Other Text2Cypher questions to try:
-- "What are the top causes of flight delays?" — Generates a query to aggregate delay causes.
-- "Which airports have the most delayed arrivals?" — Creates a query joining Flights, Delays, and Airports.
-- "Show all components in the hydraulics system" — Traverses the System → Component hierarchy.
-- "Find flights operated by ExampleAir" — Queries flight operations by operator.
+**"Which airports have the most delayed arrivals?"** — Joins Flights, Delays, and Airports.
 
-## Step 6: (Optional) Add Similarity Search Tool
+**"Show all components in the hydraulics system"** — Traverses the System-Component hierarchy.
 
-> **Note:** Similarity Search requires an embedding provider that matches the embeddings stored in your vector index. If you created embeddings in Lab 6 using Databricks Foundation Model APIs (BGE-large, 1024 dimensions), you'll need a compatible embedding provider configured in Aura. If you have an OpenAI API key available, you can re-embed the chunks with OpenAI and use the similarity search tool. Otherwise, skip this step — the Cypher Template and Text2Cypher tools provide comprehensive access to the graph.
+**"Which sensors have operating limits defined?"** — Traverses the Sensor-OperatingLimit cross-link.
 
-If you have a compatible embedding provider:
+**"Trace the provenance of the EGT operating limit for B737-800"** — Follows OperatingLimit → Chunk → Document → Aircraft.
 
-1. Click **Add Tool** and select **Similarity Search**
-2. **Tool Name:** `search_maintenance_docs`
-3. **Description:** Search aircraft maintenance documentation semantically to find relevant procedures, troubleshooting steps, and specifications.
-4. Configure the embedding provider and select the `maintenanceChunkEmbeddings` vector index
-5. Set **Top K** to 5
+### Similarity Search Questions
 
-Sample questions for similarity search:
-- "How do I troubleshoot engine vibration?"
-- "What are the EGT limits during takeoff?"
-- "What causes hydraulic pressure loss?"
+**"How do I troubleshoot engine vibration?"** — Finds relevant chunks from the maintenance manuals about vibration diagnostics.
+
+**"What are the EGT limits during takeoff?"** — Retrieves chunks describing exhaust gas temperature limits.
+
+**"What is the engine inspection schedule?"** — Finds chunks from Section 9 of the manuals covering scheduled maintenance tasks.
 
 ## Step 7: (Optional) Deploy to API
 
@@ -297,15 +252,25 @@ Deploy your agent to a production endpoint:
 
 ## Summary
 
-You have built an Aura Agent that provides no-code access to the Aircraft Digital Twin knowledge graph using powerful retrieval patterns:
+You have built an Aura Agent that provides no-code access to the Aircraft Digital Twin knowledge graph using three retrieval patterns:
 
 | Tool Type | Purpose | Best For |
 |-----------|---------|----------|
-| **Cypher Templates** | Controlled, precise queries | Aircraft overviews, shared faults, maintenance summaries |
-| **Text2Cypher** | Flexible natural language | Ad-hoc questions about topology, flights, delays, removals |
-| **Similarity Search** | Semantic retrieval (optional) | Finding maintenance procedures by meaning |
+| **Cypher Templates** | Controlled, precise queries | Aircraft overviews, maintenance summaries, sensor limits, shared faults, manual lookup |
+| **Text2Cypher** | Flexible natural language | Ad-hoc questions about topology, flights, delays, removals, cross-links |
+| **Similarity Search** | Semantic retrieval | Finding maintenance procedures, troubleshooting steps, and inspection schedules by meaning |
 
-These same retrieval patterns are implemented programmatically in Lab 6 (Semantic Search / GraphRAG) using Python, and the graph is queried by AI agents in Lab 4 (AgentCore) and Lab 7 (AgentBricks).
+## Graph Schema Reference
+
+**Node types (9 operational + 3 enrichment):**
+Aircraft, System, Component, Sensor, Airport, Flight, Delay, MaintenanceEvent, Removal, Document, Chunk, OperatingLimit
+
+**Relationship types (12 operational + 5 enrichment):**
+HAS_SYSTEM, HAS_COMPONENT, HAS_SENSOR, HAS_EVENT, OPERATES_FLIGHT, DEPARTS_FROM, ARRIVES_AT, HAS_DELAY, AFFECTS_SYSTEM, AFFECTS_AIRCRAFT, HAS_REMOVAL, REMOVED_COMPONENT, FROM_DOCUMENT, NEXT_CHUNK, APPLIES_TO, HAS_LIMIT, FROM_CHUNK
+
+**Indexes:**
+- Vector: `maintenanceChunkEmbeddings` on Chunk.embedding
+- Fulltext: `maintenanceChunkText` on Chunk.text
 
 ## Next Steps
 
@@ -345,7 +310,7 @@ LIMIT 20
 
 **Tool Name:** `fleet_summary`
 
-**Description:** Get a summary of the entire fleet by manufacturer and model.
+**Description:** Get a summary of the entire fleet by manufacturer and model, including flight counts.
 
 **Parameters:** None
 
@@ -353,12 +318,47 @@ LIMIT 20
 ```cypher
 MATCH (a:Aircraft)
 OPTIONAL MATCH (a)-[:OPERATES_FLIGHT]->(f:Flight)
-WITH a, count(f) AS flights
-RETURN
-    a.manufacturer AS manufacturer,
-    a.model AS model,
-    a.operator AS operator,
-    count(a) AS aircraft_count,
-    sum(flights) AS total_flights
+WITH a.manufacturer AS manufacturer, a.model AS model,
+     count(DISTINCT a) AS aircraft_count, count(f) AS total_flights
+RETURN manufacturer, model, aircraft_count, total_flights
 ORDER BY aircraft_count DESC
+```
+
+### Airport Delay Analysis
+
+**Tool Name:** `airport_delays`
+
+**Description:** Find airports with the most delayed arrivals, including average delay time.
+
+**Parameters:** None
+
+**Cypher Query:**
+```cypher
+MATCH (f:Flight)-[:HAS_DELAY]->(d:Delay), (f)-[:ARRIVES_AT]->(apt:Airport)
+RETURN apt.iata AS airport, apt.city, count(d) AS delay_count,
+       round(avg(d.minutes), 1) AS avg_delay_minutes
+ORDER BY delay_count DESC
+```
+
+### Sensor-to-Limit Provenance
+
+**Tool Name:** `sensor_limit_provenance`
+
+**Description:** Trace a sensor's operating limit back to the source chunk and maintenance manual, showing the full provenance chain.
+
+**Parameters:** `sensor_id` (string) - The sensor ID (e.g., "AC1001-S01-SN01")
+
+**Cypher Query:**
+```cypher
+MATCH (s:Sensor {sensor_id: $sensor_id})-[:HAS_LIMIT]->(ol:OperatingLimit)
+OPTIONAL MATCH (ol)-[:FROM_CHUNK]->(c:Chunk)-[:FROM_DOCUMENT]->(d:Document)
+RETURN
+    s.sensor_id AS sensor,
+    s.type AS sensor_type,
+    ol.name AS limit_name,
+    ol.minValue AS min_value,
+    ol.maxValue AS max_value,
+    ol.unit AS unit,
+    substring(c.text, 0, 200) AS source_text,
+    d.title AS manual
 ```
