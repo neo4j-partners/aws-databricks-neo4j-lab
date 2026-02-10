@@ -35,8 +35,13 @@ Together the dataset includes:
 | Technology | Purpose |
 |------------|---------|
 | **Neo4j Aura** | Graph database for storing aircraft relationships |
-| **AWS Bedrock + AgentCore** | Pre-deployed Neo4j MCP Server and Agent infrastructure |
-| **Databricks** | Notebooks, Unity Catalog, AI/BI Genie, AgentBricks |
+| **Neo4j Aura Agents** | No-code AI agents with Cypher Templates, Text2Cypher, and Similarity Search |
+| **AWS Bedrock** | Foundation models for AI agent reasoning |
+| **AWS AgentCore** | Pre-deployed Neo4j MCP Server and Agent infrastructure |
+| **Databricks** | Notebooks, Unity Catalog |
+| **AI/BI Genie** | Natural language analytics over Unity Catalog tables |
+| **AgentBricks** | No-code multi-agent supervisor combining multiple data sources |
+| **GraphRAG** | Graph-enhanced retrieval combining vector search with graph traversal |
 | **Neo4j Spark Connector** | ETL from Databricks to Neo4j |
 | **Model Context Protocol (MCP)** | Standard for connecting AI models to data sources |
 
