@@ -87,36 +87,36 @@ The key component for graph construction:
 |------|--------------|
 | **Document Ingestion** | Read source documents (PDFs) |
 | **Chunking** | Break into smaller pieces for processing |
-| **Entity Extraction** | LLM identifies companies, products, risks, metrics |
+| **Entity Extraction** | LLM identifies aircraft, systems, components, faults |
 | **Relationship Extraction** | LLM finds connections between entities |
 | **Graph Storage** | Save entities and relationships to Neo4j |
 | **Vector Embeddings** | Generate embeddings for semantic search |
 
 ---
 
-## The SEC Filings Example
+## The Aircraft Digital Twin Example
 
-Throughout this workshop, you'll work with a knowledge graph built from SEC 10-K filings.
+Throughout this workshop, you'll work with a knowledge graph built from an Aircraft Digital Twin dataset.
 
-**These documents contain:**
-- Companies and their business descriptions
-- Risk factors they face
-- Financial metrics they report
-- Products and services they mention
-- Executives who lead them
+**This dataset models:**
+- 20 aircraft across 4 operators (Boeing 737, Airbus A320/A321, Embraer E190)
+- Systems per aircraft (engines, avionics, hydraulics)
+- Components within systems (turbines, compressors, pumps)
+- Sensors generating time-series telemetry (EGT, vibration, fuel flow)
+- Flights, delays, and maintenance events
 
 ---
 
-## From PDF to Graph
+## From Tabular Data to Graph
 
-**In raw PDF form:** Information is locked in narrative text.
+**In flat CSV/tables:** Information is isolated across separate files.
 
-**In a knowledge graph:** It becomes structured and queryable:
+**In a knowledge graph:** It becomes connected and traversable:
 
 ```
-(Apple Inc)-[:FACES_RISK]->(Cybersecurity Threats)
-(Apple Inc)-[:MENTIONS]->(iPhone)
-(BlackRock Inc)-[:OWNS]->(Apple Inc)
+(Aircraft AC1001)-[:HAS_SYSTEM]->(Engine CFM56-7B #1)
+(Engine CFM56-7B #1)-[:HAS_COMPONENT]->(High-pressure Turbine)
+(High-pressure Turbine)-[:HAS_EVENT]->(Bearing wear, CRITICAL)
 ```
 
 ---
@@ -126,11 +126,10 @@ Throughout this workshop, you'll work with a knowledge graph built from SEC 10-K
 After processing, your knowledge graph contains:
 
 ```
-Documents → Chunks (with embeddings)
-    ↓
-Entities (Company, Product, RiskFactor, Executive, FinancialMetric)
-    ↓
-Relationships (FACES_RISK, MENTIONS, OWNS, WORKS_FOR, HAS_METRIC)
+Aircraft → Systems → Components → MaintenanceEvents
+                  → Sensors (with embeddings on maintenance chunks)
+Aircraft → Flights → Airports
+                   → Delays
 ```
 
 This structure enables questions that traditional RAG can't answer.
@@ -141,10 +140,10 @@ This structure enables questions that traditional RAG can't answer.
 
 | Question Type | How the Graph Helps |
 |--------------|---------------------|
-| "What risks does Apple face?" | Traverse FACES_RISK relationships |
-| "Which companies mention AI?" | Find MENTIONS relationships to AI products |
-| "Who owns Apple?" | Follow OWNS relationships from asset managers |
-| "How many risk factors are there?" | Count RiskFactor nodes |
+| "What maintenance events affect AC1001?" | Traverse HAS_SYSTEM → HAS_COMPONENT → HAS_EVENT |
+| "Which flights departed from JFK?" | Follow DEPARTS_FROM relationships |
+| "What sensors monitor Engine #1?" | Traverse HAS_SENSOR relationships |
+| "How many critical maintenance events?" | Count MaintenanceEvent nodes by severity |
 
 ---
 

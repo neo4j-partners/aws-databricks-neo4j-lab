@@ -45,7 +45,7 @@ These capabilities emerge from training on vast amounts of text data.
 
 ---
 
-![bg contain](../../images/gen_ai_gaps.jpg)
+![bg contain](../images/gen_ai_gaps.jpg)
 
 ---
 
@@ -80,9 +80,9 @@ LLMs are trained at a specific point in time on publicly available data.
 LLMs process text sequentially and treat each piece in isolation.
 
 **Questions they struggle with:**
-- "Which asset managers own companies facing cybersecurity risks?"
-- "What products are mentioned by companies that share risk factors?"
-- "How are these two companies connected through their executives?"
+- "Which aircraft have engines with critical maintenance events?"
+- "What components share the same fault types across the fleet?"
+- "How is a sensor reading connected to a flight delay?"
 
 These questions require *reasoning over relationships*—connecting entities across documents and traversing chains of connections.
 
@@ -93,8 +93,8 @@ These questions require *reasoning over relationships*—connecting entities acr
 | Limitation | Impact | Example |
 |------------|--------|---------|
 | Hallucination | Can't trust answers without verification | Legal brief with fabricated citations |
-| Knowledge cutoff | Can't answer questions about your data | "What did our CEO say last quarter?" |
-| Relationship blindness | Can't reason across connected information | "Which investors are exposed to these risks?" |
+| Knowledge cutoff | Can't answer questions about your data | "What maintenance was done on AC1001 last month?" |
+| Relationship blindness | Can't reason across connected information | "Which aircraft have engines with critical faults?" |
 
 Building production AI systems means addressing these limitations directly.
 

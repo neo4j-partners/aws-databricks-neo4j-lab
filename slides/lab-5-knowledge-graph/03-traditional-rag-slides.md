@@ -71,7 +71,7 @@ Let's understand each component: chunking, embeddings, and vector search.
 
 ---
 
-![bg contain](../../images/embeddings_visual.jpg)
+![bg contain](../images/embeddings_visual.jpg)
 
 ---
 
@@ -91,7 +91,7 @@ Think of embeddings like having a **really smart librarian** who has read every 
 
 ---
 
-![bg contain](../../images/beyond_keywords.jpg)
+![bg contain](../images/beyond_keywords.jpg)
 
 ---
 

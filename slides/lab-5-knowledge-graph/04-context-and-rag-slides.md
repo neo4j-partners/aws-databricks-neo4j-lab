@@ -52,24 +52,24 @@ Traditional RAG treats documents as isolated, unstructured blobs.
 
 **What traditional RAG sees:**
 ```
-Chunk 1: "Apple Inc. faces cybersecurity risks including..."
-Chunk 2: "BlackRock Inc. holds shares in technology companies..."
-Chunk 3: "The semiconductor supply chain impacts..."
+Chunk 1: "Aircraft AC1001 engine reported bearing wear..."
+Chunk 2: "Flight FL00123 was delayed 45 minutes at JFK..."
+Chunk 3: "EGT sensor readings exceeded threshold on Engine #1..."
 ```
 
 **What traditional RAG misses:**
-- Which specific companies does BlackRock own?
-- Do any of those companies face cybersecurity risks?
-- How are supply chain issues connected to specific products?
+- Which flights were delayed because of that bearing wear?
+- Is the high EGT reading on the same engine with the fault?
+- Which other aircraft share this engine type and might be at risk?
 
 ---
 
 ## Retrieves Similar Content, Not Connected Information
 
-Traditional RAG can find text about cybersecurity and text about BlackRock.
+Traditional RAG can find text about bearing wear and text about flight delays.
 
 **But it can't tell you:**
-- Which asset managers are exposed to cybersecurity risks through their holdings
+- Which flights were delayed because of maintenance events on a specific engine
 
 **Why?** Each chunk is independent—there's no understanding of how information connects.
 
@@ -106,10 +106,10 @@ The graph shows how adding more retrieved chunks often hurts rather than helps.
 
 | Question | Why Traditional RAG Struggles |
 |----------|------------------------------|
-| "Which asset managers own companies facing cyber risks?" | Requires connecting ownership data to risk mentions |
-| "What products are mentioned by companies that share risk factors?" | Requires finding shared entities across documents |
-| "How many companies mention supply chain issues?" | Requires aggregation, not similarity search |
-| "What executives work for companies in the tech sector?" | Requires traversing entity relationships |
+| "Which aircraft have engines with critical maintenance events?" | Requires traversing Aircraft → System → Component → Event |
+| "What components share the same fault types across the fleet?" | Requires finding shared patterns across multiple aircraft |
+| "How many flights were delayed due to maintenance?" | Requires aggregation, not similarity search |
+| "What sensors are on the same system as a failed component?" | Requires traversing entity relationships |
 
 These questions need *structured context* that preserves relationships.
 
@@ -120,8 +120,8 @@ These questions need *structured context* that preserves relationships.
 **The core insight:** Information isn't truly unstructured.
 
 Documents contain:
-- **Entities**: Companies, people, products, risks
-- **Relationships**: Owns, faces, mentions, works for
+- **Entities**: Aircraft, systems, components, sensors, flights
+- **Relationships**: HAS_SYSTEM, HAS_COMPONENT, OPERATES_FLIGHT, HAS_EVENT
 
 Traditional RAG ignores this structure. It treats a document as a bag of words to embed and search.
 

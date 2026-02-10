@@ -72,17 +72,17 @@ The pipeline uses the schema to guide extraction, prune invalid data, and ensure
 ```python
 schema = {
     "node_types": [
-        {"label": "Company", "description": "A business organization"},
-        {"label": "RiskFactor", "description": "A business risk or threat"},
-        {"label": "Product", "description": "A product or service"},
+        {"label": "Aircraft", "description": "An individual aircraft in the fleet"},
+        {"label": "System", "description": "A major aircraft system (engine, avionics, hydraulics)"},
+        {"label": "Component", "description": "A part within a system (turbine, compressor, pump)"},
     ],
     "relationship_types": [
-        {"label": "FACES_RISK", "description": "Company faces this risk"},
-        {"label": "MENTIONS", "description": "Company mentions this product"},
+        {"label": "HAS_SYSTEM", "description": "Aircraft contains this system"},
+        {"label": "HAS_COMPONENT", "description": "System contains this component"},
     ],
     "patterns": [
-        ("Company", "FACES_RISK", "RiskFactor"),
-        ("Company", "MENTIONS", "Product"),
+        ("Aircraft", "HAS_SYSTEM", "System"),
+        ("System", "HAS_COMPONENT", "Component"),
     ]
 }
 ```
@@ -129,16 +129,16 @@ Node types can be simple strings or detailed dictionaries:
 
 **Simple:**
 ```python
-node_types = ["Company", "Product", "RiskFactor"]
+node_types = ["Aircraft", "System", "Component"]
 ```
 
 **With descriptions and properties:**
 ```python
 node_types = [
-    {"label": "Company", "description": "A business organization"},
+    {"label": "Aircraft", "description": "An individual aircraft"},
     {
-        "label": "Product",
-        "properties": [{"name": "category", "type": "STRING"}]
+        "label": "Sensor",
+        "properties": [{"name": "unit", "type": "STRING"}]
     }
 ]
 ```

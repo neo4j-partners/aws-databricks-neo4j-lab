@@ -31,10 +31,6 @@ ol > li {
 
 ---
 
-![bg contain](../images/neo4j_msft_customers.jpg)
-
----
-
 # Neo4j Aura: Cloud Graph Database
 
 ---
@@ -47,7 +43,7 @@ Neo4j Aura is a **fully managed cloud graph database service** that eliminates t
 - **Fully managed** - No infrastructure to maintain
 - **Scalable** - Automatically scales with your data and queries
 - **Secure** - Enterprise-grade security and compliance
-- **Available everywhere** - Deploy in AWS, GCP, or Azure regions
+- **Available everywhere** - Deploy in AWS, GCP, or Azure
 
 ---
 

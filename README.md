@@ -109,57 +109,9 @@ In this phase you'll construct a knowledge graph in Neo4j using the Spark Connec
 
 #### Part C: Multi-Agent Aircraft Analytics with AgentBricks (~75 min)
 - [Lab 6 - AgentBricks](Lab_6_AgentBricks/README.md) - No-code multi-agent system using Databricks AgentBricks
-
-**Why two data sources?** Aircraft intelligence requires both **time-series telemetry** and **rich relational data**, and each is best served by a purpose-built platform:
-
-- **Genie + Lakehouse** excels at time-series sensor data — 345,600+ hourly readings stored in Delta Lake columnar format, optimized for aggregations, trend analysis, percentile calculations, and fleet-wide statistical comparisons over time. SQL is the natural language for these analytical workloads, and Genie translates natural language into SQL automatically.
-- **Neo4j** excels at richly connected relational data — aircraft topology, component hierarchies, maintenance event chains, flight-to-airport routes, and delay root causes. These queries traverse multiple relationships (e.g., "Which components in the hydraulics system had maintenance events that caused flight delays?") and would require expensive multi-table JOINs in a relational database, but Neo4j handles them natively.
-
-The **multi-agent supervisor** routes each question to the right system and, for complex questions spanning both, queries each sequentially and synthesizes a combined answer.
-
-**Part C includes two sub-parts:**
-
-**Genie Space for Sensor Analytics (~30 min)**
-- Create an AI/BI Genie space over sensor telemetry tables in Unity Catalog
-- Connect data sources: `sensor_readings`, `sensors`, `systems`, `aircraft`
-- Add sample questions and domain-specific instructions (sensor types, normal ranges, fleet info)
-- Test natural language to SQL queries for time-series aggregations and anomaly detection
-
-**Multi-Agent Supervisor (~45 min)**
-- Build a supervisor agent that coordinates two specialized sub-agents
-- Add the **Neo4j MCP agent** for graph relationship queries (topology, maintenance, flights)
-- Add the **Genie space agent** for time-series sensor analytics (readings, trends, fleet comparisons)
-- Configure routing rules so the supervisor directs questions to the right agent
-- Test single-agent routing and combined multi-agent queries
-- Deploy as a serving endpoint for programmatic access
-
-**Agent Architecture:**
-
-```
-User Question
-     |
-     v
-Multi-Agent Supervisor
-     |
-     +---> "sensor readings?" ---> Genie Space ---> Unity Catalog (Lakehouse)
-     |        time-series              SQL           aws-databricks-neo4j-lab.lakehouse
-     |        aggregations                           345,600+ sensor readings
-     |        trend analysis
-     |
-     +---> "relationships?" ---> Neo4j MCP ---> Knowledge Graph (Aura)
-     |        topology               Cypher       8 node types, 13 relationship types
-     |        maintenance                         pre-configured admin instance
-     |        flights/delays
-     |
-     +---> "both needed?" ---> Sequential calls to both agents
-                               |
-                               v
-                         Synthesized Response
-```
-
-**Routing Examples:**
-- **Genie Agent:** Time-series aggregations, sensor anomaly detection, fleet comparisons, trend analysis
-- **Neo4j Agent:** Aircraft topology, component hierarchy, maintenance events, flight operations, delays
+- Create an AI/BI Genie space for sensor analytics over Unity Catalog tables
+- Build a multi-agent supervisor combining Genie Space + Neo4j MCP
+- Test cross-system queries spanning both time-series telemetry and graph relationships
 
 ---
 
