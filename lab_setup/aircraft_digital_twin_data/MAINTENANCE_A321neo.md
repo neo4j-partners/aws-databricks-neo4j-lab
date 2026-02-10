@@ -151,9 +151,9 @@ Each LEAP-1A engine is equipped with comprehensive monitoring sensors:
 |-------------|-----------|------|----------|
 | EGT | Exhaust Gas Temperature | °C | HPT exit (8 thermocouples) |
 | VIB | Engine Vibration | ips (inches/sec) | Fan case, core case |
-| N1 | Fan Speed | % RPM | Fan shaft |
+| N1Speed | Fan Speed | % RPM | Fan shaft |
 | N2 | Core Speed | % RPM | HP shaft |
-| FF | Fuel Flow | kg/s | Fuel metering unit |
+| FuelFlow | Fuel Flow | kg/s | Fuel metering unit |
 | OIL-P | Oil Pressure | psi | Main oil gallery |
 | OIL-T | Oil Temperature | °C | Scavenge return |
 | OIL-Q | Oil Quantity | % | Oil tank |
@@ -332,10 +332,10 @@ The #3 main bearing assembly is a duplex ball bearing with squeeze film damper, 
 
 | Parameter | Ground Idle | Flight Idle | Max Continuous | Takeoff |
 |-----------|-------------|-------------|----------------|---------|
-| N1 (% RPM) | 18-23% | 23-28% | 92% | 97% |
+| N1Speed (% RPM) | 18-23% | 23-28% | 92% | 97% |
 | N2 (% RPM) | 52-58% | 58-64% | 96% | 100% |
 | EGT (°C) | 320-400 | 400-480 | 900-950 | 980-1040 |
-| Fuel Flow (kg/s) | 0.12-0.20 | 0.20-0.30 | 0.95-1.25 | 1.50-2.00 |
+| FuelFlow (kg/s) | 0.12-0.20 | 0.20-0.30 | 0.95-1.25 | 1.50-2.00 |
 | Oil Pressure (psi) | 40-65 | 45-75 | 50-80 | 50-85 |
 | Oil Temperature (°C) | 45-85 | 55-115 | 75-135 | 75-150 |
 | Vibration N1 (ips) | < 0.8 | < 1.2 | < 2.0 | < 2.5 |
@@ -1012,7 +1012,7 @@ START: Fan Blade Damage Reported/Suspected
 
 | Parameter | Ground Idle | Flight Idle | Max Continuous | Takeoff (5 min) |
 |-----------|-------------|-------------|----------------|-----------------|
-| N1 (%) | 18-23 | 23-28 | 92 | 97 |
+| N1Speed (%) | 18-23 | 23-28 | 92 | 97 |
 | N2 (%) | 52-58 | 58-64 | 96 | 100 |
 | EGT (°C) | 320-400 | 400-480 | 950 | 1,040 |
 | Oil Pressure (psi) | 40-65 | 45-75 | 50-80 | 50-85 |

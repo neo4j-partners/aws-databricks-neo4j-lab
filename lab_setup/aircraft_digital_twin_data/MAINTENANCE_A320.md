@@ -137,8 +137,8 @@ Each V2500 engine is equipped with four primary monitoring sensors:
 |-------------|-----------|------|----------|
 | EGT | Exhaust Gas Temperature | °C | Turbine exhaust |
 | VIB | Engine Vibration | ips (inches/sec) | Fan case |
-| N1 | Fan Speed | % RPM | Fan shaft |
-| FF | Fuel Flow | kg/s | Fuel metering unit |
+| N1Speed | Fan Speed | % RPM | Fan shaft |
+| FuelFlow | Fuel Flow | kg/s | Fuel metering unit |
 
 **Sensor Sampling Rate:** Continuous (1 Hz during flight, recorded hourly for trend analysis)
 
@@ -241,10 +241,10 @@ The thrust bearing assembly absorbs axial loads from the high-pressure rotor sys
 
 | Parameter | Idle | Cruise | Takeoff |
 |-----------|------|--------|---------|
-| N1 (% RPM) | 22-28% | 85-92% | 100-104% |
+| N1Speed (% RPM) | 22-28% | 85-92% | 100-104% |
 | N2 (% RPM) | 58-65% | 92-97% | 100-102% |
 | EGT (°C) | 380-450 | 520-580 | 620-680 |
-| Fuel Flow (kg/s) | 0.15-0.25 | 0.65-0.85 | 1.20-1.95 |
+| FuelFlow (kg/s) | 0.15-0.25 | 0.65-0.85 | 1.20-1.95 |
 | Vibration (ips) | < 0.8 | < 1.2 | < 2.0 |
 
 ---
@@ -791,7 +791,7 @@ START: Low Hydraulic Pressure Warning
 
 | Parameter | Ground Idle | Flight Idle | Max Continuous | Takeoff |
 |-----------|-------------|-------------|----------------|---------|
-| N1 (%) | 22 | 28 | 97 | 104 |
+| N1Speed (%) | 22 | 28 | 97 | 104 |
 | N2 (%) | 58 | 65 | 97 | 102 |
 | EGT (°C) | 380 | 450 | 620 | 680 |
 | Oil Pressure (psi) | 25-55 | 40-65 | 40-65 | 40-65 |

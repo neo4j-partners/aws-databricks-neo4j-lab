@@ -139,8 +139,8 @@ Each CFM56-7B engine is equipped with four primary monitoring sensors:
 |-------------|-----------|------|----------|
 | EGT | Exhaust Gas Temperature | °C | Turbine exhaust section |
 | VIB | Engine Vibration | ips (inches/sec) | Fan frame, turbine frame |
-| N1 | Fan Speed | % RPM | Fan shaft |
-| FF | Fuel Flow | kg/s | Fuel metering valve |
+| N1Speed | Fan Speed | % RPM | Fan shaft |
+| FuelFlow | Fuel Flow | kg/s | Fuel metering valve |
 
 **Sensor Sampling Rate:** Continuous (1 Hz during flight, recorded hourly for trend analysis)
 
@@ -264,10 +264,10 @@ The #4 bearing (thrust bearing) absorbs axial loads from the high-pressure rotor
 
 | Parameter | Ground Idle | Flight Idle | Max Continuous | Takeoff |
 |-----------|-------------|-------------|----------------|---------|
-| N1 (% RPM) | 20-25% | 25-30% | 95% | 104% |
+| N1Speed (% RPM) | 20-25% | 25-30% | 95% | 104% |
 | N2 (% RPM) | 55-62% | 62-68% | 95% | 101% |
 | EGT (°C) | 350-420 | 420-480 | 850-895 | 900-950 |
-| Fuel Flow (kg/s) | 0.10-0.18 | 0.18-0.25 | 0.85-1.10 | 1.20-1.50 |
+| FuelFlow (kg/s) | 0.10-0.18 | 0.18-0.25 | 0.85-1.10 | 1.20-1.50 |
 | Oil Pressure (psi) | 35-60 | 40-70 | 45-75 | 45-75 |
 | Oil Temperature (°C) | 50-90 | 60-120 | 80-140 | 80-155 |
 | Vibration (ips) | < 1.0 | < 1.5 | < 2.5 | < 3.0 |
@@ -741,7 +741,7 @@ START: Sensor Parameter Disagree / Drift Indication
 │   │            Verify wiring to EEC
 │   │            └─► Replace sensor or EEC channel
 │   │
-│   ├─► Fuel Flow ─► Compare commanded vs actual
+│   ├─► FuelFlow ─► Compare commanded vs actual
 │   │               Check fuel flow transmitter
 │   │               Verify FMV operation
 │   │               └─► Replace transmitter or HMU
@@ -898,7 +898,7 @@ START: HYD SYS PRESS (System A or B) Warning
 
 | Parameter | Ground Idle | Flight Idle | Max Continuous | Takeoff (5 min) |
 |-----------|-------------|-------------|----------------|-----------------|
-| N1 (%) | 20-25 | 25-30 | 95 | 104 |
+| N1Speed (%) | 20-25 | 25-30 | 95 | 104 |
 | N2 (%) | 55-62 | 62-68 | 95 | 101 |
 | EGT (°C) | 350-420 | 420-480 | 895 | 950 |
 | Oil Pressure (psi) | 35-60 | 40-70 | 45-75 | 45-75 |
