@@ -185,6 +185,17 @@ All slides are organized by lab module for easy navigation.
    - What You Built
    - Next Steps
 
+## 📖 Participant Reference Docs
+
+Condensed reference documents combining multiple slide decks into single-page markdown for easy review.
+
+| Document | Covers |
+|----------|--------|
+| [Overview & GenAI Foundations](docs/overview-and-genai-foundations.md) | Workshop overview, digital twins, GenAI limitations, traditional RAG, Context ROT, and the GraphRAG solution |
+| [Building Knowledge Graphs](docs/building-knowledge-graphs.md) | GraphRAG pipeline, schema design, chunking strategies, entity resolution, and vectors/semantic search |
+
+---
+
 ## 🚀 How to Use These Slides
 
 ### Option 1: Marp CLI (Recommended)
