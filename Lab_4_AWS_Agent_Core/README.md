@@ -51,7 +51,7 @@ AgentCore Runtime supports hosting MCP servers as stateless streamable-HTTP endp
 
 This lab environment has been pre-configured with two components deployed to AgentCore:
 
-1. **Neo4j MCP Server** -- exposes the Aircraft Digital Twin graph as MCP tools
+1. **Neo4j MCP Server** -- exposes the Aircraft Digital Twin graph as MCP tools ([see repo for more info](https://github.com/neo4j-partners/aws-starter/tree/main/neo4j-agentcore-mcp-server))
 2. **Multi-Agent Orchestrator** -- routes natural language questions to specialist agents that call those tools
 
 ```
