@@ -208,5 +208,5 @@ Neo4j Aura provides:
 - **Integrated Tools** - Query, Explore, and Dashboards
 - **Aura Agents** - No-code conversational AI over your graph
 
-**Next:** Learn about Aura Agents for no-code GraphRAG applications.
+**Next:** Learn about the promise and limits of GenAI—and why we need RAG.
 
