@@ -19,11 +19,11 @@ The orchestrator agent runs on **AgentCore Runtime** and uses a LangGraph StateG
 
 ## Overview
 
-### What is Amazon Bedrock?
+### Amazon Bedrock
 
 [Amazon Bedrock](https://aws.amazon.com/bedrock/) is a fully managed service that provides access to high-performing foundation models (FMs) from leading AI companies through a single API. Bedrock enables you to build generative AI applications with security, privacy, and responsible AI built in.
 
-### What is Amazon Bedrock AgentCore?
+### Amazon Bedrock AgentCore
 
 [Amazon Bedrock AgentCore](https://aws.amazon.com/bedrock/agentcore/) is an agentic platform for building, deploying, and operating AI agents securely at scale -- without managing infrastructure. AgentCore provides the building blocks for production-grade agents:
 
@@ -39,7 +39,7 @@ The orchestrator agent runs on **AgentCore Runtime** and uses a LangGraph StateG
 | **Evaluations** *(Preview)* | Automated, consistent agent assessment measuring task execution, edge case handling, and output reliability across diverse inputs and contexts. |
 | **Policy** *(Preview)* | Deterministic control ensuring agents operate within defined boundaries and business rules. Author fine-grained rules using natural language or Cedar policy language. |
 
-### What is the Model Context Protocol (MCP)?
+### Model Context Protocol (MCP)
 
 The [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) is an open standard that provides a universal way for AI agents to connect to tools and data sources. Instead of building custom integrations for every tool, agents use MCP to discover and invoke tools through a consistent interface.
 
