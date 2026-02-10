@@ -6,7 +6,7 @@ This hands-on workshop teaches you how to build production-ready AI agents that 
 
 ## Overview
 
-**Total Duration:** ~4 hours
+**Total Duration:** ~5 hours
 
 Participants start with a guided overview of AWS Bedrock and AgentCore, then work through lab exercises in Databricks and Neo4j Aura for graph exploration. AWS Bedrock and AgentCore provide pre-deployed infrastructure, while Databricks provides the notebook environment and multi-agent orchestration.
 
@@ -87,7 +87,7 @@ In addition, the workshop administrators have set up a **shared Neo4j Aura insta
 
 ---
 
-### Phase 3: Databricks ETL & Multi-Agent Analytics (90 min)
+### Phase 3: Databricks ETL & Multi-Agent Analytics (2 hours)
 
 *Load aircraft data into Neo4j and build a multi-agent supervisor that combines the Databricks Lakehouse with the Neo4j knowledge graph — two purpose-built systems for two fundamentally different types of data.*
 
@@ -95,17 +95,19 @@ In this phase you'll construct a knowledge graph in Neo4j using the Spark Connec
 
 **Participant Experience:** Pre-configured environment with CSV files in Unity Catalog Volume and ready-to-run notebooks.
 
+**Data Location:** `/Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/`
+
 #### Part A: Databricks Workspace Access
 - Workspace credentials and cluster access
 - Import notebooks to your workspace
 
-#### Part B: Load Data with Spark Connector
+#### Part B: Load Data with Spark Connector (~45 min)
 - [Lab 5 - Databricks ETL to Neo4j](Lab_5_Databricks_ETL_Neo4j/README.md) | [Sample Queries](Lab_5_Databricks_ETL_Neo4j/SAMPLE_QUERIES.md)
 - Load core aircraft topology (Aircraft, System, Component) via Spark Connector
 - Load full dataset (Sensors, Airports, Flights, Delays, Maintenance Events, Removals) via Python driver
 - Validate with Cypher queries and explore in Neo4j Aura
 
-#### Part C: Multi-Agent Aircraft Analytics with AgentBricks
+#### Part C: Multi-Agent Aircraft Analytics with AgentBricks (~75 min)
 - [Lab 6 - AgentBricks](Lab_6_AgentBricks/README.md) - No-code multi-agent system using Databricks AgentBricks
 
 **Why two data sources?** Aircraft intelligence requires both **time-series telemetry** and **rich relational data**, and each is best served by a purpose-built platform:
@@ -115,13 +117,15 @@ In this phase you'll construct a knowledge graph in Neo4j using the Spark Connec
 
 The **multi-agent supervisor** routes each question to the right system and, for complex questions spanning both, queries each sequentially and synthesizes a combined answer.
 
-#### Part C.1: Genie Space for Sensor Analytics (~30 min)
+**Part C includes two sub-parts:**
+
+**Genie Space for Sensor Analytics (~30 min)**
 - Create an AI/BI Genie space over sensor telemetry tables in Unity Catalog
 - Connect data sources: `sensor_readings`, `sensors`, `systems`, `aircraft`
 - Add sample questions and domain-specific instructions (sensor types, normal ranges, fleet info)
 - Test natural language to SQL queries for time-series aggregations and anomaly detection
 
-#### Part C.2: Multi-Agent Supervisor (~45 min)
+**Multi-Agent Supervisor (~45 min)**
 - Build a supervisor agent that coordinates two specialized sub-agents
 - Add the **Neo4j MCP agent** for graph relationship queries (topology, maintenance, flights)
 - Add the **Genie space agent** for time-series sensor analytics (readings, trends, fleet comparisons)
@@ -157,11 +161,9 @@ Multi-Agent Supervisor
 - **Genie Agent:** Time-series aggregations, sensor anomaly detection, fleet comparisons, trend analysis
 - **Neo4j Agent:** Aircraft topology, component hierarchy, maintenance events, flight operations, delays
 
-**Data Location:** `/Volumes/aws-databricks-neo4j-lab/lab-schema/lab-volume/`
-
 ---
 
-### Phase 4: Semantic Search & GraphRAG (75 min)
+### Phase 4: Semantic Search & GraphRAG (60 min)
 
 *Add semantic search capabilities to the knowledge graph — chunk maintenance documentation, generate vector embeddings, and build GraphRAG retrievers that blend similarity search with graph traversal.*
 
@@ -298,9 +300,9 @@ LIMIT 10
 | Track | Labs | Duration | Description |
 |-------|------|----------|-------------|
 | **Console Tour Only** | Phases 1-2 | 2 hours | Explore AWS and Neo4j consoles without coding |
-| **ETL + Multi-Agent** | Phases 1-3 | 2.5 hours | Load data and build multi-agent systems with AgentBricks |
-| **Full Databricks** | Phases 1-4 | 3 hours | ETL, multi-agent analytics, and semantic search |
-| **Full Workshop** | All Phases | 4 hours | Complete hands-on experience |
+| **ETL + Multi-Agent** | Phases 1-3 | 3.5 hours | Load data and build multi-agent systems with AgentBricks |
+| **Full Databricks** | Phases 1-4 | 4.5 hours | ETL, multi-agent analytics, and semantic search |
+| **Full Workshop** | All Phases | 5 hours | Complete hands-on experience |
 
 ---
 

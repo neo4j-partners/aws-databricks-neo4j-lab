@@ -12,10 +12,10 @@ This lab has two notebooks:
 
 | Notebook | Description | Required For |
 |----------|-------------|--------------|
-| [`01_aircraft_etl_to_neo4j.ipynb`](01_aircraft_etl_to_neo4j.ipynb) | Core ETL — loads Aircraft, System, and Component nodes using the Spark Connector | Lab 7 |
+| [`01_aircraft_etl_to_neo4j.ipynb`](01_aircraft_etl_to_neo4j.ipynb) | Core ETL — loads Aircraft, System, and Component nodes using the Spark Connector | Labs 6, 7 |
 | [`02_load_neo4j_full.ipynb`](02_load_neo4j_full.ipynb) | Full dataset — adds Sensors, Airports, Flights, Delays, Maintenance Events, and Removals using the Python driver | **Lab 6** |
 
-> **Important:** Run **both** notebooks. Notebook 01 loads the core aircraft topology. Notebook 02 loads the complete dataset required by the Neo4j MCP agent in Lab 6.
+> **Important:** Run **both** notebooks before proceeding. Notebook 01 loads the core aircraft topology needed by all subsequent labs. Notebook 02 loads the complete dataset required by the Neo4j MCP agent in Lab 6 (AgentBricks).
 
 ---
 
@@ -282,8 +282,8 @@ This loads additional node types and relationships required by Lab 6:
 ## Next Steps
 
 After completing this lab:
-- Continue to **Lab 6** (AgentBricks) to build multi-agent systems with Genie and Neo4j MCP
-- Continue to **Lab 7** (Semantic Search) to add GraphRAG capabilities over maintenance documentation
+- Continue to [Lab 6 - AgentBricks](../Lab_6_AgentBricks) to build multi-agent systems with Genie and Neo4j MCP
+- Continue to [Lab 7 - Semantic Search](../Lab_7_Semantic_Search) to add GraphRAG capabilities over maintenance documentation
 - The data you loaded will be queried by AI agents in later labs
 
 ---

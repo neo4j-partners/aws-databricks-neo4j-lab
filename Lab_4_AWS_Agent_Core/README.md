@@ -577,4 +577,4 @@ This architecture demonstrates how Amazon Bedrock AgentCore provides managed inf
 
 ## Next Steps
 
-Continue to **Lab 5** to work with Databricks and learn how to load data into Neo4j using the Spark Connector.
+Continue to [Lab 5 - Databricks ETL to Neo4j](../Lab_5_Databricks_ETL_Neo4j) to work with Databricks and learn how to load data into Neo4j using the Spark Connector.

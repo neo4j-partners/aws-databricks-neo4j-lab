@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-This is a hands-on workshop teaching AI agents and GraphRAG using Neo4j, AWS, and Databricks. The workshop uses an Aircraft Digital Twin dataset and progresses from setup through ETL, semantic search, and multi-agent orchestration across three platforms (AWS AgentCore, Databricks AgentBricks, Neo4j Aura Agents).
+This is a hands-on workshop teaching AI agents and GraphRAG using Neo4j, AWS, and Databricks. The workshop uses an Aircraft Digital Twin dataset and progresses from setup through ETL, multi-agent orchestration, and semantic search across three platforms (AWS AgentCore, Databricks AgentBricks, Neo4j Aura Agents).
 
 ## Workshop Structure
 
