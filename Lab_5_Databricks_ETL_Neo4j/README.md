@@ -2,6 +2,8 @@
 
 Load aircraft data from Databricks into Neo4j using the Spark Connector.
 
+> **Infrastructure:** This lab uses your **personal** Aura instance. You'll walk through the same ETL process used to build the shared Reference Aura Instance, loading data from shared CSV files into your own Neo4j database.
+
 **Duration:** ~45 minutes
 
 ---

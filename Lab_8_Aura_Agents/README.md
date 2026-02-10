@@ -2,6 +2,8 @@
 
 In this lab, you'll explore the Aircraft Digital Twin knowledge graph directly in Neo4j Aura, then build an AI-powered agent using Aura Agents — all without writing any code.
 
+> **Infrastructure:** This lab uses the **shared Reference Aura Instance**, which contains the complete dataset with all entities, relationships, maintenance manual chunks, embeddings, and extracted operating limits.
+
 ## Prerequisites
 
 - Neo4j Aura instance with data loaded via the `populate-aircraft-db` CLI tool:

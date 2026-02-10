@@ -85,13 +85,13 @@ In addition, the workshop administrators have set up a **shared Neo4j Aura insta
 - [Lab 0 - Sign In](Lab_0_Sign_In) - Access workshop resources
 - [Lab 1 - Neo4j Aura Setup](Lab_1_Aura_Setup) - Save connection credentials
 
-#### Part B: AWS Console Tour
+#### Part B: AWS Console Tour *(shared infrastructure)*
 - Read-only walk-through of Bedrock and AgentCore
 - View the pre-deployed Neo4j MCP server (AgentCore Gateway + MCP Server Hosting)
 - View the AgentCore agent deployment that calls the Neo4j MCP server
 - Understand the architecture: `AgentCore Agent → AgentCore Gateway → Neo4j MCP Server → Neo4j Aura`
 
-#### Part C: AgentCore Agent Sandbox Testing (No-Code)
+#### Part C: AgentCore Agent Sandbox Testing (No-Code) *(shared — queries the Reference Aura Instance)*
 - [Lab 4 - AWS AgentCore](Lab_4_AWS_Agent_Core/README.md) - Use the AgentCore Agent Sandbox
 - Interactively test the deployed agent without writing code
 - Send natural language questions about the aircraft data
@@ -113,21 +113,22 @@ In this phase you'll construct a knowledge graph in Neo4j using the Spark Connec
 - Workspace credentials and cluster access
 - Import notebooks to your workspace
 
-#### Part B: Load Data with Spark Connector 
+#### Part B: Load Data with Spark Connector *(personal — loads into your Aura instance)*
 - [Lab 5 - Databricks ETL to Neo4j](Lab_5_Databricks_ETL_Neo4j/README.md) | [Sample Queries](Lab_5_Databricks_ETL_Neo4j/SAMPLE_QUERIES.md)
+- Walk through the same ETL process used to build the Reference Aura Instance, loading into your personal instance
 - Load core aircraft topology (Aircraft, System, Component) via Spark Connector
 - Load full dataset (Sensors, Airports, Flights, Delays, Maintenance Events, Removals) via Python driver
 - Validate with Cypher queries and explore in Neo4j Aura
 
-#### Part C: Multi-Agent Aircraft Analytics with AgentBricks 
+#### Part C: Multi-Agent Aircraft Analytics with AgentBricks *(shared — Lakehouse tables + Reference Aura via MCP)*
 - [Lab 6 - AgentBricks](Lab_6_AgentBricks/README.md) - No-code multi-agent system using Databricks AgentBricks
-- Create an AI/BI Genie space for sensor analytics over Unity Catalog tables
-- Build a multi-agent supervisor combining Genie Space + Neo4j MCP
+- Create an AI/BI Genie space for sensor analytics over shared Unity Catalog tables
+- Build a multi-agent supervisor combining Genie Space + Neo4j MCP (queries the Reference Aura Instance)
 - Test cross-system queries spanning both time-series telemetry and graph relationships
 
 ---
 
-### Phase 3: Semantic Search & GraphRAG
+### Phase 3: Semantic Search & GraphRAG *(personal — loads into your Aura instance)*
 
 *Add semantic search capabilities to the knowledge graph — chunk maintenance documentation, generate vector embeddings, and build GraphRAG retrievers that blend similarity search with graph traversal.*
 
@@ -140,11 +141,11 @@ In this phase you'll construct a knowledge graph in Neo4j using the Spark Connec
 
 ---
 
-### Phase 4: Neo4j Aura Exploration
+### Phase 4: Neo4j Aura Exploration *(shared — uses the Reference Aura Instance)*
 
-*Visualize and query the knowledge graph you built in previous labs, then create a no-code AI agent on top of it.*
+*Explore the fully populated knowledge graph and create a no-code AI agent on top of it.*
 
-Open [console.neo4j.io](https://console.neo4j.io), sign in, and select your instance to begin exploring.
+Open [console.neo4j.io](https://console.neo4j.io), sign in, and select the Reference Aura Instance to begin exploring.
 
 #### Part A: Data Exploration in Aura
 - [Exploration Guide](Lab_8_Aura_Agents/README.md#part-a-data-exploration-in-aura) — Guided Cypher queries in the Aura Query interface

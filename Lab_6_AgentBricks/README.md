@@ -2,6 +2,8 @@
 
 In this lab, you'll build a multi-agent system using Databricks AgentBricks that combines **Genie** (for sensor time-series analytics) with **Neo4j MCP** (for graph relationship queries). The multi-agent supervisor routes each question to the right system and, for complex questions spanning both, queries each sequentially and synthesizes a combined answer.
 
+> **Infrastructure:** This lab uses **shared** workshop resources — the Genie space queries shared Lakehouse tables in Unity Catalog, and the Neo4j MCP agent queries the **Reference Aura Instance** (the fully populated graph). You do not need data in your personal Aura instance for this lab.
+
 ## Why Two Data Sources?
 
 Aircraft intelligence requires both **time-series telemetry** and **rich relational data**, and each is best served by a purpose-built platform:

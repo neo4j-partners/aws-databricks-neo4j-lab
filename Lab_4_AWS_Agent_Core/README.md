@@ -2,6 +2,8 @@
 
 In this lab, you will explore Amazon Bedrock and AgentCore through a guided console tour, then interact with a pre-deployed multi-agent orchestrator that queries the Aircraft Digital Twin graph in Neo4j.
 
+> **Infrastructure:** This lab uses **shared** workshop resources — the pre-deployed AgentCore agent and Neo4j MCP server query the **Reference Aura Instance**, which contains the complete Aircraft Digital Twin dataset. No personal credentials or data loading are required.
+
 ## Architecture Overview
 
 ![MCP Architecture](../docs/images/mcp-architecture.png)
