@@ -153,14 +153,14 @@ Patterns specify which relationships are valid between node types:
 
 ```python
 patterns = [
-    ("Company", "FACES_RISK", "RiskFactor"),
-    ("Company", "MENTIONS", "Product"),
-    ("Executive", "WORKS_FOR", "Company"),
+    ("Aircraft", "HAS_SYSTEM", "System"),
+    ("System", "HAS_COMPONENT", "Component"),
+    ("Component", "HAS_EVENT", "MaintenanceEvent"),
 ]
 ```
 
 Without patterns, the LLM might create nonsensical relationships like:
-`(Product)-[:FACES_RISK]->(Company)`
+`(Sensor)-[:HAS_SYSTEM]->(Aircraft)`
 
 ---
 
@@ -168,11 +168,11 @@ Without patterns, the LLM might create nonsensical relationships like:
 
 | Node Type | Description |
 |-----------|-------------|
-| Company | Organizations filing reports |
-| RiskFactor | Business risks identified |
-| Product | Products and services mentioned |
-| Executive | Company leaders |
-| FinancialMetric | Financial measures reported |
+| Aircraft | Individual aircraft with tail number and model |
+| System | Engine, Avionics, or Hydraulics system |
+| Component | Turbine, Compressor, Pump, etc. |
+| Sensor | EGT, Vibration, N1Speed, FuelFlow monitors |
+| MaintenanceEvent | Faults with severity (MINOR, MAJOR, CRITICAL) |
 
 ---
 
@@ -180,12 +180,13 @@ Without patterns, the LLM might create nonsensical relationships like:
 
 | Relationship | Pattern |
 |-------------|---------|
-| FACES_RISK | Company → RiskFactor |
-| MENTIONS | Company → Product |
-| WORKS_FOR | Executive → Company |
-| HAS_METRIC | Company → FinancialMetric |
+| HAS_SYSTEM | Aircraft → System |
+| HAS_COMPONENT | System → Component |
+| HAS_SENSOR | System → Sensor |
+| HAS_EVENT | Component → MaintenanceEvent |
+| OPERATES_FLIGHT | Aircraft → Flight |
 
-This focuses extraction on business-relevant information.
+This focuses on the aircraft topology and maintenance tracking.
 
 ---
 

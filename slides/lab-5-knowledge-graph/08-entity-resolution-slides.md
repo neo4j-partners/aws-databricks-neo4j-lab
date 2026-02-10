@@ -36,9 +36,9 @@ ol > li {
 
 When entities are extracted from text, the same real-world entity can appear with different names:
 
-- "Neo4j" vs "Neo4j Graph Database" vs "Neo4j, Inc."
-- "Apple" vs "Apple Inc" vs "Apple Inc." vs "the Company"
-- "Tim Cook" vs "Timothy Cook" vs "CEO Tim Cook"
+- "CFM56-7B" vs "CFM56-7B Engine" vs "CFM56-7B #1"
+- "Engine 1" vs "Engine #1" vs "the left engine"
+- "High-pressure Turbine" vs "HP Turbine" vs "HPT"
 
 **Without resolution:** Your graph contains multiple nodes representing the same thing.
 
@@ -47,14 +47,14 @@ When entities are extracted from text, the same real-world entity can appear wit
 ## Why This Breaks Queries
 
 ```cypher
-// This might miss risks if Apple appears under different names
-MATCH (c:Company {name: 'Apple Inc'})-[:FACES_RISK]->(r:RiskFactor)
-RETURN r.name
+// This might miss events if the component appears under different names
+MATCH (c:Component {name: 'High-pressure Turbine'})-[:HAS_EVENT]->(m:MaintenanceEvent)
+RETURN m.fault
 ```
 
-If some risks are connected to "Apple" and others to "APPLE INC", your query returns incomplete results.
+If some events are connected to "HP Turbine" and others to "High-pressure Turbine", your query returns incomplete results.
 
-**You can't trust basic queries like "How many risk factors does Apple face?"**
+**You can't trust basic queries like "How many faults affect the HP Turbine?"**
 
 ---
 
@@ -73,12 +73,12 @@ Entity resolution ensures:
 By default, `SimpleKGPipeline` performs basic resolution:
 
 - Entities with the **same label** and **identical name** are merged
-- "Company: Apple Inc" + "Company: Apple Inc" = one node
+- "Component: High-pressure Turbine" + "Component: High-pressure Turbine" = one node
 
 **But it misses variations:**
-- "Apple Inc" and "APPLE INC" (case difference)
-- "Apple Inc" and "Apple Inc." (punctuation)
-- "Apple" and "Apple Inc" (name variation)
+- "HP Turbine" and "hp turbine" (case difference)
+- "CFM56-7B" and "CFM56-7B." (punctuation)
+- "Engine 1" and "Engine #1" (name variation)
 
 ---
 
@@ -90,9 +90,9 @@ By default, `SimpleKGPipeline` performs basic resolution:
 
 ### Too Aggressive
 
-- "Apple Inc" (tech) merged with "Apple Records" (music)
-- Distinct entities incorrectly combined
-- Relationships become meaningless
+- "CFM56-7B #1" (Engine 1) merged with "CFM56-7B #2" (Engine 2)
+- Distinct engines incorrectly combined
+- Maintenance history becomes meaningless
 
 </div>
 
@@ -100,9 +100,9 @@ By default, `SimpleKGPipeline` performs basic resolution:
 
 ### Too Conservative
 
-- "Apple Inc" and "APPLE INC" remain separate
-- Queries miss connections
-- Aggregations are wrong
+- "HP Turbine" and "High-pressure Turbine" remain separate
+- Queries miss maintenance events
+- Fault counts are wrong
 
 </div>
 
@@ -120,10 +120,10 @@ Guide the LLM during extraction:
 
 ```python
 prompt_template = """
-When extracting company names, normalize to official names:
-- "Apple", "Apple Inc", "the Company" → "APPLE INC"
-- Use uppercase for company names
-- Use the full legal name when known
+When extracting component names, normalize to standard names:
+- "HP Turbine", "HPT", "High-pressure Turbine" → "High-pressure Turbine"
+- "Engine 1", "Engine #1", "left engine" → "CFM56-7B #1"
+- Use the full standard name when known
 """
 ```
 
@@ -135,10 +135,10 @@ Provide a canonical list of entities:
 
 ```python
 prompt_template = """
-Only extract companies from this approved list:
-- APPLE INC
-- MICROSOFT CORP
-- ALPHABET INC
+Only extract components from this approved list:
+- High-pressure Turbine
+- Low-pressure Compressor
+- Combustion Chamber
 
 Match variations to the canonical name.
 """
@@ -195,15 +195,15 @@ After resolution, verify your entity counts:
 
 ```cypher
 // Check for potential duplicates
-MATCH (c:Company)
+MATCH (c:Component)
 WITH c.name AS name, collect(c) AS nodes
 WHERE size(nodes) > 1
 RETURN name, size(nodes) AS duplicates
 
-// Check company name variations
-MATCH (c:Company)
-WHERE c.name CONTAINS 'Apple' OR c.name CONTAINS 'APPLE'
-RETURN c.name, count{(c)-[:FACES_RISK]->()} AS risks
+// Check component name variations
+MATCH (c:Component)
+WHERE c.name CONTAINS 'Turbine' OR c.name CONTAINS 'turbine'
+RETURN c.name, count{(c)-[:HAS_EVENT]->()} AS events
 ```
 
 ---

@@ -56,7 +56,7 @@ In addition, the workshop administrators have set up a **shared Neo4j Aura insta
 
 ## Lab Structure
 
-### Phase 1: Foundation Setup (45 min)
+### Phase 1: Foundation Setup 
 
 *Get connected to all workshop resources.*
 
@@ -70,7 +70,7 @@ In addition, the workshop administrators have set up a **shared Neo4j Aura insta
 
 ---
 
-### Phase 2: AWS AgentCore Overview (60 min)
+### Phase 2: AWS AgentCore Overview 
 
 *Explore pre-deployed AI agent infrastructure.*
 
@@ -87,7 +87,7 @@ In addition, the workshop administrators have set up a **shared Neo4j Aura insta
 
 ---
 
-### Phase 3: Databricks ETL & Multi-Agent Analytics (2 hours)
+### Phase 3: Databricks ETL & Multi-Agent Analytics 
 
 *Load aircraft data into Neo4j and build a multi-agent supervisor that combines the Databricks Lakehouse with the Neo4j knowledge graph — two purpose-built systems for two fundamentally different types of data.*
 
@@ -101,13 +101,13 @@ In this phase you'll construct a knowledge graph in Neo4j using the Spark Connec
 - Workspace credentials and cluster access
 - Import notebooks to your workspace
 
-#### Part B: Load Data with Spark Connector (~45 min)
+#### Part B: Load Data with Spark Connector 
 - [Lab 5 - Databricks ETL to Neo4j](Lab_5_Databricks_ETL_Neo4j/README.md) | [Sample Queries](Lab_5_Databricks_ETL_Neo4j/SAMPLE_QUERIES.md)
 - Load core aircraft topology (Aircraft, System, Component) via Spark Connector
 - Load full dataset (Sensors, Airports, Flights, Delays, Maintenance Events, Removals) via Python driver
 - Validate with Cypher queries and explore in Neo4j Aura
 
-#### Part C: Multi-Agent Aircraft Analytics with AgentBricks (~75 min)
+#### Part C: Multi-Agent Aircraft Analytics with AgentBricks 
 - [Lab 6 - AgentBricks](Lab_6_AgentBricks/README.md) - No-code multi-agent system using Databricks AgentBricks
 - Create an AI/BI Genie space for sensor analytics over Unity Catalog tables
 - Build a multi-agent supervisor combining Genie Space + Neo4j MCP
@@ -115,7 +115,7 @@ In this phase you'll construct a knowledge graph in Neo4j using the Spark Connec
 
 ---
 
-### Phase 4: Semantic Search & GraphRAG (60 min)
+### Phase 4: Semantic Search & GraphRAG 
 
 *Add semantic search capabilities to the knowledge graph — chunk maintenance documentation, generate vector embeddings, and build GraphRAG retrievers that blend similarity search with graph traversal.*
 
@@ -128,7 +128,7 @@ In this phase you'll construct a knowledge graph in Neo4j using the Spark Connec
 
 ---
 
-### Phase 5: Neo4j Aura Exploration (60 min)
+### Phase 5: Neo4j Aura Exploration 
 
 *Visualize and query the knowledge graph you built in previous labs, then create a no-code AI agent on top of it.*
 

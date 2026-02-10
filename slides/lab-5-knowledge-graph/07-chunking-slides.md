@@ -34,7 +34,7 @@ ol > li {
 
 ## Why Chunking Matters
 
-LLMs have context limits. You can't pass an entire 200-page SEC filing to an LLM for entity extraction.
+LLMs have context limits. You can't pass an entire 200-page maintenance manual to an LLM for entity extraction.
 
 Documents must be broken into smaller pieces—**chunks**—that fit within processing limits.
 
@@ -51,7 +51,7 @@ Chunk size creates a fundamental trade-off:
 **For Entity Extraction:**
 - Larger chunks provide more context for understanding entities
 - The LLM sees more surrounding text, making better extraction decisions
-- "The Company" can be resolved to "Apple Inc" when full context is visible
+- "The engine" can be resolved to "CFM56-7B #1" when full context is visible
 
 **For Retrieval:**
 - Smaller chunks enable more precise matches
@@ -69,10 +69,10 @@ Chunk size creates a fundamental trade-off:
 ### Large Chunks (2000 chars)
 
 ```
-[Full paragraph about Apple's
-risk factors, mentioning
-cybersecurity, supply chain,
-and regulatory risks with
+[Full paragraph about AC1001
+engine maintenance, covering
+bearing wear, EGT trends,
+and corrective actions with
 full context about each]
 ```
 
@@ -87,9 +87,9 @@ full context about each]
 ### Small Chunks (200 chars)
 
 ```
-[Apple faces cybersecurity...]
-[Supply chain disruptions...]
-[Regulatory changes in...]
+[Engine bearing wear on...]
+[EGT readings exceeded...]
+[Corrective action: replaced...]
 ```
 
 - ❌ Less context for extraction
@@ -152,7 +152,7 @@ pipeline = SimpleKGPipeline(
 | 1000-2000 chars | Context-heavy extraction, narrative documents |
 | 2000+ chars | Maximum context, fewer chunks |
 
-For SEC filings with complex, interconnected information, **500-1000 characters** often provides a good balance.
+For maintenance manuals with technical, interconnected information, **500-1000 characters** often provides a good balance.
 
 ---
 

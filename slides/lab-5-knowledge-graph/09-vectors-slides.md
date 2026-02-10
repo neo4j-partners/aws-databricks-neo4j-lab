@@ -48,8 +48,8 @@ Embeddings are numerical representations of text encoded as high-dimensional vec
 
 **The key property:** Similar meanings produce similar vectors.
 
-- "Apple's business strategy" and "the company's strategic approach" → vectors close together
-- "Apple's business strategy" and "banana nutrition facts" → vectors far apart
+- "Engine bearing wear requires replacement" and "turbine component degradation" → vectors close together
+- "Engine bearing wear requires replacement" and "flight departed from JFK" → vectors far apart
 
 This enables **semantic search**—finding content by meaning, not just keywords.
 
@@ -58,8 +58,8 @@ This enables **semantic search**—finding content by meaning, not just keywords
 ## Why Vectors Matter for GraphRAG
 
 Your knowledge graph now has:
-- Structured entities (companies, risks, products)
-- Relationships (FACES_RISK, OWNS, MENTIONS)
+- Structured entities (aircraft, systems, components, sensors)
+- Relationships (HAS_SYSTEM, HAS_COMPONENT, HAS_EVENT)
 - Text chunks from source documents
 
 **But how do you *find* relevant information when a user asks a question?**
@@ -70,12 +70,12 @@ Your knowledge graph now has:
 
 **Without vectors:**
 - You need exact keyword matches
-- "What challenges does Apple face?" won't find chunks about "risks" or "threats"
+- "What engine problems occurred?" won't find chunks about "bearing wear" or "vibration exceedance"
 
 **With vectors:**
 - The question and chunks become embeddings
 - You find chunks with similar *meaning*, regardless of exact words
-- "Challenges" finds content about "risks" and "threats"
+- "Engine problems" finds content about "bearing wear" and "overheat"
 
 ---
 
@@ -115,13 +115,13 @@ LIMIT 1
 ```cypher
 // Create an embedding for the query
 WITH genai.vector.encode(
-    "What risks does Apple face?",
+    "What maintenance issues affect the turbine?",
     "OpenAI",
     { token: $apiKey }
 ) AS queryEmbedding
 
 // Search the vector index for similar chunks
-CALL db.index.vector.queryNodes('chunkEmbeddings', 5, queryEmbedding)
+CALL db.index.vector.queryNodes('maintenanceChunkEmbeddings', 5, queryEmbedding)
 YIELD node, score
 
 RETURN node.text AS content, score
@@ -138,20 +138,20 @@ This finds the 5 chunks most semantically similar to the query.
 
 ```cypher
 WITH genai.vector.encode(
-    "What risks does Apple face?",
+    "What maintenance issues affect the turbine?",
     "OpenAI",
     { token: $apiKey }
 ) AS queryEmbedding
 
-CALL db.index.vector.queryNodes('chunkEmbeddings', 5, queryEmbedding)
+CALL db.index.vector.queryNodes('maintenanceChunkEmbeddings', 5, queryEmbedding)
 YIELD node, score
 
-// Traverse to connected entities
-MATCH (node)<-[:FROM_CHUNK]-(entity)
-RETURN node.text AS content, score, collect(entity.name) AS relatedEntities
+// Traverse from chunk to its parent document
+MATCH (node)-[:FROM_DOCUMENT]->(d:Document)
+RETURN node.text AS content, score, d.path AS sourceDocument
 ```
 
-Returns both similar text AND the entities extracted from that text.
+Returns both similar text AND the source document it came from.
 
 ---
 
