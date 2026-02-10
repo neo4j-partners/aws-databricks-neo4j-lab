@@ -18,38 +18,7 @@ The multi-agent approach lets users ask questions in natural language without kn
 
 ## Data Model
 
-### Databricks Lakehouse (Time-Series Analytics)
-
-These tables should already be loaded from Lab 5 setup:
-
-| Table | Rows | Description |
-|-------|------|-------------|
-| `sensor_readings` | 345,600+ | Hourly sensor telemetry (90 days) |
-| `sensors` | 160 | Sensor metadata (type, unit, system) |
-| `systems` | ~80 | Aircraft systems (engines, avionics, hydraulics) |
-| `aircraft` | 20 | Fleet metadata (tail number, model, operator) |
-
-**Sensor Types:**
-- **EGT** (Exhaust Gas Temperature): 640-700 C
-- **Vibration**: 0.05-0.50 ips
-- **N1Speed** (Fan Speed): 4,300-5,200 rpm
-- **FuelFlow**: 0.85-1.95 kg/s
-
-### Neo4j Knowledge Graph (Relationships)
-
-From Lab 5 (both notebooks), your graph contains:
-
-| Node Type | Count | Purpose |
-|-----------|-------|---------|
-| Aircraft | 20 | Fleet inventory |
-| System | ~80 | Component hierarchy |
-| Component | 320 | Parts and assemblies |
-| Sensor | 160 | Monitoring equipment |
-| MaintenanceEvent | 300 | Fault tracking |
-| Flight | 800 | Operations |
-| Delay | ~300 | Delay causes |
-| Airport | 12 | Route network |
-| Removal | ~60 | Component removal tracking |
+For the full data model (Lakehouse tables, Neo4j node types, graph schema), see the [Data Architecture](../docs/DATA_ARCHITECTURE.md).
 
 ### Data Overlap
 
