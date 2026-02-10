@@ -2,6 +2,14 @@
 
 In this lab, you will explore Amazon Bedrock and AgentCore through a guided console tour, then interact with a pre-deployed multi-agent orchestrator that queries the Aircraft Digital Twin graph in Neo4j.
 
+## Architecture Overview
+
+![MCP Architecture](../docs/images/mcp-architecture.png)
+
+The orchestrator agent runs on **AgentCore Runtime** and uses a LangGraph StateGraph to route user questions to specialist agents (Maintenance or Operations). Each specialist queries a Neo4j Aura graph database — containing an Aircraft Digital Twin dataset — through a **Neo4j MCP Server** also hosted on AgentCore Runtime. All communication between the orchestrator and the MCP server flows through the **AgentCore Gateway**, which handles tool discovery and JWT-based authentication via **Amazon Cognito** (OAuth2 machine-to-machine). The end-to-end flow is: client request → orchestrator agent → Gateway → Neo4j MCP Server → Neo4j Aura.
+
+---
+
 ## Prerequisites
 
 - Completed **Lab 0** (Sign In)
