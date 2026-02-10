@@ -141,10 +141,6 @@ GraphRAG extracts structure, creating a *knowledge graph* that preserves:
 
 ---
 
-![bg contain](../images/neo4j-graphrag.jpg)
-
----
-
 ![bg contain](../images/graph_mem.jpg)
 
 ---
