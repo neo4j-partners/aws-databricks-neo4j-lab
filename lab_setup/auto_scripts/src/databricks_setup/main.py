@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import time
 import traceback
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -375,15 +376,22 @@ def _run_cleanup(*, yes: bool) -> None:
 # add-users orchestration
 # ---------------------------------------------------------------------------
 
-def _run_add_users(*, skip_clusters: bool) -> None:
-    """Parse CSV, find/create users, add to group, create per-user clusters."""
-    config = Config.load()
-    client = config.prepare()
-    acct = get_account_client()
+@dataclass
+class _AddUsersStats:
+    """Counters collected across the add-users phases."""
 
-    csv_path = _resolve_csv(config)
+    users_created: int = 0
+    users_existed: int = 0
+    users_failed: int = 0
+    group_added: int = 0
+    group_already: int = 0
+    clusters_created: int = 0
+    clusters_skipped: int = 0
+    clusters_failed: int = 0
 
-    # --- Preview CSV and confirm ------------------------------------------
+
+def _confirm_csv(csv_path: Path) -> list[str]:
+    """Preview the CSV, ask for confirmation, and return parsed emails."""
     preview_rows = preview_csv(csv_path)
     emails = parse_csv(csv_path)
 
@@ -396,18 +404,25 @@ def _run_add_users(*, skip_clusters: bool) -> None:
         log(f"    ... and {len(emails) - len(preview_rows)} more")
 
     typer.confirm("Proceed with this file?", abort=True)
+    return emails
 
-    # --- Phase 1: Find or create workspace users --------------------------
+
+def _ensure_workspace_users(
+    client: WorkspaceClient,
+    acct: object,
+    emails: list[str],
+    stats: _AddUsersStats,
+) -> list[str]:
+    """Find or create workspace users and add them to the workshop group.
+
+    Returns the list of emails that were successfully resolved.
+    """
     print_header("Checking Users")
 
     grp = require_group(client, WORKSHOP_GROUP)
     group_id: str = grp.id  # type: ignore[assignment]
-    existing_members = get_group_member_ids(acct, group_id)
+    existing_members = get_group_member_ids(acct, group_id)  # type: ignore[arg-type]
 
-    users_existed = 0
-    users_created = 0
-    users_failed = 0
-    already_in_group = 0
     to_add_to_group: list[str] = []
     user_emails_ok: list[str] = []
 
@@ -415,95 +430,116 @@ def _run_add_users(*, skip_clusters: bool) -> None:
         user = find_workspace_user(client, email)
         if user is not None and user.id is not None:
             log(f"  {email} — exists")
-            users_existed += 1
+            stats.users_existed += 1
         else:
             try:
                 user = create_workspace_user(client, email)
-                users_created += 1
+                stats.users_created += 1
             except Exception as exc:
                 log(f"  [red]Failed to create user {email}: {exc}[/red]")
-                users_failed += 1
+                stats.users_failed += 1
                 continue
 
         if user.id in existing_members:
-            already_in_group += 1
+            stats.group_already += 1
         else:
             to_add_to_group.append(user.id)
 
         user_emails_ok.append(email)
 
     if to_add_to_group:
-        add_members_to_group(acct, group_id, to_add_to_group)
+        add_members_to_group(acct, group_id, to_add_to_group)  # type: ignore[arg-type]
+    stats.group_added = len(to_add_to_group)
 
-    # --- Phase 2: Per-user clusters ---------------------------------------
-    clusters_created = 0
-    clusters_skipped = 0
-    clusters_failed = 0
+    return user_emails_ok
+
+
+def _provision_clusters(
+    client: WorkspaceClient,
+    cluster_config: object,
+    library_config: object,
+    user_emails: list[str],
+    stats: _AddUsersStats,
+) -> None:
+    """Create per-user clusters, wait for them, and install libraries."""
+    print_header("Checking Clusters")
+
+    existing_clusters = {uc.cluster_name: uc for uc in find_user_clusters(client)}
+    needs_work: list[tuple[str, str]] = []
+
+    for email in user_emails:
+        cname = cluster_name_for_user(email)
+        existing = existing_clusters.get(cname)
+
+        if existing and existing.state == State.RUNNING:
+            log(f"  {cname} — already running ({existing.cluster_id})")
+            stats.clusters_skipped += 1
+            continue
+
+        try:
+            cid = create_user_cluster(client, cluster_config, email)  # type: ignore[arg-type]
+            needs_work.append((email, cid))
+        except Exception as exc:
+            log(f"  [red]Failed to create cluster for {email}: {exc}[/red]")
+            stats.clusters_failed += 1
+
+    if stats.clusters_skipped:
+        log(f"  ({stats.clusters_skipped} cluster(s) already running — skipped)")
+
+    if not needs_work:
+        return
+
+    log()
+    log(f"Waiting for {len(needs_work)} cluster(s) to start...")
+    for email, cid in needs_work:
+        try:
+            wait_for_cluster_running(client, cid)
+            stats.clusters_created += 1
+        except (RuntimeError, TimeoutError) as exc:
+            log(f"  [red]Cluster for {email} did not reach RUNNING: {exc}[/red]")
+            stats.clusters_failed += 1
+
+    print_header("Installing Libraries")
+    for email, cid in needs_work:
+        log(f"  {email} ({cid})...")
+        try:
+            ensure_libraries_installed(client, cid, library_config)  # type: ignore[arg-type]
+        except Exception as exc:
+            log(f"  [red]Library install failed for {email}: {exc}[/red]")
+
+
+def _print_add_users_summary(stats: _AddUsersStats, *, skip_clusters: bool) -> None:
+    """Print the final add-users summary."""
+    print_header("Summary")
+    log(f"  Users:    {stats.users_created} created, {stats.users_existed} already existed"
+        + (f", {stats.users_failed} failed" if stats.users_failed else ""))
+    log(f"  Group:    {stats.group_added} added, {stats.group_already} already members")
+    if not skip_clusters:
+        log(f"  Clusters: {stats.clusters_created} created, {stats.clusters_skipped} already running"
+            + (f", {stats.clusters_failed} failed" if stats.clusters_failed else ""))
+    log()
+    log("[green]add-users complete.[/green]")
+
+
+def _run_add_users(*, skip_clusters: bool) -> None:
+    """Parse CSV, find/create users, add to group, create per-user clusters."""
+    config = Config.load()
+    client = config.prepare()
+    acct = get_account_client()
+    stats = _AddUsersStats()
+
+    csv_path = _resolve_csv(config)
+    emails = _confirm_csv(csv_path)
+
+    user_emails_ok = _ensure_workspace_users(client, acct, emails, stats)
 
     if skip_clusters:
         log()
         log("[dim]Skipping cluster creation (--skip-clusters).[/dim]")
-    elif not user_emails_ok:
-        log()
-        log("[yellow]No users to create clusters for.[/yellow]")
-    else:
-        print_header("Checking Clusters")
+    elif user_emails_ok:
+        _provision_clusters(client, config.cluster, config.library, user_emails_ok, stats)
 
-        # Build lookup of existing lab-* clusters (single API call)
-        existing_clusters = {uc.cluster_name: uc for uc in find_user_clusters(client)}
-
-        needs_work: list[tuple[str, str]] = []  # (email, cluster_id) — needs wait + libs
-
-        for email in user_emails_ok:
-            cname = cluster_name_for_user(email)
-            existing = existing_clusters.get(cname)
-
-            if existing and existing.state == State.RUNNING:
-                log(f"  {cname} — already running ({existing.cluster_id})")
-                clusters_skipped += 1
-                continue
-
-            try:
-                cid = create_user_cluster(client, config.cluster, email)
-                needs_work.append((email, cid))
-            except Exception as exc:
-                log(f"  [red]Failed to create cluster for {email}: {exc}[/red]")
-                clusters_failed += 1
-
-        if clusters_skipped:
-            log(f"  ({clusters_skipped} cluster(s) already running — skipped)")
-
-        if needs_work:
-            # Wait for clusters that need starting
-            log()
-            log(f"Waiting for {len(needs_work)} cluster(s) to start...")
-            for email, cid in needs_work:
-                try:
-                    wait_for_cluster_running(client, cid)
-                    clusters_created += 1
-                except (RuntimeError, TimeoutError) as exc:
-                    log(f"  [red]Cluster for {email} did not reach RUNNING: {exc}[/red]")
-                    clusters_failed += 1
-
-            # Install libraries
-            print_header("Installing Libraries")
-            for email, cid in needs_work:
-                log(f"  {email} ({cid})...")
-                try:
-                    ensure_libraries_installed(client, cid, config.library)
-                except Exception as exc:
-                    log(f"  [red]Library install failed for {email}: {exc}[/red]")
-
-    # --- Summary -----------------------------------------------------------
-    print_header("Summary")
-    log(f"  Users:    {users_created} created, {users_existed} already existed"
-        + (f", {users_failed} failed" if users_failed else ""))
-    log(f"  Group:    {len(to_add_to_group)} added, {already_in_group} already members")
-    if not skip_clusters:
-        log(f"  Clusters: {clusters_created} created, {clusters_skipped} already running"
-            + (f", {clusters_failed} failed" if clusters_failed else ""))
-    log()
-    log("[green]add-users complete.[/green]")
+    _print_add_users_summary(stats, skip_clusters=skip_clusters)
 
 
 # ---------------------------------------------------------------------------
