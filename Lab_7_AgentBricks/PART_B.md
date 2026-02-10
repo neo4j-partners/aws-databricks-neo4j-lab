@@ -55,7 +55,7 @@ The Neo4j MCP connection has been **pre-configured** by the workshop administrat
 
 1. In the left navigation pane, click **Catalog**
 2. Click **External connections** (or navigate to the **Connections** tab)
-3. Locate the Neo4j MCP connection (typically named `neo4j_mcp`)
+3. Locate the Neo4j MCP connection named `neo4j_agentcore_mcp`
 4. Verify the connection status shows as configured
 
 > **Note:** This MCP connection points to the administrator's Neo4j Aura instance, which contains the full Aircraft Digital Twin dataset. You do not need to configure this yourself — it has been set up ahead of time so that all participants share the same complete graph data.
@@ -68,9 +68,14 @@ The Neo4j MCP server provides these tools:
 
 You can test these in AI Playground before creating the supervisor:
 1. Navigate to **Playground** in the left navigation
-2. Select a model with **Tools enabled**
-3. Click **Tools** > **+ Add tool** > **MCP Servers**
-4. Select your Neo4j connection
+2. Select **GPT OSS 120B**
+3. Click **Add your own tool** > **+ Add tool** > **MCP Servers** > **External MCP Servers** > **neo4j_agentcore_mcp**
+4. Ask:
+
+```
+What is the schema of the database?
+Which aircraft had critical maintenance events?
+```
 
 ---
 
@@ -94,43 +99,18 @@ You can test these in AI Playground before creating the supervisor:
 
 ---
 
-## Step 3: Prepare Sub-agents and Permissions
+## Step 3: Add the Neo4j Graph Agent
 
-Before adding agents to the supervisor, ensure proper access is configured.
-
-### 3.1 Genie Space Permissions
-
-For the Genie space created in Part A:
-1. Navigate to your Genie space
-2. Share the space with end users who will query the supervisor
-3. Ensure users have access to the underlying data tables in:
-   - Catalog: `aws-databricks-neo4j-lab`
-   - Schema: `lakehouse`
-   - Tables: `sensor_readings`, `sensors`, `systems`, `aircraft`
-
-### 3.2 MCP Server Permissions
-
-For the Neo4j MCP connection:
-1. Navigate to **Catalog** > **Connections**
-2. Select the Neo4j connection
-3. Click **Permissions**
-4. Grant `USE CONNECTION` permission to relevant users/groups
-
----
-
-## Step 4: Add the Neo4j Graph Agent
-
-### 4.1 Add External MCP Server
+### 3.1 Add and Configure the External MCP Server
 
 1. In the supervisor configuration under **Configure Agents**, click **+ Add**
 2. From the **Type** dropdown, select **External MCP Server**
-3. From the connection dropdown, select your Neo4j connection (e.g., `neo4j_mcp`)
+3. From the **Unity Catalog connection** dropdown, select `neo4j_agentcore_mcp`
+4. The **Agent Name** `mcp-neo4j-agentcore-mcp` will auto-populate
 
-### 4.2 Configure Agent Settings
+![MCP Connection Configuration](images/mcp_connection.png)
 
-1. **Agent Name:** `neo4j_graph_agent`
-   - The name auto-populates but can be edited
-2. **Description** (critical for routing accuracy):
+5. In the **Describe the content** field, paste the following. The supervisor uses this description to decide which agent handles each question, so detail matters:
 
 ```
 Queries the Neo4j knowledge graph to explore aircraft relationships, topology, and operational data.
@@ -170,15 +150,15 @@ DO NOT USE FOR:
 
 ---
 
-## Step 5: Add the Genie Space Agent
+## Step 4: Add the Genie Space Agent
 
-### 5.1 Add Genie Space
+### 4.1 Add Genie Space
 
 1. Click **+ Add** to add another agent
 2. From the **Type** dropdown, select **Genie Space**
 3. Select your Genie space from Part A: `Aircraft Sensor Analyst [YOUR_INITIALS]`
 
-### 5.2 Configure Agent Settings
+### 4.2 Configure Agent Settings
 
 1. **Agent Name:** `sensor_data_agent`
    - Edit the auto-populated name if needed
@@ -213,7 +193,7 @@ SENSOR TYPES:
 - FuelFlow: Fuel consumption (0.85-1.95 kg/s)
 
 DO NOT USE FOR:
-- Relationship queries (use neo4j_graph_agent)
+- Relationship queries (use mcp-neo4j-agentcore-mcp)
 - Maintenance event details
 - Flight operations or delays
 - Component-level fault tracking
@@ -221,11 +201,21 @@ DO NOT USE FOR:
 
 ---
 
+## Step 5: Create the Agent
+
+Click **Create Agent** to deploy the supervisor.
+
+> **Note:** Deployment may take several minutes to complete. The status will update when ready.
+
+---
+
 ## Step 6: Configure Supervisor Instructions
 
 ### 6.1 Set Supervisor Instructions
 
-In the **Instructions** field (optional but recommended), enter:
+1. Scroll to the bottom of the agent configuration page
+2. Expand the **Optional** section
+3. In the **Instructions** field, enter the following:
 
 ```
 # Aircraft Intelligence Hub - Routing Instructions
@@ -243,7 +233,7 @@ Use for questions about:
 - Anomaly detection based on readings
 - Questions containing: EGT, vibration, N1, fuel flow, temperature, readings, averages, trends
 
-### neo4j_graph_agent (Neo4j Knowledge Graph - Cypher)
+### mcp-neo4j-agentcore-mcp (Neo4j Knowledge Graph - Cypher)
 Use for questions about:
 - Aircraft structure and topology
 - Component relationships and hierarchy
@@ -259,17 +249,17 @@ Use for questions about:
    - "Show vibration readings..."
    - "Average fuel flow..."
 
-2. **Relationships/structure** -> neo4j_graph_agent
+2. **Relationships/structure** -> mcp-neo4j-agentcore-mcp
    - "What systems does aircraft X have?"
    - "Which components..."
    - "Show maintenance events..."
 
-3. **Flights/operations** -> neo4j_graph_agent
+3. **Flights/operations** -> mcp-neo4j-agentcore-mcp
    - "Which flights were delayed?"
    - "What airports does..."
    - "Show flight routes..."
 
-4. **Maintenance history** -> neo4j_graph_agent
+4. **Maintenance history** -> mcp-neo4j-agentcore-mcp
    - "What maintenance events..."
    - "Which components had faults?"
    - "Critical maintenance..."
@@ -285,14 +275,14 @@ For questions that need BOTH sources, process sequentially:
 
 1. **"Find aircraft with high vibration AND recent maintenance"**
    - First: sensor_data_agent -> Get aircraft with high vibration
-   - Then: neo4j_graph_agent -> Get maintenance events for those aircraft
+   - Then: mcp-neo4j-agentcore-mcp -> Get maintenance events for those aircraft
 
 2. **"Which engines have abnormal EGT and what components were serviced?"**
    - First: sensor_data_agent -> Find abnormal EGT readings
-   - Then: neo4j_graph_agent -> Find maintenance events for those engines
+   - Then: mcp-neo4j-agentcore-mcp -> Find maintenance events for those engines
 
 3. **"Compare sensor trends for aircraft that had delays"**
-   - First: neo4j_graph_agent -> Get aircraft with delays
+   - First: mcp-neo4j-agentcore-mcp -> Get aircraft with delays
    - Then: sensor_data_agent -> Get sensor trends for those aircraft
 
 ## Response Guidelines
@@ -303,11 +293,9 @@ For questions that need BOTH sources, process sequentially:
 4. If a query cannot be answered by either agent, explain what data would be needed
 ```
 
-### 6.2 Create the Agent
+### 6.2 Save Changes
 
-Click **Create Agent** to deploy the supervisor.
-
-> **Note:** Deployment may take several minutes to complete. The status will update when ready.
+Click **Update Agent** to save the instructions.
 
 ---
 
@@ -327,13 +315,13 @@ What is the average EGT temperature across the fleet?
 ```
 Verify: The query is routed to sensor_data_agent and returns a numerical average
 
-**Test 2: Graph Relationships (should route to neo4j_graph_agent)**
+**Test 2: Graph Relationships (should route to mcp-neo4j-agentcore-mcp)**
 ```
 What systems does aircraft AC1001 have?
 ```
-Verify: The query is routed to neo4j_graph_agent and returns engine, avionics, hydraulics systems
+Verify: The query is routed to mcp-neo4j-agentcore-mcp and returns engine, avionics, hydraulics systems
 
-**Test 3: Maintenance Events (should route to neo4j_graph_agent)**
+**Test 3: Maintenance Events (should route to mcp-neo4j-agentcore-mcp)**
 ```
 Show me all critical maintenance events in the last month
 ```
@@ -353,7 +341,7 @@ Find aircraft with EGT readings above 680 degrees and show their maintenance his
 ```
 Expected behavior:
 1. Supervisor routes to sensor_data_agent for high EGT aircraft
-2. Supervisor routes to neo4j_graph_agent for maintenance history
+2. Supervisor routes to mcp-neo4j-agentcore-mcp for maintenance history
 3. Response synthesizes both data sources
 
 **Test 6: Another Combined Query**
@@ -362,7 +350,7 @@ Which engines had above-average vibration, and what components were recently ser
 ```
 Expected behavior:
 1. Get high-vibration engines from sensor_data_agent
-2. Get maintenance events from neo4j_graph_agent
+2. Get maintenance events from mcp-neo4j-agentcore-mcp
 3. Combine and present results
 
 ---
@@ -390,19 +378,7 @@ Expected behavior:
 
 ---
 
-## Step 9: Manage Permissions and Deploy
-
-### 9.1 Configure Permissions
-
-1. Click the kebab menu (three dots) at the top of the agent page
-2. Select **Manage permissions**
-3. Add users, groups, or service principals
-4. Assign permission levels:
-   - **Can Manage:** Full editing and permission control
-   - **Can Query:** Endpoint access only via Playground or API
-5. Click **Add**, then **Save**
-
-### 9.2 Query the Endpoint Programmatically
+## Step 9: Optional - Query the Endpoint Programmatically
 
 1. Click **See Agent status** or **Open in Playground**
 2. Select **Get code** to retrieve API examples
@@ -518,7 +494,7 @@ Compare fuel flow rates by aircraft model
 What was the maximum N1 speed recorded?
 ```
 
-### Graph Queries (neo4j_graph_agent)
+### Graph Queries (mcp-neo4j-agentcore-mcp)
 ```
 What systems does aircraft AC1001 have?
 Show all components in the hydraulics system

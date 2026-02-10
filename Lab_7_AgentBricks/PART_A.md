@@ -67,26 +67,10 @@ Still on the **Settings** tab, scroll down to **Sample questions**. These train 
 What is the average EGT temperature for aircraft N95040A over the last 30 days?
 ```
 
-```
-Show daily average vibration readings for Engine 1 on aircraft AC1001
-```
-
-```
-What was the maximum fuel flow recorded in August 2024?
-```
-
 **Fleet Comparisons**
 
 ```
 Compare average EGT temperatures between Boeing 737 and Airbus A320 aircraft
-```
-
-```
-Which aircraft has the highest average vibration readings?
-```
-
-```
-Show fuel flow rates by operator
 ```
 
 **Anomaly Detection**
@@ -95,22 +79,10 @@ Show fuel flow rates by operator
 Find sensors with readings above their 95th percentile value
 ```
 
-```
-Show all EGT readings above 690 degrees Celsius
-```
-
-```
-Which engines have N1 speed readings outside the normal range of 4500-5000 rpm?
-```
-
 **Trend Analysis**
 
 ```
 Show the trend of EGT temperatures over the 90-day period for aircraft N95040A
-```
-
-```
-Calculate the 7-day rolling average of vibration for Engine 1 on AC1001
 ```
 
 ---
@@ -250,6 +222,46 @@ You've created a Genie space that can:
 - Understand domain-specific terminology (EGT, N1Speed, etc.)
 
 ---
+
+## Additional Sample Queries
+
+Want to add more sample questions to your Genie space or test further? Here are additional queries organized by category:
+
+**Time-Series Analytics**
+
+```
+Show daily average vibration readings for Engine 1 on aircraft AC1001
+```
+
+```
+What was the maximum fuel flow recorded in August 2024?
+```
+
+**Fleet Comparisons**
+
+```
+Which aircraft has the highest average vibration readings?
+```
+
+```
+Show fuel flow rates by operator
+```
+
+**Anomaly Detection**
+
+```
+Show all EGT readings above 690 degrees Celsius
+```
+
+```
+Which engines have N1 speed readings outside the normal range of 4500-5000 rpm?
+```
+
+**Trend Analysis**
+
+```
+Calculate the 7-day rolling average of vibration for Engine 1 on AC1001
+```
 
 ---
 

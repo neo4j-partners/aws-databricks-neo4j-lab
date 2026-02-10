@@ -16,6 +16,24 @@ from databricks.sdk.service.workspace import ImportFormat
 from .config import NotebookConfig
 from .log import log
 
+# Workspace subdirectories that should be deleted before re-upload
+# (to avoid stale artifacts from previous imports).
+_DELETE_BEFORE_UPLOAD = {"neo4j_mcp_connection"}
+
+
+def _delete_lab_subfolder(
+    client: WorkspaceClient,
+    workspace_folder: str,
+    subfolder: str,
+) -> None:
+    """Recursively delete a lab subfolder from the workspace."""
+    path = f"{workspace_folder}/{subfolder}"
+    try:
+        client.workspace.delete(path, recursive=True)
+        log(f"  Deleted existing folder: {path}")
+    except NotFound:
+        pass
+
 
 def _import_file(
     client: WorkspaceClient,
@@ -59,6 +77,11 @@ def upload_notebooks(client: WorkspaceClient, notebook_config: NotebookConfig) -
 
     # Collect unique lab dirs to create
     lab_dirs = {lab_dir for _, lab_dir in upload_files}
+
+    # Delete folders that need a clean re-import (e.g. neo4j_mcp_connection)
+    for lab_dir in sorted(lab_dirs & _DELETE_BEFORE_UPLOAD):
+        _delete_lab_subfolder(client, notebook_config.workspace_folder, lab_dir)
+
     for lab_dir in sorted(lab_dirs):
         folder = f"{notebook_config.workspace_folder}/{lab_dir}"
         client.workspace.mkdirs(folder)

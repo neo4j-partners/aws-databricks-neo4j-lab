@@ -201,6 +201,31 @@ def remove_users(
 # list-users
 # ---------------------------------------------------------------------------
 
+@app.command()
+def sync() -> None:
+    """Sync workshop notebooks to the Databricks workspace.
+
+    Uploads all lab notebooks.  The neo4j_mcp_connection folder is deleted
+    first to avoid stale artifacts, then re-uploaded cleanly.
+    """
+    log_path = init_log_file()
+    log(f"[dim]Log file: {log_path}[/dim]")
+
+    start = time.monotonic()
+    try:
+        _run_sync()
+        elapsed = time.monotonic() - start
+        log(f"[green]Total elapsed time: {_fmt_elapsed(elapsed)}[/green]")
+    except Exception as e:
+        elapsed = time.monotonic() - start
+        log(f"[red]Error: {e}[/red]", level=Level.ERROR)
+        log_to_file(traceback.format_exc(), level=Level.ERROR)
+        log(f"[dim]Failed after {_fmt_elapsed(elapsed)}[/dim]")
+        raise typer.Exit(code=1) from None
+    finally:
+        close_log_file()
+
+
 @app.command("list-users")
 def list_users() -> None:
     """List members of the workshop group and their cluster status."""
@@ -232,6 +257,21 @@ def _fmt_elapsed(seconds: float) -> str:
 # ---------------------------------------------------------------------------
 # setup orchestration
 # ---------------------------------------------------------------------------
+
+def _run_sync() -> None:
+    """Load config, upload notebooks, and verify."""
+    config = Config.load()
+    client = config.prepare()
+
+    print_header("Sync Notebooks")
+    log(f"  Target: {config.notebook.workspace_folder}")
+
+    upload_notebooks(client, config.notebook)
+    verify_notebook_upload(client, config.notebook)
+
+    log()
+    log("[green]Notebook sync complete.[/green]")
+
 
 def _run_setup() -> None:
     """Load config, run Tracks A, B, and C, and print results."""
