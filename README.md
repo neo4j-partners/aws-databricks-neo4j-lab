@@ -77,30 +77,21 @@ In addition, the workshop administrators have set up a **shared Neo4j Aura insta
 
 ## Lab Structure
 
-### Phase 1: Foundation Setup 
+### Phase 1: Setup & AWS AgentCore Overview
 
-*Get connected to all workshop resources.*
+*Get connected to all workshop resources and explore pre-deployed AI agent infrastructure.*
 
-#### Part A: AWS Console Tour
-- Read-only access to view the Neo4j MCP Server deployment in AgentCore
-- Understand the architecture: `AgentCore Agent → AgentCore Gateway → Neo4j MCP Server → Neo4j Aura`
-
-#### Part B: Neo4j Aura Credentials
+#### Part A: Sign In & Neo4j Aura Credentials
 - [Lab 0 - Sign In](Lab_0_Sign_In) - Access workshop resources
 - [Lab 1 - Neo4j Aura Setup](Lab_1_Aura_Setup) - Save connection credentials
 
----
-
-### Phase 2: AWS AgentCore Overview 
-
-*Explore pre-deployed AI agent infrastructure.*
-
-#### Part A: Read-Only Console Tour
-- Walk-through of Bedrock and AgentCore
+#### Part B: AWS Console Tour
+- Read-only walk-through of Bedrock and AgentCore
 - View the pre-deployed Neo4j MCP server (AgentCore Gateway + MCP Server Hosting)
 - View the AgentCore agent deployment that calls the Neo4j MCP server
+- Understand the architecture: `AgentCore Agent → AgentCore Gateway → Neo4j MCP Server → Neo4j Aura`
 
-#### Part B: AgentCore Agent Sandbox Testing (No-Code)
+#### Part C: AgentCore Agent Sandbox Testing (No-Code)
 - [Lab 4 - AWS AgentCore](Lab_4_AWS_Agent_Core/README.md) - Use the AgentCore Agent Sandbox
 - Interactively test the deployed agent without writing code
 - Send natural language questions about the aircraft data
@@ -108,7 +99,7 @@ In addition, the workshop administrators have set up a **shared Neo4j Aura insta
 
 ---
 
-### Phase 3: Databricks ETL & Multi-Agent Analytics 
+### Phase 2: Databricks ETL & Multi-Agent Analytics
 
 *Load aircraft data into Neo4j and build a multi-agent supervisor that combines the Databricks Lakehouse with the Neo4j knowledge graph — two purpose-built systems for two fundamentally different types of data.*
 
@@ -136,7 +127,7 @@ In this phase you'll construct a knowledge graph in Neo4j using the Spark Connec
 
 ---
 
-### Phase 4: Semantic Search & GraphRAG 
+### Phase 3: Semantic Search & GraphRAG
 
 *Add semantic search capabilities to the knowledge graph — chunk maintenance documentation, generate vector embeddings, and build GraphRAG retrievers that blend similarity search with graph traversal.*
 
@@ -149,7 +140,7 @@ In this phase you'll construct a knowledge graph in Neo4j using the Spark Connec
 
 ---
 
-### Phase 5: Neo4j Aura Exploration 
+### Phase 4: Neo4j Aura Exploration
 
 *Visualize and query the knowledge graph you built in previous labs, then create a no-code AI agent on top of it.*
 
@@ -210,9 +201,9 @@ LIMIT 10
 
 | Track | Labs | Duration | Description |
 |-------|------|----------|-------------|
-| **Console Tour Only** | Phases 1-2 | 2 hours | Explore AWS and Neo4j consoles without coding |
-| **ETL + Multi-Agent** | Phases 1-3 | 3.5 hours | Load data and build multi-agent systems with AgentBricks |
-| **Full Databricks** | Phases 1-4 | 4.5 hours | ETL, multi-agent analytics, and semantic search |
+| **Console Tour Only** | Phase 1 | 2 hours | Explore AWS and Neo4j consoles without coding |
+| **ETL + Multi-Agent** | Phases 1-2 | 3.5 hours | Load data and build multi-agent systems with AgentBricks |
+| **Full Databricks** | Phases 1-3 | 4.5 hours | ETL, multi-agent analytics, and semantic search |
 | **Full Workshop** | All Phases | 5 hours | Complete hands-on experience |
 
 ---
