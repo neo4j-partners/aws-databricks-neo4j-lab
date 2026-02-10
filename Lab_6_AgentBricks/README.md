@@ -61,28 +61,7 @@ From Lab 5 (both notebooks), your graph contains:
 
 ## Architecture
 
-```
-User Question
-     |
-     v
-Multi-Agent Supervisor
-"Aircraft Intelligence Hub"
-     |
-     +---> "sensor readings?" ---> Genie Space ---> Unity Catalog (Lakehouse)
-     |        time-series              SQL           aws-databricks-neo4j-lab.lakehouse
-     |        aggregations                           345,600+ sensor readings
-     |        trend analysis
-     |
-     +---> "relationships?" ---> Neo4j MCP ---> Knowledge Graph (Aura)
-     |        topology               Cypher       8 node types, 13 relationship types
-     |        maintenance                         pre-configured admin instance
-     |        flights/delays
-     |
-     +---> "both needed?" ---> Sequential calls to both agents
-                               |
-                               v
-                         Synthesized Response
-```
+![Lab Architecture Overview](../docs/images/lab-architecture-overview.png)
 
 ## Prerequisites
 

@@ -19,6 +19,8 @@ The workshop uses a comprehensive **Aircraft Digital Twin** dataset that models 
 
 Together the dataset includes:
 
+![Dual Database Architecture](docs/images/dual-database-architecture.png)
+
 - **20 Aircraft** with tail numbers, models, and operators
 - **80 Systems** (Engines, Avionics, Hydraulics) per aircraft
 - **320 Components** (Turbines, Compressors, Pumps, etc.)

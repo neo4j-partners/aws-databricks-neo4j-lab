@@ -27,7 +27,7 @@ ol > li {
 }
 </style>
 
-![bg contain](../images/GraphRAG_Agent_Blueprint.jpg)
+# GraphRAG Agent Blueprint with AWS
 
 ---
 
