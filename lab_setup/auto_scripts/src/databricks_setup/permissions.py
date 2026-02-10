@@ -87,7 +87,7 @@ _CATALOG_PRIVILEGES = (
 )
 
 # Name of the Unity Catalog connection for the Neo4j MCP server (Lab 7B).
-_MCP_CONNECTION_NAME = "neo4j_mcp"
+_MCP_CONNECTION_NAME = "neo4j_agentcore_mcp"
 
 # Foundation Model API endpoints used by Labs 6.3–6.5.
 _FOUNDATION_MODEL_ENDPOINTS = (

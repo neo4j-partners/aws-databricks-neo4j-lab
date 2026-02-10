@@ -10,7 +10,7 @@ configured by setup_databricks_secrets.sh.
 Features:
 - Connects to external Neo4j MCP server via Unity Catalog HTTP connection proxy
 - Uses OAuth2 M2M authentication (Databricks handles token refresh automatically)
-- Provides READ-ONLY access to Neo4j (get-schema, read-cypher tools)
+- Provides READ-ONLY access to Neo4j (get-schema, read-cypher, list-gds-procedures tools)
 - Compatible with MLflow ResponsesAgent for deployment
 
 Prerequisites:
@@ -75,11 +75,13 @@ You are a helpful assistant that can query a Neo4j graph database.
 You have access to the following tools:
 - neo4j-mcp-server-target___get-schema: Retrieve the database schema including node labels, relationship types, and properties
 - neo4j-mcp-server-target___read-cypher: Execute read-only Cypher queries against the database
+- neo4j-mcp-server-target___list-gds-procedures: Discover available Graph Data Science (GDS) analytics and algorithm procedures
 
 When users ask questions about the data:
 1. First use neo4j-mcp-server-target___get-schema if you need to understand the database structure
 2. Then construct and execute appropriate Cypher queries using neo4j-mcp-server-target___read-cypher
-3. Explain the results clearly to the user
+3. Use neo4j-mcp-server-target___list-gds-procedures to discover available graph analytics capabilities
+4. Explain the results clearly to the user
 
 IMPORTANT: You can only read data. Write operations are not permitted.
 Always use valid Cypher syntax and handle query results appropriately.
@@ -178,7 +180,7 @@ def create_tool_calling_agent(
     )
     workflow.add_edge("tools", "agent")
 
-    return workflow.compile(recursion_limit=20)
+    return workflow.compile()
 
 
 ############################################
