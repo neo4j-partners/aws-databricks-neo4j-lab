@@ -212,6 +212,7 @@ class Config:
     data: DataConfig = field(default_factory=DataConfig)
     warehouse: WarehouseConfig = field(default_factory=WarehouseConfig)
     notebook: NotebookConfig = field(default_factory=NotebookConfig)
+    users_csv: Path | None = None
     user_email: str | None = None
     databricks_profile: str | None = None
 
@@ -228,6 +229,10 @@ class Config:
         config.volume = VolumeConfig.from_env()
         config.warehouse = WarehouseConfig.from_env()
         config.notebook = NotebookConfig.from_env()
+
+        # Users CSV path
+        if val := os.getenv("USERS_CSV"):
+            config.users_csv = Path(val)
 
         # User settings
         if val := os.getenv("USER_EMAIL"):

@@ -45,6 +45,21 @@ def parse_csv(path: Path) -> list[str]:
     return emails
 
 
+def preview_csv(path: Path, max_rows: int = 2) -> list[dict[str, str]]:
+    """Return the first *max_rows* rows from the CSV as dicts for preview."""
+    if not path.exists():
+        raise RuntimeError(f"CSV file not found: {path}")
+
+    with open(path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows: list[dict[str, str]] = []
+        for i, row in enumerate(reader):
+            if i >= max_rows:
+                break
+            rows.append({k: v.strip() for k, v in row.items()})
+    return rows
+
+
 def find_workspace_user(client: WorkspaceClient, email: str) -> User | None:
     """Look up a workspace user by email address."""
     results = list(client.users.list(filter=f'userName eq "{email}"'))
