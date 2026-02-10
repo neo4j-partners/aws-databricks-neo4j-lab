@@ -186,26 +186,7 @@ This loads additional node types and relationships required by Lab 7:
 1. Open [console.neo4j.io](https://console.neo4j.io) in a new browser tab
 2. Sign in and select your instance
 3. Click **Query** to open the query interface
-4. Try these visualization queries:
-
-**See one aircraft's hierarchy:**
-```cypher
-MATCH (a:Aircraft {tail_number: 'N95040A'})-[r1:HAS_SYSTEM]->(s:System)-[r2:HAS_COMPONENT]->(c:Component)
-RETURN a, r1, s, r2, c
-```
-
-**View fleet by manufacturer:**
-```cypher
-MATCH (a:Aircraft)
-RETURN a.manufacturer AS Manufacturer, count(a) AS Count
-```
-
-**Explore component types:**
-```cypher
-MATCH (c:Component)
-RETURN c.type AS ComponentType, count(c) AS Count
-ORDER BY Count DESC
-```
+4. Copy and paste queries from the [Sample Queries](SAMPLE_QUERIES.md) page to explore your graph
 
 ---
 

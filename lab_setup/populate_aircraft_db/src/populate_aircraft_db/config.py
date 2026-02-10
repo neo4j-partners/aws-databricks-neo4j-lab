@@ -28,12 +28,12 @@ class Settings(BaseSettings):
 
     data_dir: DirectoryPath = _DATA_DIR  # type: ignore[assignment]
 
-    # OpenAI embeddings — only required for the `embed` command.
+    # OpenAI embeddings — required for the `enrich` command.
     openai_api_key: Optional[SecretStr] = None
     openai_embedding_model: str = "text-embedding-3-small"
     openai_embedding_dimensions: int = 1536
 
-    # OpenAI chat model — used by the `extract` command.
+    # OpenAI chat model — used by the `enrich` command for entity extraction.
     openai_extraction_model: str = "gpt-4o-mini"
 
     # LLM provider selection — "openai" or "anthropic".
@@ -41,7 +41,7 @@ class Settings(BaseSettings):
 
     # Anthropic — only required when llm_provider is "anthropic".
     anthropic_api_key: Optional[SecretStr] = None
-    anthropic_extraction_model: str = "claude-sonnet-4-20250514"
+    anthropic_extraction_model: str = "claude-sonnet-4-5-20250929"
 
     @model_validator(mode="after")
     def _check_uri_scheme(self) -> Settings:

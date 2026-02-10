@@ -109,114 +109,85 @@ def clean_cmd() -> None:
     print("\nDone.")
 
 
-@app.command("embed")
-def embed_cmd(
-    clean: bool = typer.Option(False, "--clean", help="Clear existing Document/Chunk nodes first."),
+@app.command("enrich")
+def enrich_cmd(
+    clean: bool = typer.Option(False, "--clean", help="Clear existing enrichment data first."),
     chunk_size: int = typer.Option(800, "--chunk-size", help="Characters per chunk."),
     chunk_overlap: int = typer.Option(100, "--chunk-overlap", help="Overlap between chunks."),
-) -> None:
-    """Load maintenance manuals, chunk, generate OpenAI embeddings, and store in Neo4j."""
-    from .embedder import DOCUMENTS, clear_documents, process_document
-
-    settings = Settings()  # type: ignore[call-arg]
-
-    if settings.openai_api_key is None:
-        raise typer.BadParameter(
-            "OPENAI_API_KEY is required for the embed command. Set it in .env or as an env var."
-        )
-
-    api_key = settings.openai_api_key.get_secret_value()
-    model = settings.openai_embedding_model
-    dimensions = settings.openai_embedding_dimensions
-    start = time.monotonic()
-
-    print(f"Connecting to {settings.neo4j_uri}...")
-    with _connect(settings) as driver:
-        if clean:
-            clear_documents(driver)
-            print()
-
-        print("Creating constraints and indexes...")
-        create_constraints(driver)
-        create_indexes(driver)
-
-        for meta in DOCUMENTS:
-            process_document(
-                driver,
-                settings.data_dir,
-                meta,
-                api_key=api_key,
-                model=model,
-                dimensions=dimensions,
-                chunk_size=chunk_size,
-                chunk_overlap=chunk_overlap,
-            )
-
-        print("\nCreating embedding indexes...")
-        create_embedding_indexes(driver, dimensions)
-
-        verify(driver)
-
-    elapsed = time.monotonic() - start
-    print(f"\nDone in {_fmt_elapsed(elapsed)}.")
-
-
-@app.command("extract")
-def extract_cmd(
-    clean: bool = typer.Option(False, "--clean", help="Clear existing extracted entities first."),
-    limit: int = typer.Option(0, "--limit", help="Max chunks to process (0 = all)."),
-    document: str = typer.Option("", "--document", help="Only process chunks from this document ID."),
     provider: str = typer.Option(
         "",
         "--provider",
         help="LLM provider: 'openai' or 'anthropic' (overrides LLM_PROVIDER env var).",
     ),
 ) -> None:
-    """Extract structured entities from maintenance manual chunks."""
-    from .extractor import clear_extracted, make_llm_caller, run_extraction
+    """Chunk maintenance manuals, generate embeddings, and extract entities via SimpleKGPipeline."""
+    from .pipeline import (
+        clear_enrichment_data,
+        link_to_existing_graph,
+        process_all_documents,
+    )
 
     settings = Settings()  # type: ignore[call-arg]
-
     chosen_provider = provider or settings.llm_provider
 
+    # Always need OpenAI for embeddings
+    if settings.openai_api_key is None:
+        raise typer.BadParameter(
+            "OPENAI_API_KEY is required for the enrich command (embeddings). "
+            "Set it in .env or as an env var."
+        )
+    openai_key = settings.openai_api_key.get_secret_value()
+
+    # LLM key depends on provider
+    anthropic_key = None
     if chosen_provider == "openai":
-        if settings.openai_api_key is None:
-            raise typer.BadParameter(
-                "OPENAI_API_KEY is required when using OpenAI. Set it in .env or as an env var."
-            )
-        api_key = settings.openai_api_key.get_secret_value()
-        model = settings.openai_extraction_model
+        llm_model = settings.openai_extraction_model
     elif chosen_provider == "anthropic":
         if settings.anthropic_api_key is None:
             raise typer.BadParameter(
                 "ANTHROPIC_API_KEY is required when using Anthropic. "
                 "Set it in .env or as an env var."
             )
-        api_key = settings.anthropic_api_key.get_secret_value()
-        model = settings.anthropic_extraction_model
+        anthropic_key = settings.anthropic_api_key.get_secret_value()
+        llm_model = settings.anthropic_extraction_model
     else:
-        raise typer.BadParameter(f"Unknown provider: {chosen_provider!r}. Use 'openai' or 'anthropic'.")
+        raise typer.BadParameter(
+            f"Unknown provider: {chosen_provider!r}. Use 'openai' or 'anthropic'."
+        )
 
-    llm_call = make_llm_caller(chosen_provider, api_key, model)
     start = time.monotonic()
 
     print(f"Connecting to {settings.neo4j_uri}...")
     with _connect(settings) as driver:
         if clean:
-            clear_extracted(driver)
+            clear_enrichment_data(driver)
             print()
 
-        print("Creating constraints for extracted entities...")
+        print("Creating constraints and indexes...")
+        create_constraints(driver)
+        create_indexes(driver)
         create_extraction_constraints(driver)
         print()
 
-        run_extraction(
+        print(f"Running SimpleKGPipeline (LLM: {chosen_provider}/{llm_model})...")
+        process_all_documents(
             driver,
-            llm_call,
-            model,
-            limit=limit or None,
-            document_id=document or None,
+            settings.data_dir,
+            provider=chosen_provider,
+            openai_api_key=openai_key,
+            anthropic_api_key=anthropic_key,
+            llm_model=llm_model,
+            embedding_model=settings.openai_embedding_model,
+            embedding_dimensions=settings.openai_embedding_dimensions,
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
         )
+
+        print("\nCreating embedding indexes...")
+        create_embedding_indexes(driver, settings.openai_embedding_dimensions)
+
+        print("\nLinking to existing graph...")
+        link_to_existing_graph(driver)
 
         verify(driver)
 

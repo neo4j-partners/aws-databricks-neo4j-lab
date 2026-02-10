@@ -100,7 +100,7 @@ In this phase you'll construct a knowledge graph in Neo4j and layer semantic sea
 - Import notebooks to your workspace
 
 #### Part B: Load Data with Spark Connector
-- [Lab 5 - Databricks ETL to Neo4j](Lab_5_Databricks_ETL_Neo4j/README.md)
+- [Lab 5 - Databricks ETL to Neo4j](Lab_5_Databricks_ETL_Neo4j/README.md) | [Sample Queries](Lab_5_Databricks_ETL_Neo4j/SAMPLE_QUERIES.md)
 - Load core aircraft topology (Aircraft, System, Component) via Spark Connector
 - Load full dataset (Sensors, Airports, Flights, Delays, Maintenance Events, Removals) via Python driver
 - Validate with Cypher queries and explore in Neo4j Aura
