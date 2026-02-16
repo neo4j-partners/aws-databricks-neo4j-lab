@@ -67,6 +67,8 @@ The data is split across two platforms, each chosen for the workload it handles 
 
 A multi-agent supervisor routes questions to the right database automatically.
 
+![Dual Database Architecture](../images/dual-database-architecture.png)
+
 ### Workshop Infrastructure
 
 **Shared resources** (pre-configured by administrators):
@@ -88,6 +90,8 @@ A multi-agent supervisor routes questions to the right database automatically.
 
 Labs using the MCP server (AgentCore, AgentBricks) connect to the shared Reference Aura Instance. Labs doing ETL and GraphRAG (Labs 5, 7) load data into your personal instance.
 
+![Workshop Infrastructure](../images/workshop-infrastructure.png)
+
 ---
 
 ## The GenAI Promise and Its Limits
@@ -100,6 +104,8 @@ LLMs excel at tasks that rely on pattern recognition and language fluency:
 - **Language understanding**: Parsing intent, extracting meaning, following instructions
 - **Pattern completion**: Continuing sequences, filling in blanks, generating variations
 - **Translation and transformation**: Converting between formats, styles, languages
+
+![GenAI Gaps](../images/gen_ai_gaps.jpg)
 
 ### The Three Core Limitations
 
@@ -155,6 +161,8 @@ This is the foundation of **Retrieval-Augmented Generation (RAG)**.
 
 ## Traditional RAG: Chunking and Vector Search
 
+![Embeddings Visual](../images/embeddings_visual.jpg)
+
 ### How Traditional RAG Works
 
 Traditional RAG follows a simple pattern:
@@ -177,6 +185,8 @@ Think of embeddings like having a **really smart librarian** who has read every 
 - Understands what each book is *about*
 - "I want something about loyal companions" finds dog books, even without the word "dog"
 - Organizes by meaning, not just labels
+
+![Beyond Keywords](../images/beyond_keywords.jpg)
 
 ### The RAG Retrieval Flow
 
@@ -244,6 +254,8 @@ A surprising discovery: **too much irrelevant context degrades LLM performance**
 
 This became known as "Context ROT" (Retrieval of Tangents) — the retrieved context actually *rots* the quality of the response. Quality of context matters more than quantity.
 
+![Context ROT Research](../images/context_rot_hero_plot.png)
+
 ### Questions Traditional RAG Can't Answer
 
 | Question | Why Traditional RAG Struggles |
@@ -275,6 +287,10 @@ GraphRAG extracts structure, creating a *knowledge graph* that preserves:
 **Traditional RAG asks**: "What chunks are similar to this query?"
 
 **GraphRAG asks**: "What entities and relationships are relevant to this query?"
+
+![Graph Memory](../images/graph_mem.jpg)
+
+![Agentic Tools](../images/agentic_tools.jpg)
 
 ### Three Retrieval Patterns
 

@@ -4,12 +4,16 @@ In this lab, you'll build a multi-agent system using Databricks AgentBricks that
 
 > **Infrastructure:** This lab uses **shared** workshop resources — the Genie space queries shared Lakehouse tables in Unity Catalog, and the Neo4j MCP agent queries the **Reference Aura Instance** (the fully populated graph). You do not need data in your personal Aura instance for this lab.
 
-## Why Two Data Sources?
+## Multi-Agent Architecture
+
+![Lab Architecture Overview](../docs/images/lab-architecture-overview.png)
+
+## Overview of the Two Data Sources - Databricks Lakehouse and Neo4j Knowledge Graph
 
 Aircraft intelligence requires both **time-series telemetry** and **rich relational data**, and each is best served by a purpose-built platform:
 
-- **Genie + Lakehouse** excels at time-series sensor data — 345,600+ hourly readings stored in Delta Lake columnar format, optimized for aggregations, trend analysis, percentile calculations, and fleet-wide statistical comparisons over time. SQL is the natural language for these analytical workloads, and Genie translates natural language into SQL automatically.
-- **Neo4j** excels at richly connected relational data — aircraft topology, component hierarchies, maintenance event chains, flight-to-airport routes, and delay root causes. These queries traverse multiple relationships (e.g., "Which components in the hydraulics system had maintenance events that caused flight delays?") and would require expensive multi-table JOINs in a relational database, but Neo4j handles them natively.
+- **Databricks Genie with Lakehouse** excels at time-series sensor data — 345,600+ hourly readings stored in Delta Lake columnar format, optimized for aggregations, trend analysis, percentile calculations, and fleet-wide statistical comparisons over time. SQL is the natural language for these analytical workloads, and Genie translates natural language into SQL automatically.
+- **Neo4j MCP Server with Knowledge Graph** excels at richly connected relational data — aircraft topology, component hierarchies, maintenance event chains, flight-to-airport routes, and delay root causes. These queries traverse multiple relationships (e.g., "Which components in the hydraulics system had maintenance events that caused flight delays?") and would require expensive multi-table JOINs in a relational database, but Neo4j handles them natively.
 
 | System | Strength | Best For |
 |--------|----------|----------|
@@ -18,7 +22,7 @@ Aircraft intelligence requires both **time-series telemetry** and **rich relatio
 
 The multi-agent approach lets users ask questions in natural language without knowing which system to query. The supervisor intelligently routes based on the question's intent.
 
-## Data Model
+## Data Model Overview
 
 For the full data model (Lakehouse tables, Neo4j node types, graph schema), see the [Data Architecture](../docs/DATA_ARCHITECTURE.md).
 
@@ -30,9 +34,7 @@ For the full data model (Lakehouse tables, Neo4j node types, graph schema), see 
 
 **Neo4j-exclusive** — Components, MaintenanceEvents, Flights, Delays, Airports, and Removals, plus the relationships between all entities (`HAS_COMPONENT`, `HAS_EVENT`, `OPERATES_FLIGHT`, `HAS_DELAY`, `HAS_REMOVAL`, etc.). These relationship-rich structures are what make graph queries powerful for topology, maintenance history, and operational analysis.
 
-## Architecture
 
-![Lab Architecture Overview](../docs/images/lab-architecture-overview.png)
 
 ## Prerequisites
 

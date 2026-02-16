@@ -10,16 +10,18 @@ This hands-on workshop teaches you how to build production-ready AI agents that 
 
 Participants start with a guided overview of AWS Bedrock and AgentCore, then work through lab exercises in Databricks and Neo4j Aura for graph exploration. AWS Bedrock and AgentCore provide pre-deployed infrastructure, while Databricks provides the notebook environment and multi-agent orchestration.
 
-### Dataset
+### Data Overview
 
 The workshop uses a comprehensive **Aircraft Digital Twin** dataset that models a complete aviation fleet over 90 operational days. The data is split across two platforms, each chosen for the workload it handles best:
 
 - **Databricks Lakehouse** stores the **time-series sensor telemetry** — 345,600+ hourly readings across 90 days. Columnar storage and SQL make the Lakehouse ideal for aggregations, trend analysis, and statistical comparisons over large volumes of timestamped data.
 - **Neo4j Aura** stores the **richly connected relational data** — aircraft topology, component hierarchies, maintenance events, flights, delays, and airport routes. A graph database handles multi-hop relationship traversals natively, avoiding the expensive JOINs a tabular database would require for queries like "Which components caused flight delays?"
 
-Together the dataset includes (see [Data Architecture](docs/DATA_ARCHITECTURE.md) for full schema details):
+### Data Architecture Overview
 
 ![Dual Database Architecture](docs/images/dual-database-architecture.png)
+
+Together the dataset includes the following -  see [Data Architecture](docs/DATA_ARCHITECTURE.md) for full schema details:
 
 - **20 Aircraft** with tail numbers, models, and operators
 - **80 Systems** (Engines, Avionics, Hydraulics) per aircraft
