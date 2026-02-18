@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * Convert Excalidraw JSON files to SVG format using puppeteer.
- * Loads the official Excalidraw library in a headless browser to render SVGs.
+ * Convert Excalidraw JSON files to SVG and PNG formats using puppeteer.
+ * Loads the official Excalidraw library in a headless browser to render outputs.
  *
  * Usage: cd docs && node scripts/convert-excalidraw.js
  */
@@ -47,15 +47,45 @@ const HTML_TEMPLATE = `
       }
     };
 
+    window.convertToBlob = async function(excalidrawData) {
+      try {
+        const { exportToBlob } = window.ExcalidrawLib;
+        const { elements, appState, files } = excalidrawData;
+
+        const blob = await exportToBlob({
+          elements: elements || [],
+          appState: {
+            ...appState,
+            exportWithDarkMode: false,
+            exportBackground: true,
+          },
+          files: files || null,
+          mimeType: 'image/png',
+          quality: 1,
+        });
+
+        const reader = new FileReader();
+        return new Promise((resolve, reject) => {
+          reader.onloadend = () => resolve(reader.result.split(',')[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } catch (error) {
+        console.error('Error in convertToBlob:', error);
+        throw error;
+      }
+    };
+
     window.conversionReady = true;
   </script>
 </body>
 </html>
 `;
 
-async function convertExcalidrawToSVG(page, inputFile, outputFile) {
+async function convertExcalidraw(page, inputFile) {
   try {
-    console.log(`Converting ${path.basename(inputFile)}...`);
+    const baseName = path.basename(inputFile, '.excalidraw');
+    console.log(`Converting ${baseName}...`);
 
     const excalidrawData = JSON.parse(fs.readFileSync(inputFile, 'utf8'));
 
@@ -63,8 +93,17 @@ async function convertExcalidrawToSVG(page, inputFile, outputFile) {
       return window.convertToSVG(data);
     }, excalidrawData);
 
-    fs.writeFileSync(outputFile, svgString);
-    console.log(`  ✓ Created ${path.basename(outputFile)}`);
+    const svgPath = path.join(path.dirname(inputFile), `${baseName}.svg`);
+    fs.writeFileSync(svgPath, svgString);
+    console.log(`  ✓ Created ${baseName}.svg`);
+
+    const pngBase64 = await page.evaluate((data) => {
+      return window.convertToBlob(data);
+    }, excalidrawData);
+
+    const pngPath = path.join(path.dirname(inputFile), `${baseName}.png`);
+    fs.writeFileSync(pngPath, Buffer.from(pngBase64, 'base64'));
+    console.log(`  ✓ Created ${baseName}.png`);
 
     return true;
   } catch (error) {
@@ -75,7 +114,7 @@ async function convertExcalidrawToSVG(page, inputFile, outputFile) {
 }
 
 async function convertAll() {
-  console.log('Converting Excalidraw diagrams to SVG...\n');
+  console.log('Converting Excalidraw diagrams to SVG + PNG...\n');
 
   const files = fs.readdirSync(IMAGES_DIR)
     .filter(file => file.endsWith('.excalidraw'))
@@ -103,9 +142,8 @@ async function convertAll() {
 
   for (const file of files) {
     const inputPath = path.join(IMAGES_DIR, file);
-    const outputPath = path.join(IMAGES_DIR, file.replace('.excalidraw', '.svg'));
 
-    const success = await convertExcalidrawToSVG(page, inputPath, outputPath);
+    const success = await convertExcalidraw(page, inputPath);
     if (success) successCount++;
   }
 

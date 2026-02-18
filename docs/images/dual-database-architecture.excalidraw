@@ -1123,8 +1123,8 @@
     {
       "id": "panel-neo4j",
       "type": "rectangle",
-      "x": 560,
-      "y": 100,
+      "x": 571.72265625,
+      "y": 115.5234375,
       "width": 680,
       "height": 900,
       "angle": 0,
@@ -1136,7 +1136,7 @@
       "roughness": 0,
       "opacity": 20,
       "seed": 1030,
-      "version": 2,
+      "version": 59,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -1144,9 +1144,9 @@
         "type": 3
       },
       "boundElements": [],
-      "versionNonce": 996737609,
+      "versionNonce": 1389587574,
       "index": "aT",
-      "updated": 1770709566259,
+      "updated": 1771390709632,
       "link": null,
       "locked": false
     },
@@ -1995,10 +1995,10 @@
     {
       "id": "arrow-n-flt-to-airport",
       "type": "arrow",
-      "x": 900,
-      "y": 330,
-      "width": 30,
-      "height": 40,
+      "x": 915.9609375,
+      "y": 332.6953125,
+      "width": 11.37890625,
+      "height": 46.33203125,
       "angle": 0,
       "strokeColor": "#e03131",
       "backgroundColor": "transparent",
@@ -2008,7 +2008,7 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 1051,
-      "version": 2,
+      "version": 97,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -2022,32 +2022,36 @@
           0
         ],
         [
-          -30,
-          40
+          11.37890625,
+          46.33203125
         ]
       ],
       "startBinding": {
         "elementId": "node-flight",
-        "focus": 0.2,
-        "gap": 1
+        "focus": 0.3184733641157522,
+        "gap": 3.5011023035242754
       },
-      "endBinding": null,
+      "endBinding": {
+        "elementId": "node-airport",
+        "focus": 0.06243345222451762,
+        "gap": 3.405506750276643
+      },
       "startArrowhead": null,
       "endArrowhead": "arrow",
       "lastCommittedPoint": null,
-      "versionNonce": 363881991,
+      "versionNonce": 1706750454,
       "index": "ao",
-      "updated": 1770709566259,
+      "updated": 1771390707504,
       "link": null,
       "locked": false
     },
     {
       "id": "arrow-n-flt-to-delay",
       "type": "arrow",
-      "x": 965,
-      "y": 330,
-      "width": 20,
-      "height": 40,
+      "x": 965.23828125,
+      "y": 330.01171875,
+      "width": 71.5703125,
+      "height": 45.98828125,
       "angle": 0,
       "strokeColor": "#e03131",
       "backgroundColor": "transparent",
@@ -2057,7 +2061,7 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 1052,
-      "version": 2,
+      "version": 42,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -2071,30 +2075,34 @@
           0
         ],
         [
-          20,
-          40
+          71.5703125,
+          45.98828125
         ]
       ],
       "startBinding": {
         "elementId": "node-flight",
-        "focus": -0.3,
-        "gap": 1
+        "focus": 0.07626213216103246,
+        "gap": 2.111292647427743
       },
-      "endBinding": null,
+      "endBinding": {
+        "elementId": "node-delay",
+        "focus": 0.3739464768862566,
+        "gap": 4.829630299351978
+      },
       "startArrowhead": null,
       "endArrowhead": "arrow",
       "lastCommittedPoint": null,
-      "versionNonce": 678830569,
+      "versionNonce": 1166780330,
       "index": "ap",
-      "updated": 1770709566259,
+      "updated": 1771390699496,
       "link": null,
       "locked": false
     },
     {
       "id": "node-airport",
       "type": "ellipse",
-      "x": 869.13671875,
-      "y": 403.79296875,
+      "x": 880.796875,
+      "y": 382.375,
       "width": 100,
       "height": 50,
       "angle": 0,
@@ -2106,7 +2114,7 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 1053,
-      "version": 31,
+      "version": 67,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -2117,19 +2125,23 @@
         {
           "id": "label-node-airport",
           "type": "text"
+        },
+        {
+          "id": "arrow-n-flt-to-airport",
+          "type": "arrow"
         }
       ],
-      "versionNonce": 2038993033,
+      "versionNonce": 814812726,
       "index": "aq",
-      "updated": 1770709585439,
+      "updated": 1771390706062,
       "link": null,
       "locked": false
     },
     {
       "id": "label-node-airport",
       "type": "text",
-      "x": 884.13671875,
-      "y": 416.79296875,
+      "x": 895.796875,
+      "y": 395.375,
       "width": 70,
       "height": 24,
       "angle": 0,
@@ -2141,7 +2153,7 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 1054,
-      "version": 31,
+      "version": 66,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -2153,9 +2165,9 @@
       "textAlign": "center",
       "verticalAlign": "middle",
       "containerId": "node-airport",
-      "versionNonce": 756520809,
+      "versionNonce": 1019862902,
       "index": "ar",
-      "updated": 1770709585439,
+      "updated": 1771390700111,
       "link": null,
       "locked": false,
       "originalText": "Airport (12)",
@@ -2165,8 +2177,8 @@
     {
       "id": "node-delay",
       "type": "ellipse",
-      "x": 966.1171875,
-      "y": 392.3046875,
+      "x": 992.4140625,
+      "y": 380.37890625,
       "width": 110,
       "height": 50,
       "angle": 0,
@@ -2178,7 +2190,7 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 1055,
-      "version": 30,
+      "version": 65,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -2189,19 +2201,23 @@
         {
           "id": "label-node-delay",
           "type": "text"
+        },
+        {
+          "id": "arrow-n-flt-to-delay",
+          "type": "arrow"
         }
       ],
-      "versionNonce": 1251336937,
+      "versionNonce": 2131306346,
       "index": "as",
-      "updated": 1770709583923,
+      "updated": 1771390698101,
       "link": null,
       "locked": false
     },
     {
       "id": "label-node-delay",
       "type": "text",
-      "x": 981.1171875,
-      "y": 405.3046875,
+      "x": 1007.4140625,
+      "y": 393.37890625,
       "width": 80,
       "height": 24,
       "angle": 0,
@@ -2213,7 +2229,7 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 1056,
-      "version": 30,
+      "version": 64,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -2225,9 +2241,9 @@
       "textAlign": "center",
       "verticalAlign": "middle",
       "containerId": "node-delay",
-      "versionNonce": 1770757577,
+      "versionNonce": 117627242,
       "index": "at",
-      "updated": 1770709583923,
+      "updated": 1771390694692,
       "link": null,
       "locked": false,
       "originalText": "Delay (~300)",
@@ -2833,8 +2849,8 @@
     {
       "id": "node-chunk",
       "type": "ellipse",
-      "x": 1076.5625,
-      "y": 389.8359375,
+      "x": 1112.12109375,
+      "y": 399.1875,
       "width": 170,
       "height": 50,
       "angle": 0,
@@ -2846,7 +2862,7 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2003,
-      "version": 41,
+      "version": 165,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -2863,17 +2879,17 @@
           "type": "arrow"
         }
       ],
-      "versionNonce": 1913825321,
+      "versionNonce": 329630314,
       "index": "b0A",
-      "updated": 1770709582089,
+      "updated": 1771390691474,
       "link": null,
       "locked": false
     },
     {
       "id": "label-node-chunk",
       "type": "text",
-      "x": 1106.5625,
-      "y": 402.8359375,
+      "x": 1142.12109375,
+      "y": 412.1875,
       "width": 110,
       "height": 24,
       "angle": 0,
@@ -2885,7 +2901,7 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2004,
-      "version": 41,
+      "version": 165,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -2897,9 +2913,9 @@
       "textAlign": "center",
       "verticalAlign": "middle",
       "containerId": "node-chunk",
-      "versionNonce": 666745609,
+      "versionNonce": 1599464746,
       "index": "b0B",
-      "updated": 1770709582089,
+      "updated": 1771390691474,
       "link": null,
       "locked": false,
       "originalText": "📝 Chunk (~480)",
@@ -2909,8 +2925,8 @@
     {
       "id": "label-chunk-detail",
       "type": "text",
-      "x": 1085,
-      "y": 427,
+      "x": 1152.453125,
+      "y": 464.30078125,
       "width": 100,
       "height": 14,
       "angle": 0,
@@ -2922,7 +2938,7 @@
       "roughness": 0,
       "opacity": 60,
       "seed": 2005,
-      "version": 2,
+      "version": 137,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -2934,9 +2950,9 @@
       "textAlign": "center",
       "verticalAlign": "top",
       "containerId": null,
-      "versionNonce": 1613591431,
+      "versionNonce": 27177898,
       "index": "b0C",
-      "updated": 1770709566259,
+      "updated": 1771390693008,
       "link": null,
       "locked": false,
       "originalText": "text + embedding",
@@ -2946,10 +2962,10 @@
     {
       "id": "arrow-chunk-to-doc",
       "type": "arrow",
-      "x": 1157.9102091449906,
-      "y": 388.85939453493165,
-      "width": 10.683244385555327,
-      "height": 75.75851463106176,
+      "x": 1187.0456670573317,
+      "y": 398.36654875588266,
+      "width": 33.384010317493676,
+      "height": 85.42284407790191,
       "angle": 0,
       "strokeColor": "#7048e8",
       "backgroundColor": "transparent",
@@ -2959,7 +2975,7 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2006,
-      "version": 88,
+      "version": 212,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -2973,8 +2989,8 @@
           0
         ],
         [
-          -10.683244385555327,
-          -75.75851463106176
+          -33.384010317493676,
+          -85.42284407790191
         ]
       ],
       "startBinding": {
@@ -2990,9 +3006,9 @@
       "startArrowhead": null,
       "endArrowhead": "arrow",
       "lastCommittedPoint": null,
-      "versionNonce": 1615032809,
+      "versionNonce": 1853075434,
       "index": "b0D",
-      "updated": 1770709582089,
+      "updated": 1771390691474,
       "link": null,
       "locked": false
     },
@@ -3195,16 +3211,7 @@
     "gridSize": 20,
     "gridStep": 5,
     "gridModeEnabled": false,
-    "viewBackgroundColor": "#ffffff",
-    "currentItemFontFamily": 5,
-    "currentItemRoughness": 0,
-    "currentItemRoundness": "round",
-    "currentItemArrowType": "round",
-    "currentItemStrokeWidth": 2,
-    "exportBackground": true,
-    "exportScale": 2,
-    "theme": "light",
-    "bindMode": "orbit"
+    "viewBackgroundColor": "#ffffff"
   },
   "files": {}
 }

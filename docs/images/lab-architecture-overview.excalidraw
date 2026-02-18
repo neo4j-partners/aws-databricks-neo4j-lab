@@ -1,7 +1,7 @@
 {
   "type": "excalidraw",
   "version": 2,
-  "source": "https://excalidraw.com",
+  "source": "https://marketplace.visualstudio.com/items?itemName=pomdtr.excalidraw-editor",
   "elements": [
     {
       "id": "title",
@@ -19,12 +19,12 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2001,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
       "roundness": null,
-      "boundElements": null,
+      "boundElements": [],
       "locked": false,
       "link": null,
       "text": "Aircraft Digital Twin — End-to-End Lab Architecture",
@@ -35,15 +35,17 @@
       "containerId": null,
       "originalText": "Aircraft Digital Twin — End-to-End Lab Architecture",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "versionNonce": 250262656,
+      "index": "a0",
+      "updated": 1771390714761
     },
-
     {
       "id": "box-user",
       "type": "rectangle",
       "x": 430,
       "y": 55,
-      "width": 200,
+      "width": 222.03515624999997,
       "height": 45,
       "angle": 0,
       "strokeColor": "#1e1e1e",
@@ -54,25 +56,36 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2002,
-      "version": 1,
+      "version": 21,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
-      "roundness": { "type": 3 },
+      "roundness": {
+        "type": 3
+      },
       "boundElements": [
-        { "id": "label-user", "type": "text" },
-        { "id": "arrow-user-to-sup", "type": "arrow" }
+        {
+          "id": "label-user",
+          "type": "text"
+        },
+        {
+          "id": "arrow-user-to-sup",
+          "type": "arrow"
+        }
       ],
       "locked": false,
-      "link": null
+      "link": null,
+      "versionNonce": 2037343104,
+      "index": "a1",
+      "updated": 1771390724609
     },
     {
       "id": "label-user",
       "type": "text",
-      "x": 465,
-      "y": 63,
-      "width": 130,
-      "height": 28,
+      "x": 456.6076354980469,
+      "y": 65,
+      "width": 168.81988525390625,
+      "height": 25,
       "angle": 0,
       "strokeColor": "#1e1e1e",
       "backgroundColor": "transparent",
@@ -82,12 +95,12 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2003,
-      "version": 1,
+      "version": 22,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
       "roundness": null,
-      "boundElements": null,
+      "boundElements": [],
       "locked": false,
       "link": null,
       "text": "👤 User Question",
@@ -98,9 +111,11 @@
       "containerId": "box-user",
       "originalText": "👤 User Question",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "versionNonce": 814515072,
+      "index": "a2",
+      "updated": 1771390724609
     },
-
     {
       "id": "arrow-user-to-sup",
       "type": "arrow",
@@ -117,21 +132,44 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2004,
-      "version": 1,
+      "version": 21,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
-      "roundness": { "type": 2 },
-      "boundElements": null,
+      "roundness": {
+        "type": 2
+      },
+      "boundElements": [],
       "locked": false,
       "link": null,
-      "points": [[0, 0], [0, 30]],
-      "startBinding": { "mode": "orbit", "elementId": "box-user", "fixedPoint": [0.5, 1] },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          30
+        ]
+      ],
+      "startBinding": {
+        "mode": "orbit",
+        "elementId": "box-user",
+        "fixedPoint": [
+          0.5,
+          1
+        ],
+        "focus": 0,
+        "gap": null
+      },
       "endBinding": null,
       "startArrowhead": null,
-      "endArrowhead": "arrow"
+      "endArrowhead": "arrow",
+      "lastCommittedPoint": null,
+      "versionNonce": 1823929216,
+      "index": "a3",
+      "updated": 1771390724609
     },
-
     {
       "id": "panel-databricks",
       "type": "rectangle",
@@ -148,14 +186,19 @@
       "roughness": 0,
       "opacity": 15,
       "seed": 2005,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
-      "roundness": { "type": 3 },
-      "boundElements": null,
+      "roundness": {
+        "type": 3
+      },
+      "boundElements": [],
       "locked": false,
-      "link": null
+      "link": null,
+      "versionNonce": 1780978816,
+      "index": "a4",
+      "updated": 1771390714761
     },
     {
       "id": "label-databricks",
@@ -173,12 +216,12 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2006,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
       "roundness": null,
-      "boundElements": null,
+      "boundElements": [],
       "locked": false,
       "link": null,
       "text": "📊 DATABRICKS WORKSPACE",
@@ -189,9 +232,11 @@
       "containerId": null,
       "originalText": "📊 DATABRICKS WORKSPACE",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "versionNonce": 1563030400,
+      "index": "a5",
+      "updated": 1771390714761
     },
-
     {
       "id": "box-supervisor",
       "type": "rectangle",
@@ -208,18 +253,32 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2007,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
-      "roundness": { "type": 3 },
+      "roundness": {
+        "type": 3
+      },
       "boundElements": [
-        { "id": "label-supervisor", "type": "text" },
-        { "id": "arrow-sup-to-genie", "type": "arrow" },
-        { "id": "arrow-sup-to-neo4j", "type": "arrow" }
+        {
+          "id": "label-supervisor",
+          "type": "text"
+        },
+        {
+          "id": "arrow-sup-to-genie",
+          "type": "arrow"
+        },
+        {
+          "id": "arrow-sup-to-neo4j",
+          "type": "arrow"
+        }
       ],
       "locked": false,
-      "link": null
+      "link": null,
+      "versionNonce": 1497433216,
+      "index": "a6",
+      "updated": 1771390714761
     },
     {
       "id": "label-supervisor",
@@ -237,12 +296,12 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2008,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
       "roundness": null,
-      "boundElements": null,
+      "boundElements": [],
       "locked": false,
       "link": null,
       "text": "🧠 Multi-Agent Supervisor\nLab 6 — AgentBricks",
@@ -253,9 +312,11 @@
       "containerId": "box-supervisor",
       "originalText": "🧠 Multi-Agent Supervisor\nLab 6 — AgentBricks",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "versionNonce": 446661504,
+      "index": "a7",
+      "updated": 1771390714761
     },
-
     {
       "id": "arrow-sup-to-genie",
       "type": "arrow",
@@ -272,19 +333,50 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2009,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
-      "roundness": { "type": 2 },
-      "boundElements": null,
+      "roundness": {
+        "type": 2
+      },
+      "boundElements": [],
       "locked": false,
       "link": null,
-      "points": [[0, 0], [-180, 50]],
-      "startBinding": { "mode": "orbit", "elementId": "box-supervisor", "fixedPoint": [0.5, 1] },
-      "endBinding": { "mode": "orbit", "elementId": "box-genie", "fixedPoint": [0.5, 0] },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -180,
+          50
+        ]
+      ],
+      "startBinding": {
+        "mode": "orbit",
+        "elementId": "box-supervisor",
+        "fixedPoint": [
+          0.5,
+          1
+        ],
+        "focus": 0
+      },
+      "endBinding": {
+        "mode": "orbit",
+        "elementId": "box-genie",
+        "fixedPoint": [
+          0.5,
+          0
+        ],
+        "focus": 0
+      },
       "startArrowhead": null,
-      "endArrowhead": "arrow"
+      "endArrowhead": "arrow",
+      "lastCommittedPoint": null,
+      "versionNonce": 61633664,
+      "index": "a8",
+      "updated": 1771390714761
     },
     {
       "id": "label-route-sensor",
@@ -302,12 +394,12 @@
       "roughness": 0,
       "opacity": 70,
       "seed": 2010,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
       "roundness": null,
-      "boundElements": null,
+      "boundElements": [],
       "locked": false,
       "link": null,
       "text": "\"sensor readings?\"",
@@ -318,9 +410,11 @@
       "containerId": null,
       "originalText": "\"sensor readings?\"",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "versionNonce": 853742464,
+      "index": "a9",
+      "updated": 1771390714761
     },
-
     {
       "id": "arrow-sup-to-neo4j",
       "type": "arrow",
@@ -337,19 +431,50 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2011,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
-      "roundness": { "type": 2 },
-      "boundElements": null,
+      "roundness": {
+        "type": 2
+      },
+      "boundElements": [],
       "locked": false,
       "link": null,
-      "points": [[0, 0], [180, 50]],
-      "startBinding": { "mode": "orbit", "elementId": "box-supervisor", "fixedPoint": [0.5, 1] },
-      "endBinding": { "mode": "orbit", "elementId": "box-neo4j-agent", "fixedPoint": [0.5, 0] },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          180,
+          50
+        ]
+      ],
+      "startBinding": {
+        "mode": "orbit",
+        "elementId": "box-supervisor",
+        "fixedPoint": [
+          0.5,
+          1
+        ],
+        "focus": 0
+      },
+      "endBinding": {
+        "mode": "orbit",
+        "elementId": "box-neo4j-agent",
+        "fixedPoint": [
+          0.5,
+          0
+        ],
+        "focus": 0
+      },
       "startArrowhead": null,
-      "endArrowhead": "arrow"
+      "endArrowhead": "arrow",
+      "lastCommittedPoint": null,
+      "versionNonce": 791274624,
+      "index": "aA",
+      "updated": 1771390714761
     },
     {
       "id": "label-route-graph",
@@ -367,12 +492,12 @@
       "roughness": 0,
       "opacity": 70,
       "seed": 2012,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
       "roundness": null,
-      "boundElements": null,
+      "boundElements": [],
       "locked": false,
       "link": null,
       "text": "\"relationships?\"",
@@ -383,9 +508,11 @@
       "containerId": null,
       "originalText": "\"relationships?\"",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "versionNonce": 473211776,
+      "index": "aB",
+      "updated": 1771390714761
     },
-
     {
       "id": "box-genie",
       "type": "rectangle",
@@ -402,18 +529,32 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2013,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
-      "roundness": { "type": 3 },
+      "roundness": {
+        "type": 3
+      },
       "boundElements": [
-        { "id": "label-genie", "type": "text" },
-        { "id": "arrow-sup-to-genie", "type": "arrow" },
-        { "id": "arrow-genie-to-lake", "type": "arrow" }
+        {
+          "id": "label-genie",
+          "type": "text"
+        },
+        {
+          "id": "arrow-sup-to-genie",
+          "type": "arrow"
+        },
+        {
+          "id": "arrow-genie-to-lake",
+          "type": "arrow"
+        }
       ],
       "locked": false,
-      "link": null
+      "link": null,
+      "versionNonce": 1769559168,
+      "index": "aC",
+      "updated": 1771390714761
     },
     {
       "id": "label-genie",
@@ -431,12 +572,12 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2014,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
       "roundness": null,
-      "boundElements": null,
+      "boundElements": [],
       "locked": false,
       "link": null,
       "text": "📊 Genie Space Agent\nsensor_data_agent",
@@ -447,9 +588,11 @@
       "containerId": "box-genie",
       "originalText": "📊 Genie Space Agent\nsensor_data_agent",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "versionNonce": 81015680,
+      "index": "aD",
+      "updated": 1771390714761
     },
-
     {
       "id": "box-neo4j-agent",
       "type": "rectangle",
@@ -466,18 +609,32 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2015,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
-      "roundness": { "type": 3 },
+      "roundness": {
+        "type": 3
+      },
       "boundElements": [
-        { "id": "label-neo4j-agent", "type": "text" },
-        { "id": "arrow-sup-to-neo4j", "type": "arrow" },
-        { "id": "arrow-neo4j-to-http", "type": "arrow" }
+        {
+          "id": "label-neo4j-agent",
+          "type": "text"
+        },
+        {
+          "id": "arrow-sup-to-neo4j",
+          "type": "arrow"
+        },
+        {
+          "id": "arrow-neo4j-to-http",
+          "type": "arrow"
+        }
       ],
       "locked": false,
-      "link": null
+      "link": null,
+      "versionNonce": 140166272,
+      "index": "aE",
+      "updated": 1771390714761
     },
     {
       "id": "label-neo4j-agent",
@@ -495,12 +652,12 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2016,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
       "roundness": null,
-      "boundElements": null,
+      "boundElements": [],
       "locked": false,
       "link": null,
       "text": "🔷 Neo4j MCP Agent\nneo4j_graph_agent",
@@ -511,9 +668,11 @@
       "containerId": "box-neo4j-agent",
       "originalText": "🔷 Neo4j MCP Agent\nneo4j_graph_agent",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "versionNonce": 1392624512,
+      "index": "aF",
+      "updated": 1771390714761
     },
-
     {
       "id": "arrow-genie-to-lake",
       "type": "arrow",
@@ -530,19 +689,50 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2017,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
-      "roundness": { "type": 2 },
-      "boundElements": null,
+      "roundness": {
+        "type": 2
+      },
+      "boundElements": [],
       "locked": false,
       "link": null,
-      "points": [[0, 0], [0, 40]],
-      "startBinding": { "mode": "orbit", "elementId": "box-genie", "fixedPoint": [0.5, 1] },
-      "endBinding": { "mode": "orbit", "elementId": "box-lakehouse", "fixedPoint": [0.5, 0] },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          40
+        ]
+      ],
+      "startBinding": {
+        "mode": "orbit",
+        "elementId": "box-genie",
+        "fixedPoint": [
+          0.5,
+          1
+        ],
+        "focus": 0
+      },
+      "endBinding": {
+        "mode": "orbit",
+        "elementId": "box-lakehouse",
+        "fixedPoint": [
+          0.5,
+          0
+        ],
+        "focus": 0
+      },
       "startArrowhead": null,
-      "endArrowhead": "arrow"
+      "endArrowhead": "arrow",
+      "lastCommittedPoint": null,
+      "versionNonce": 697185408,
+      "index": "aG",
+      "updated": 1771390714761
     },
     {
       "id": "label-sql",
@@ -560,12 +750,12 @@
       "roughness": 0,
       "opacity": 70,
       "seed": 2018,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
       "roundness": null,
-      "boundElements": null,
+      "boundElements": [],
       "locked": false,
       "link": null,
       "text": "SQL",
@@ -576,9 +766,11 @@
       "containerId": null,
       "originalText": "SQL",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "versionNonce": 620581760,
+      "index": "aH",
+      "updated": 1771390714761
     },
-
     {
       "id": "arrow-neo4j-to-http",
       "type": "arrow",
@@ -595,19 +787,50 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2019,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
-      "roundness": { "type": 2 },
-      "boundElements": null,
+      "roundness": {
+        "type": 2
+      },
+      "boundElements": [],
       "locked": false,
       "link": null,
-      "points": [[0, 0], [0, 40]],
-      "startBinding": { "mode": "orbit", "elementId": "box-neo4j-agent", "fixedPoint": [0.5, 1] },
-      "endBinding": { "mode": "orbit", "elementId": "box-http-conn", "fixedPoint": [0.5, 0] },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          40
+        ]
+      ],
+      "startBinding": {
+        "mode": "orbit",
+        "elementId": "box-neo4j-agent",
+        "fixedPoint": [
+          0.5,
+          1
+        ],
+        "focus": 0
+      },
+      "endBinding": {
+        "mode": "orbit",
+        "elementId": "box-http-conn",
+        "fixedPoint": [
+          0.5,
+          0
+        ],
+        "focus": 0
+      },
       "startArrowhead": null,
-      "endArrowhead": "arrow"
+      "endArrowhead": "arrow",
+      "lastCommittedPoint": null,
+      "versionNonce": 852731008,
+      "index": "aI",
+      "updated": 1771390714761
     },
     {
       "id": "label-mcp-tools",
@@ -625,12 +848,12 @@
       "roughness": 0,
       "opacity": 70,
       "seed": 2020,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
       "roundness": null,
-      "boundElements": null,
+      "boundElements": [],
       "locked": false,
       "link": null,
       "text": "MCP tools",
@@ -641,9 +864,11 @@
       "containerId": null,
       "originalText": "MCP tools",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "versionNonce": 1359405952,
+      "index": "aJ",
+      "updated": 1771390714761
     },
-
     {
       "id": "box-lakehouse",
       "type": "rectangle",
@@ -660,17 +885,28 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2021,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
-      "roundness": { "type": 3 },
+      "roundness": {
+        "type": 3
+      },
       "boundElements": [
-        { "id": "label-lakehouse", "type": "text" },
-        { "id": "arrow-genie-to-lake", "type": "arrow" }
+        {
+          "id": "label-lakehouse",
+          "type": "text"
+        },
+        {
+          "id": "arrow-genie-to-lake",
+          "type": "arrow"
+        }
       ],
       "locked": false,
-      "link": null
+      "link": null,
+      "versionNonce": 1374360704,
+      "index": "aK",
+      "updated": 1771390714761
     },
     {
       "id": "label-lakehouse",
@@ -688,12 +924,12 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2022,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
       "roundness": null,
-      "boundElements": null,
+      "boundElements": [],
       "locked": false,
       "link": null,
       "text": "💾 Unity Catalog — Lakehouse\naws-databricks-neo4j-lab.lakehouse\n\nsensor_readings  (345,600+ rows)\nsensors  (160)\nsystems  (~80)\naircraft  (20)",
@@ -704,9 +940,11 @@
       "containerId": "box-lakehouse",
       "originalText": "💾 Unity Catalog — Lakehouse\naws-databricks-neo4j-lab.lakehouse\n\nsensor_readings  (345,600+ rows)\nsensors  (160)\nsystems  (~80)\naircraft  (20)",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "versionNonce": 1700688768,
+      "index": "aL",
+      "updated": 1771390714761
     },
-
     {
       "id": "box-http-conn",
       "type": "rectangle",
@@ -723,18 +961,32 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2023,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
-      "roundness": { "type": 3 },
+      "roundness": {
+        "type": 3
+      },
       "boundElements": [
-        { "id": "label-http-conn", "type": "text" },
-        { "id": "arrow-neo4j-to-http", "type": "arrow" },
-        { "id": "arrow-proxy-to-agentcore", "type": "arrow" }
+        {
+          "id": "label-http-conn",
+          "type": "text"
+        },
+        {
+          "id": "arrow-neo4j-to-http",
+          "type": "arrow"
+        },
+        {
+          "id": "arrow-proxy-to-agentcore",
+          "type": "arrow"
+        }
       ],
       "locked": false,
-      "link": null
+      "link": null,
+      "versionNonce": 2090108032,
+      "index": "aM",
+      "updated": 1771390714761
     },
     {
       "id": "label-http-conn",
@@ -752,12 +1004,12 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2024,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
       "roundness": null,
-      "boundElements": null,
+      "boundElements": [],
       "locked": false,
       "link": null,
       "text": "🔗 Unity Catalog — HTTP Connection\nneo4j_agentcore_mcp\nOAuth2 M2M (Cognito)\n\n/api/2.0/mcp/external/{conn}",
@@ -768,9 +1020,11 @@
       "containerId": "box-http-conn",
       "originalText": "🔗 Unity Catalog — HTTP Connection\nneo4j_agentcore_mcp\nOAuth2 M2M (Cognito)\n\n/api/2.0/mcp/external/{conn}",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "versionNonce": 675545984,
+      "index": "aN",
+      "updated": 1771390714761
     },
-
     {
       "id": "label-databrick-samples",
       "type": "text",
@@ -787,12 +1041,12 @@
       "roughness": 0,
       "opacity": 70,
       "seed": 2025,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
       "roundness": null,
-      "boundElements": null,
+      "boundElements": [],
       "locked": false,
       "link": null,
       "text": "Setup: databrick_samples/\nneo4j-mcp-http-connection.ipynb",
@@ -803,9 +1057,11 @@
       "containerId": null,
       "originalText": "Setup: databrick_samples/\nneo4j-mcp-http-connection.ipynb",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "versionNonce": 1888482432,
+      "index": "aO",
+      "updated": 1771390714761
     },
-
     {
       "id": "label-lakehouse-strengths",
       "type": "text",
@@ -822,12 +1078,12 @@
       "roughness": 0,
       "opacity": 70,
       "seed": 2026,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
       "roundness": null,
-      "boundElements": null,
+      "boundElements": [],
       "locked": false,
       "link": null,
       "text": "Time-series | Aggregations | Trends\nAnomaly detection | Fleet comparisons",
@@ -838,9 +1094,11 @@
       "containerId": null,
       "originalText": "Time-series | Aggregations | Trends\nAnomaly detection | Fleet comparisons",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "versionNonce": 402101120,
+      "index": "aP",
+      "updated": 1771390714761
     },
-
     {
       "id": "label-lab7-badge-text",
       "type": "text",
@@ -857,12 +1115,12 @@
       "roughness": 0,
       "opacity": 70,
       "seed": 2027,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
       "roundness": null,
-      "boundElements": null,
+      "boundElements": [],
       "locked": false,
       "link": null,
       "text": "Databricks auto-refreshes OAuth2 tokens.\nProxy handles JSON-RPC forwarding.",
@@ -873,15 +1131,17 @@
       "containerId": null,
       "originalText": "Databricks auto-refreshes OAuth2 tokens.\nProxy handles JSON-RPC forwarding.",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "versionNonce": 865952896,
+      "index": "aQ",
+      "updated": 1771390714761
     },
-
     {
       "id": "arrow-proxy-to-agentcore",
       "type": "arrow",
       "x": 860,
       "y": 475,
-      "width": -195,
+      "width": 195,
       "height": 230,
       "angle": 0,
       "strokeColor": "#2f9e44",
@@ -892,19 +1152,54 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2028,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
-      "roundness": { "type": 2 },
-      "boundElements": null,
+      "roundness": {
+        "type": 2
+      },
+      "boundElements": [],
       "locked": false,
       "link": null,
-      "points": [[0, 0], [0, 115], [-195, 230]],
-      "startBinding": { "mode": "orbit", "elementId": "box-http-conn", "fixedPoint": [0.5, 1] },
-      "endBinding": { "mode": "orbit", "elementId": "box-gateway", "fixedPoint": [0.5, 0] },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          115
+        ],
+        [
+          -195,
+          230
+        ]
+      ],
+      "startBinding": {
+        "mode": "orbit",
+        "elementId": "box-http-conn",
+        "fixedPoint": [
+          0.5,
+          1
+        ],
+        "focus": 0
+      },
+      "endBinding": {
+        "mode": "orbit",
+        "elementId": "box-gateway",
+        "fixedPoint": [
+          0.5,
+          0
+        ],
+        "focus": 0
+      },
       "startArrowhead": null,
-      "endArrowhead": "arrow"
+      "endArrowhead": "arrow",
+      "lastCommittedPoint": null,
+      "versionNonce": 1790518144,
+      "index": "aR",
+      "updated": 1771390714761
     },
     {
       "id": "label-https-oauth",
@@ -922,12 +1217,12 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2029,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
       "roundness": null,
-      "boundElements": null,
+      "boundElements": [],
       "locked": false,
       "link": null,
       "text": "HTTPS + OAuth2 JWT\nJSON-RPC 2.0",
@@ -938,9 +1233,11 @@
       "containerId": null,
       "originalText": "HTTPS + OAuth2 JWT\nJSON-RPC 2.0",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "versionNonce": 326947968,
+      "index": "aS",
+      "updated": 1771390714761
     },
-
     {
       "id": "panel-agentcore",
       "type": "rectangle",
@@ -957,14 +1254,19 @@
       "roughness": 0,
       "opacity": 20,
       "seed": 2030,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
-      "roundness": { "type": 3 },
-      "boundElements": null,
+      "roundness": {
+        "type": 3
+      },
+      "boundElements": [],
       "locked": false,
-      "link": null
+      "link": null,
+      "versionNonce": 248034176,
+      "index": "aT",
+      "updated": 1771390714761
     },
     {
       "id": "label-agentcore",
@@ -982,12 +1284,12 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2031,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
       "roundness": null,
-      "boundElements": null,
+      "boundElements": [],
       "locked": false,
       "link": null,
       "text": "☁️ AWS AGENTCORE",
@@ -998,9 +1300,11 @@
       "containerId": null,
       "originalText": "☁️ AWS AGENTCORE",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "versionNonce": 636372096,
+      "index": "aU",
+      "updated": 1771390714761
     },
-
     {
       "id": "box-gateway",
       "type": "rectangle",
@@ -1017,18 +1321,32 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2032,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
-      "roundness": { "type": 3 },
+      "roundness": {
+        "type": 3
+      },
       "boundElements": [
-        { "id": "label-gateway", "type": "text" },
-        { "id": "arrow-proxy-to-agentcore", "type": "arrow" },
-        { "id": "arrow-gw-to-mcp", "type": "arrow" }
+        {
+          "id": "label-gateway",
+          "type": "text"
+        },
+        {
+          "id": "arrow-proxy-to-agentcore",
+          "type": "arrow"
+        },
+        {
+          "id": "arrow-gw-to-mcp",
+          "type": "arrow"
+        }
       ],
       "locked": false,
-      "link": null
+      "link": null,
+      "versionNonce": 711345024,
+      "index": "aV",
+      "updated": 1771390714761
     },
     {
       "id": "label-gateway",
@@ -1046,12 +1364,12 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2033,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
       "roundness": null,
-      "boundElements": null,
+      "boundElements": [],
       "locked": false,
       "link": null,
       "text": "🔗 AgentCore Gateway\nJWT validation + routing",
@@ -1062,9 +1380,11 @@
       "containerId": "box-gateway",
       "originalText": "🔗 AgentCore Gateway\nJWT validation + routing",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "versionNonce": 1219605632,
+      "index": "aW",
+      "updated": 1771390714761
     },
-
     {
       "id": "arrow-gw-to-mcp",
       "type": "arrow",
@@ -1081,21 +1401,51 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2034,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
-      "roundness": { "type": 2 },
-      "boundElements": null,
+      "roundness": {
+        "type": 2
+      },
+      "boundElements": [],
       "locked": false,
       "link": null,
-      "points": [[0, 0], [40, 0]],
-      "startBinding": { "mode": "orbit", "elementId": "box-gateway", "fixedPoint": [1, 0.5] },
-      "endBinding": { "mode": "orbit", "elementId": "box-mcp-server", "fixedPoint": [0, 0.5] },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          40,
+          0
+        ]
+      ],
+      "startBinding": {
+        "mode": "orbit",
+        "elementId": "box-gateway",
+        "fixedPoint": [
+          1,
+          0.5
+        ],
+        "focus": 0
+      },
+      "endBinding": {
+        "mode": "orbit",
+        "elementId": "box-mcp-server",
+        "fixedPoint": [
+          0,
+          0.5
+        ],
+        "focus": 0
+      },
       "startArrowhead": null,
-      "endArrowhead": "arrow"
+      "endArrowhead": "arrow",
+      "lastCommittedPoint": null,
+      "versionNonce": 466736000,
+      "index": "aX",
+      "updated": 1771390714761
     },
-
     {
       "id": "box-mcp-server",
       "type": "rectangle",
@@ -1112,18 +1462,32 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2035,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
-      "roundness": { "type": 3 },
+      "roundness": {
+        "type": 3
+      },
       "boundElements": [
-        { "id": "label-mcp-server", "type": "text" },
-        { "id": "arrow-gw-to-mcp", "type": "arrow" },
-        { "id": "arrow-mcp-to-aura", "type": "arrow" }
+        {
+          "id": "label-mcp-server",
+          "type": "text"
+        },
+        {
+          "id": "arrow-gw-to-mcp",
+          "type": "arrow"
+        },
+        {
+          "id": "arrow-mcp-to-aura",
+          "type": "arrow"
+        }
       ],
       "locked": false,
-      "link": null
+      "link": null,
+      "versionNonce": 562504832,
+      "index": "aY",
+      "updated": 1771390714761
     },
     {
       "id": "label-mcp-server",
@@ -1141,12 +1505,12 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2036,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
       "roundness": null,
-      "boundElements": null,
+      "boundElements": [],
       "locked": false,
       "link": null,
       "text": "🔷 Neo4j MCP Server\nget-schema  |  read-cypher",
@@ -1157,9 +1521,11 @@
       "containerId": "box-mcp-server",
       "originalText": "🔷 Neo4j MCP Server\nget-schema  |  read-cypher",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "versionNonce": 2034983808,
+      "index": "aZ",
+      "updated": 1771390714761
     },
-
     {
       "id": "label-agentcore-note",
       "type": "text",
@@ -1176,12 +1542,12 @@
       "roughness": 0,
       "opacity": 60,
       "seed": 2037,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
       "roundness": null,
-      "boundElements": null,
+      "boundElements": [],
       "locked": false,
       "link": null,
       "text": "Go binary, Docker, ARM64, read-only mode",
@@ -1192,9 +1558,11 @@
       "containerId": null,
       "originalText": "Go binary, Docker, ARM64, read-only mode",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "versionNonce": 506369152,
+      "index": "aa",
+      "updated": 1771390714761
     },
-
     {
       "id": "arrow-mcp-to-aura",
       "type": "arrow",
@@ -1211,19 +1579,50 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2038,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
-      "roundness": { "type": 2 },
-      "boundElements": null,
+      "roundness": {
+        "type": 2
+      },
+      "boundElements": [],
       "locked": false,
       "link": null,
-      "points": [[0, 0], [0, 60]],
-      "startBinding": { "mode": "orbit", "elementId": "box-mcp-server", "fixedPoint": [0.5, 1] },
-      "endBinding": { "mode": "orbit", "elementId": "panel-aura", "fixedPoint": [0.5, 0] },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          60
+        ]
+      ],
+      "startBinding": {
+        "mode": "orbit",
+        "elementId": "box-mcp-server",
+        "fixedPoint": [
+          0.5,
+          1
+        ],
+        "focus": 0
+      },
+      "endBinding": {
+        "mode": "orbit",
+        "elementId": "panel-aura",
+        "fixedPoint": [
+          0.5,
+          0
+        ],
+        "focus": 0
+      },
       "startArrowhead": null,
-      "endArrowhead": "arrow"
+      "endArrowhead": "arrow",
+      "lastCommittedPoint": null,
+      "versionNonce": 286454656,
+      "index": "ab",
+      "updated": 1771390714761
     },
     {
       "id": "label-bolt",
@@ -1241,12 +1640,12 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2039,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
       "roundness": null,
-      "boundElements": null,
+      "boundElements": [],
       "locked": false,
       "link": null,
       "text": "Bolt (neo4j+s://)",
@@ -1257,9 +1656,11 @@
       "containerId": null,
       "originalText": "Bolt (neo4j+s://)",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "versionNonce": 1952973952,
+      "index": "ac",
+      "updated": 1771390714761
     },
-
     {
       "id": "panel-aura",
       "type": "rectangle",
@@ -1276,16 +1677,24 @@
       "roughness": 0,
       "opacity": 25,
       "seed": 2040,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
-      "roundness": { "type": 3 },
+      "roundness": {
+        "type": 3
+      },
       "boundElements": [
-        { "id": "arrow-mcp-to-aura", "type": "arrow" }
+        {
+          "id": "arrow-mcp-to-aura",
+          "type": "arrow"
+        }
       ],
       "locked": false,
-      "link": null
+      "link": null,
+      "versionNonce": 1768457088,
+      "index": "ad",
+      "updated": 1771390714761
     },
     {
       "id": "label-aura-title",
@@ -1303,12 +1712,12 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2041,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
       "roundness": null,
-      "boundElements": null,
+      "boundElements": [],
       "locked": false,
       "link": null,
       "text": "🔷 NEO4J AURA",
@@ -1319,7 +1728,10 @@
       "containerId": null,
       "originalText": "🔷 NEO4J AURA",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "versionNonce": 569603200,
+      "index": "ae",
+      "updated": 1771390714761
     },
     {
       "id": "box-graph-db",
@@ -1337,16 +1749,24 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2042,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
-      "roundness": { "type": 3 },
+      "roundness": {
+        "type": 3
+      },
       "boundElements": [
-        { "id": "label-graph-db", "type": "text" }
+        {
+          "id": "label-graph-db",
+          "type": "text"
+        }
       ],
       "locked": false,
-      "link": null
+      "link": null,
+      "versionNonce": 1082921856,
+      "index": "af",
+      "updated": 1771390714761
     },
     {
       "id": "label-graph-db",
@@ -1364,12 +1784,12 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2043,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
       "roundness": null,
-      "boundElements": null,
+      "boundElements": [],
       "locked": false,
       "link": null,
       "text": "🔷 Aircraft Digital Twin — Knowledge Graph\n20 Aircraft, 320 Components, 300 MaintenanceEvents\n800 Flights, 12 Airports  |  8 node types, 13 rel types",
@@ -1380,9 +1800,11 @@
       "containerId": "box-graph-db",
       "originalText": "🔷 Aircraft Digital Twin — Knowledge Graph\n20 Aircraft, 320 Components, 300 MaintenanceEvents\n800 Flights, 12 Airports  |  8 node types, 13 rel types",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "versionNonce": 1821435008,
+      "index": "ag",
+      "updated": 1771390714761
     },
-
     {
       "id": "label-lab4",
       "type": "text",
@@ -1399,12 +1821,12 @@
       "roughness": 0,
       "opacity": 60,
       "seed": 2044,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
       "roundness": null,
-      "boundElements": null,
+      "boundElements": [],
       "locked": false,
       "link": null,
       "text": "Lab 4 — AWS AgentCore overview",
@@ -1415,9 +1837,11 @@
       "containerId": null,
       "originalText": "Lab 4 — AWS AgentCore overview",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "versionNonce": 213754752,
+      "index": "ah",
+      "updated": 1771390714761
     },
-
     {
       "id": "box-also-lab4",
       "type": "rectangle",
@@ -1434,14 +1858,19 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2045,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
-      "roundness": { "type": 3 },
-      "boundElements": null,
+      "roundness": {
+        "type": 3
+      },
+      "boundElements": [],
       "locked": false,
-      "link": null
+      "link": null,
+      "versionNonce": 1644188800,
+      "index": "ai",
+      "updated": 1771390714761
     },
     {
       "id": "label-also-lab4-title",
@@ -1459,12 +1888,12 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2046,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
       "roundness": null,
-      "boundElements": null,
+      "boundElements": [],
       "locked": false,
       "link": null,
       "text": "🔗 How It All Connects",
@@ -1475,7 +1904,10 @@
       "containerId": null,
       "originalText": "🔗 How It All Connects",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "versionNonce": 2084385664,
+      "index": "aj",
+      "updated": 1771390714761
     },
     {
       "id": "label-how-it-connects",
@@ -1493,12 +1925,12 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2047,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
       "roundness": null,
-      "boundElements": null,
+      "boundElements": [],
       "locked": false,
       "link": null,
       "text": "1. Neo4j Aura hosts the Aircraft Digital Twin\n   graph (admin's shared instance, full dataset)\n\n2. Neo4j MCP Server deployed to AWS AgentCore\n   Runtime exposes read-only Cypher tools\n\n3. databrick_samples/ sets up the Unity Catalog\n   HTTP Connection with OAuth2 M2M credentials\n   (neo4j-mcp-http-connection.ipynb)\n\n4. Lab 6 AgentBricks ties it together:\n   Supervisor routes sensor queries to Genie\n   (Lakehouse SQL) and relationship queries\n   to Neo4j MCP Agent (via HTTP Connection\n   -> AgentCore Gateway -> MCP Server -> Aura)",
@@ -1509,9 +1941,11 @@
       "containerId": null,
       "originalText": "1. Neo4j Aura hosts the Aircraft Digital Twin\n   graph (admin's shared instance, full dataset)\n\n2. Neo4j MCP Server deployed to AWS AgentCore\n   Runtime exposes read-only Cypher tools\n\n3. databrick_samples/ sets up the Unity Catalog\n   HTTP Connection with OAuth2 M2M credentials\n   (neo4j-mcp-http-connection.ipynb)\n\n4. Lab 6 AgentBricks ties it together:\n   Supervisor routes sensor queries to Genie\n   (Lakehouse SQL) and relationship queries\n   to Neo4j MCP Agent (via HTTP Connection\n   -> AgentCore Gateway -> MCP Server -> Aura)",
       "autoResize": true,
-      "lineHeight": 1.25
+      "lineHeight": 1.25,
+      "versionNonce": 1476510848,
+      "index": "ak",
+      "updated": 1771390714761
     },
-
     {
       "id": "divider-vert",
       "type": "line",
@@ -1528,34 +1962,41 @@
       "roughness": 0,
       "opacity": 30,
       "seed": 2048,
-      "version": 1,
+      "version": 2,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
-      "roundness": { "type": 2 },
-      "boundElements": null,
+      "roundness": {
+        "type": 2
+      },
+      "boundElements": [],
       "locked": false,
       "link": null,
-      "points": [[0, 0], [0, 345]],
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          345
+        ]
+      ],
       "startBinding": null,
       "endBinding": null,
       "startArrowhead": null,
-      "endArrowhead": null
+      "endArrowhead": null,
+      "lastCommittedPoint": null,
+      "versionNonce": 1967833984,
+      "index": "al",
+      "updated": 1771390714761
     }
   ],
   "appState": {
     "gridSize": 20,
+    "gridStep": 5,
     "gridModeEnabled": false,
-    "viewBackgroundColor": "#ffffff",
-    "currentItemFontFamily": 5,
-    "currentItemRoughness": 0,
-    "currentItemRoundness": "round",
-    "currentItemArrowType": "round",
-    "currentItemStrokeWidth": 2,
-    "exportBackground": true,
-    "exportScale": 2,
-    "theme": "light",
-    "bindMode": "orbit"
+    "viewBackgroundColor": "#ffffff"
   },
   "files": {}
 }
