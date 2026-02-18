@@ -133,19 +133,27 @@ def enrich_cmd() -> None:
     settings = Settings()  # type: ignore[call-arg]
     provider = settings.llm_provider
 
-    # Always need OpenAI for embeddings
-    if settings.openai_api_key is None:
-        raise typer.BadParameter(
-            "OPENAI_API_KEY is required for the enrich command (embeddings). "
-            "Set it in .env or as an env var."
-        )
-    openai_key = settings.openai_api_key.get_secret_value()
-
-    # LLM key depends on provider
+    # Resolve credentials and model names per provider.
+    openai_key = None
     anthropic_key = None
+    azure_key = None
+
     if provider == "openai":
+        if settings.openai_api_key is None:
+            raise typer.BadParameter(
+                "OPENAI_API_KEY is required when using OpenAI. "
+                "Set it in .env or as an env var."
+            )
+        openai_key = settings.openai_api_key.get_secret_value()
         llm_model = settings.openai_extraction_model
     elif provider == "anthropic":
+        # Anthropic still needs OpenAI for embeddings.
+        if settings.openai_api_key is None:
+            raise typer.BadParameter(
+                "OPENAI_API_KEY is required for embeddings when using Anthropic. "
+                "Set it in .env or as an env var."
+            )
+        openai_key = settings.openai_api_key.get_secret_value()
         if settings.anthropic_api_key is None:
             raise typer.BadParameter(
                 "ANTHROPIC_API_KEY is required when using Anthropic. "
@@ -153,9 +161,23 @@ def enrich_cmd() -> None:
             )
         anthropic_key = settings.anthropic_api_key.get_secret_value()
         llm_model = settings.anthropic_extraction_model
+    elif provider == "azure":
+        for field, label in [
+            ("azure_openai_api_key", "AZURE_OPENAI_API_KEY"),
+            ("azure_openai_endpoint", "AZURE_OPENAI_ENDPOINT"),
+            ("azure_openai_llm_deployment", "AZURE_OPENAI_LLM_DEPLOYMENT"),
+            ("azure_openai_embedding_deployment", "AZURE_OPENAI_EMBEDDING_DEPLOYMENT"),
+        ]:
+            if getattr(settings, field) is None:
+                raise typer.BadParameter(
+                    f"{label} is required when using Azure. "
+                    "Set it in .env or as an env var."
+                )
+        azure_key = settings.azure_openai_api_key.get_secret_value()  # type: ignore[union-attr]
+        llm_model = settings.azure_openai_llm_deployment  # type: ignore[assignment]
     else:
         raise typer.BadParameter(
-            f"Unknown provider: {provider!r}. Use 'openai' or 'anthropic'."
+            f"Unknown provider: {provider!r}. Use 'openai', 'anthropic', or 'azure'."
         )
 
     start = time.monotonic()
@@ -181,15 +203,25 @@ def enrich_cmd() -> None:
                   f" sample_size={settings.enrich_sample_size} chunks/doc)...")
         else:
             print(f"Running SimpleKGPipeline (LLM: {provider}/{llm_model})...")
+        if provider == "azure":
+            embedding_model = settings.azure_openai_embedding_deployment
+            embedding_dims = settings.azure_openai_embedding_dimensions
+        else:
+            embedding_model = settings.openai_embedding_model
+            embedding_dims = settings.openai_embedding_dimensions
+
         process_all_documents(
             driver,
             settings.data_dir,
             provider=provider,
             openai_api_key=openai_key,
             anthropic_api_key=anthropic_key,
+            azure_api_key=azure_key,
+            azure_endpoint=settings.azure_openai_endpoint if provider == "azure" else None,
+            azure_api_version=settings.azure_openai_api_version if provider == "azure" else None,
             llm_model=llm_model,
-            embedding_model=settings.openai_embedding_model,
-            embedding_dimensions=settings.openai_embedding_dimensions,
+            embedding_model=embedding_model,
+            embedding_dimensions=embedding_dims,
             chunk_size=settings.chunk_size,
             chunk_overlap=settings.chunk_overlap,
             enrich_sample_size=settings.enrich_sample_size,
@@ -199,7 +231,7 @@ def enrich_cmd() -> None:
         create_extraction_constraints(driver)
 
         print("\nCreating embedding indexes...")
-        create_embedding_indexes(driver, settings.openai_embedding_dimensions)
+        create_embedding_indexes(driver, embedding_dims)
 
         print("\nLinking to existing graph...")
         link_to_existing_graph(driver)

@@ -37,11 +37,19 @@ class Settings(BaseSettings):
     openai_extraction_model: str = "gpt-5-mini"
 
     # LLM provider selection — "openai" or "anthropic".
-    llm_provider: Literal["openai", "anthropic"] = "openai"
+    llm_provider: Literal["openai", "anthropic", "azure"] = "openai"
 
     # Anthropic — only required when llm_provider is "anthropic".
     anthropic_api_key: Optional[SecretStr] = None
     anthropic_extraction_model: str = "claude-sonnet-4-5-20250929"
+
+    # Azure OpenAI — required when llm_provider is "azure".
+    azure_openai_api_key: Optional[SecretStr] = None
+    azure_openai_endpoint: Optional[str] = None
+    azure_openai_api_version: str = "2025-04-01-preview"
+    azure_openai_llm_deployment: Optional[str] = None
+    azure_openai_embedding_deployment: Optional[str] = None
+    azure_openai_embedding_dimensions: int = 1536
 
     # Chunking settings for the `enrich` command.
     chunk_size: int = 800

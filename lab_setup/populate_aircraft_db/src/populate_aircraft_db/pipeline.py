@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from neo4j import Driver
-from neo4j_graphrag.embeddings.openai import OpenAIEmbeddings
+from neo4j_graphrag.embeddings.openai import AzureOpenAIEmbeddings, OpenAIEmbeddings
 
 # Labels for extracted entity nodes (used by clear/verify logic).
 EXTRACTED_LABELS = ["OperatingLimit"]
@@ -68,6 +68,17 @@ class DimensionAwareOpenAIEmbeddings(OpenAIEmbeddings):
         return super().embed_query(text, dimensions=self._dimensions, **kwargs)
 
 
+class DimensionAwareAzureOpenAIEmbeddings(AzureOpenAIEmbeddings):
+    """AzureOpenAIEmbeddings that always passes ``dimensions`` to the API."""
+
+    def __init__(self, dimensions: int, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self._dimensions = dimensions
+
+    def embed_query(self, text: str, **kwargs: Any) -> list[float]:
+        return super().embed_query(text, dimensions=self._dimensions, **kwargs)
+
+
 # ---------------------------------------------------------------------------
 # Pipeline factory
 # ---------------------------------------------------------------------------
@@ -79,6 +90,9 @@ def _create_pipeline(
     provider: str,
     openai_api_key: str | None,
     anthropic_api_key: str | None,
+    azure_api_key: str | None = None,
+    azure_endpoint: str | None = None,
+    azure_api_version: str | None = None,
     llm_model: str,
     embedding_model: str,
     embedding_dimensions: int,
@@ -113,15 +127,38 @@ def _create_pipeline(
             model_params={"max_tokens": 4096},
             api_key=anthropic_api_key,
         )
+    elif provider == "azure":
+        from neo4j_graphrag.llm.openai_llm import AzureOpenAILLM
+
+        llm = AzureOpenAILLM(
+            model_name=llm_model,
+            model_params={
+                "max_completion_tokens": 2000,
+                "temperature": 0,
+                "response_format": {"type": "json_object"},
+            },
+            azure_endpoint=azure_endpoint,
+            api_key=azure_api_key,
+            api_version=azure_api_version,
+        )
     else:
         raise ValueError(f"Unknown LLM provider: {provider!r}")
 
     # --- Embedder ---
-    embedder = DimensionAwareOpenAIEmbeddings(
-        dimensions=embedding_dimensions,
-        model=embedding_model,
-        api_key=openai_api_key,
-    )
+    if provider == "azure":
+        embedder = DimensionAwareAzureOpenAIEmbeddings(
+            dimensions=embedding_dimensions,
+            model=embedding_model,
+            azure_endpoint=azure_endpoint,
+            api_key=azure_api_key,
+            api_version=azure_api_version,
+        )
+    else:
+        embedder = DimensionAwareOpenAIEmbeddings(
+            dimensions=embedding_dimensions,
+            model=embedding_model,
+            api_key=openai_api_key,
+        )
 
     # --- Text splitter ---
     splitter = FixedSizeSplitter(
@@ -157,6 +194,9 @@ def process_all_documents(
     provider: str,
     openai_api_key: str | None,
     anthropic_api_key: str | None,
+    azure_api_key: str | None = None,
+    azure_endpoint: str | None = None,
+    azure_api_version: str | None = None,
     llm_model: str,
     embedding_model: str,
     embedding_dimensions: int,
@@ -175,6 +215,9 @@ def process_all_documents(
         provider=provider,
         openai_api_key=openai_api_key,
         anthropic_api_key=anthropic_api_key,
+        azure_api_key=azure_api_key,
+        azure_endpoint=azure_endpoint,
+        azure_api_version=azure_api_version,
         llm_model=llm_model,
         embedding_model=embedding_model,
         embedding_dimensions=embedding_dimensions,
