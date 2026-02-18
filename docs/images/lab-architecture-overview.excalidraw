@@ -320,10 +320,10 @@
     {
       "id": "arrow-sup-to-genie",
       "type": "arrow",
-      "x": 410,
+      "x": 428.7421383647799,
       "y": 225,
-      "width": 180,
-      "height": 50,
+      "width": 157.5532560905579,
+      "height": 52.99999999999994,
       "angle": 0,
       "strokeColor": "#1971c2",
       "backgroundColor": "transparent",
@@ -333,7 +333,7 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2009,
-      "version": 2,
+      "version": 5,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -349,8 +349,8 @@
           0
         ],
         [
-          -180,
-          50
+          -157.5532560905579,
+          52.99999999999994
         ]
       ],
       "startBinding": {
@@ -374,9 +374,9 @@
       "startArrowhead": null,
       "endArrowhead": "arrow",
       "lastCommittedPoint": null,
-      "versionNonce": 61633664,
+      "versionNonce": 157329738,
       "index": "a8",
-      "updated": 1771390714761
+      "updated": 1771391915703
     },
     {
       "id": "label-route-sensor",
@@ -517,7 +517,7 @@
       "id": "box-genie",
       "type": "rectangle",
       "x": 50,
-      "y": 275,
+      "y": 278,
       "width": 280,
       "height": 55,
       "angle": 0,
@@ -529,7 +529,7 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2013,
-      "version": 2,
+      "version": 5,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -552,15 +552,15 @@
       ],
       "locked": false,
       "link": null,
-      "versionNonce": 1769559168,
+      "versionNonce": 2032974614,
       "index": "aC",
-      "updated": 1771390714761
+      "updated": 1771391915703
     },
     {
       "id": "label-genie",
       "type": "text",
       "x": 80,
-      "y": 283,
+      "y": 286,
       "width": 220,
       "height": 40,
       "angle": 0,
@@ -572,7 +572,7 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2014,
-      "version": 2,
+      "version": 5,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -589,9 +589,9 @@
       "originalText": "📊 Genie Space Agent\nsensor_data_agent",
       "autoResize": true,
       "lineHeight": 1.25,
-      "versionNonce": 81015680,
+      "versionNonce": 873094858,
       "index": "aD",
-      "updated": 1771390714761
+      "updated": 1771391915704
     },
     {
       "id": "box-neo4j-agent",
@@ -677,9 +677,9 @@
       "id": "arrow-genie-to-lake",
       "type": "arrow",
       "x": 190,
-      "y": 330,
+      "y": 333,
       "width": 0,
-      "height": 40,
+      "height": 44,
       "angle": 0,
       "strokeColor": "#1971c2",
       "backgroundColor": "transparent",
@@ -689,7 +689,7 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2017,
-      "version": 2,
+      "version": 12,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -706,7 +706,7 @@
         ],
         [
           0,
-          40
+          44
         ]
       ],
       "startBinding": {
@@ -730,9 +730,9 @@
       "startArrowhead": null,
       "endArrowhead": "arrow",
       "lastCommittedPoint": null,
-      "versionNonce": 697185408,
+      "versionNonce": 1859186698,
       "index": "aG",
-      "updated": 1771390714761
+      "updated": 1771391915704
     },
     {
       "id": "label-sql",
@@ -774,10 +774,10 @@
     {
       "id": "arrow-neo4j-to-http",
       "type": "arrow",
-      "x": 860,
-      "y": 330,
-      "width": 0,
-      "height": 40,
+      "x": 860.0016649129775,
+      "y": 329.99999999999994,
+      "width": 0.0030196037100722606,
+      "height": 50.46093750000006,
       "angle": 0,
       "strokeColor": "#2f9e44",
       "backgroundColor": "transparent",
@@ -787,7 +787,7 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2019,
-      "version": 2,
+      "version": 13,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -803,8 +803,8 @@
           0
         ],
         [
-          0,
-          40
+          0.0030196037100722606,
+          50.46093750000006
         ]
       ],
       "startBinding": {
@@ -828,15 +828,15 @@
       "startArrowhead": null,
       "endArrowhead": "arrow",
       "lastCommittedPoint": null,
-      "versionNonce": 852731008,
+      "versionNonce": 108260362,
       "index": "aI",
-      "updated": 1771390714761
+      "updated": 1771391907680
     },
     {
       "id": "label-mcp-tools",
       "type": "text",
       "x": 870,
-      "y": 340,
+      "y": 343,
       "width": 80,
       "height": 16,
       "angle": 0,
@@ -848,7 +848,7 @@
       "roughness": 0,
       "opacity": 70,
       "seed": 2020,
-      "version": 2,
+      "version": 5,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -865,15 +865,15 @@
       "originalText": "MCP tools",
       "autoResize": true,
       "lineHeight": 1.25,
-      "versionNonce": 1359405952,
+      "versionNonce": 1889039318,
       "index": "aJ",
-      "updated": 1771390714761
+      "updated": 1771391909194
     },
     {
       "id": "box-lakehouse",
       "type": "rectangle",
       "x": 35,
-      "y": 370,
+      "y": 377,
       "width": 310,
       "height": 150,
       "angle": 0,
@@ -885,7 +885,7 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2021,
-      "version": 2,
+      "version": 9,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -904,15 +904,15 @@
       ],
       "locked": false,
       "link": null,
-      "versionNonce": 1374360704,
+      "versionNonce": 362929814,
       "index": "aK",
-      "updated": 1771390714761
+      "updated": 1771391913848
     },
     {
       "id": "label-lakehouse",
       "type": "text",
       "x": 55,
-      "y": 378,
+      "y": 385,
       "width": 270,
       "height": 134,
       "angle": 0,
@@ -924,7 +924,7 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2022,
-      "version": 2,
+      "version": 9,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -941,15 +941,15 @@
       "originalText": "💾 Unity Catalog — Lakehouse\naws-databricks-neo4j-lab.lakehouse\n\nsensor_readings  (345,600+ rows)\nsensors  (160)\nsystems  (~80)\naircraft  (20)",
       "autoResize": true,
       "lineHeight": 1.25,
-      "versionNonce": 1700688768,
+      "versionNonce": 1279472778,
       "index": "aL",
-      "updated": 1771390714761
+      "updated": 1771391913849
     },
     {
       "id": "box-http-conn",
       "type": "rectangle",
-      "x": 700,
-      "y": 370,
+      "x": 700.0078125,
+      "y": 380.4609375,
       "width": 320,
       "height": 105,
       "angle": 0,
@@ -961,7 +961,7 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2023,
-      "version": 2,
+      "version": 13,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -984,15 +984,15 @@
       ],
       "locked": false,
       "link": null,
-      "versionNonce": 2090108032,
+      "versionNonce": 997469270,
       "index": "aM",
-      "updated": 1771390714761
+      "updated": 1771391907679
     },
     {
       "id": "label-http-conn",
       "type": "text",
-      "x": 720,
-      "y": 378,
+      "x": 720.0078125,
+      "y": 388.4609375,
       "width": 280,
       "height": 90,
       "angle": 0,
@@ -1004,7 +1004,7 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2024,
-      "version": 2,
+      "version": 13,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -1021,15 +1021,15 @@
       "originalText": "🔗 Unity Catalog — HTTP Connection\nneo4j_agentcore_mcp\nOAuth2 M2M (Cognito)\n\n/api/2.0/mcp/external/{conn}",
       "autoResize": true,
       "lineHeight": 1.25,
-      "versionNonce": 675545984,
+      "versionNonce": 1706815882,
       "index": "aN",
-      "updated": 1771390714761
+      "updated": 1771391907680
     },
     {
       "id": "label-databrick-samples",
       "type": "text",
-      "x": 710,
-      "y": 480,
+      "x": 710.23046875,
+      "y": 495.01171875,
       "width": 300,
       "height": 40,
       "angle": 0,
@@ -1041,7 +1041,7 @@
       "roughness": 0,
       "opacity": 70,
       "seed": 2025,
-      "version": 2,
+      "version": 18,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -1058,15 +1058,15 @@
       "originalText": "Setup: databrick_samples/\nneo4j-mcp-http-connection.ipynb",
       "autoResize": true,
       "lineHeight": 1.25,
-      "versionNonce": 1888482432,
+      "versionNonce": 943410134,
       "index": "aO",
-      "updated": 1771390714761
+      "updated": 1771391905620
     },
     {
       "id": "label-lakehouse-strengths",
       "type": "text",
       "x": 40,
-      "y": 530,
+      "y": 544,
       "width": 300,
       "height": 40,
       "angle": 0,
@@ -1078,7 +1078,7 @@
       "roughness": 0,
       "opacity": 70,
       "seed": 2026,
-      "version": 2,
+      "version": 16,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -1095,9 +1095,9 @@
       "originalText": "Time-series | Aggregations | Trends\nAnomaly detection | Fleet comparisons",
       "autoResize": true,
       "lineHeight": 1.25,
-      "versionNonce": 402101120,
+      "versionNonce": 290210570,
       "index": "aP",
-      "updated": 1771390714761
+      "updated": 1771391912535
     },
     {
       "id": "label-lab7-badge-text",
@@ -1139,10 +1139,10 @@
     {
       "id": "arrow-proxy-to-agentcore",
       "type": "arrow",
-      "x": 860,
-      "y": 475,
-      "width": 195,
-      "height": 230,
+      "x": 860.0052006896424,
+      "y": 485.4609375,
+      "width": 152.32843301287483,
+      "height": 220.5390625,
       "angle": 0,
       "strokeColor": "#2f9e44",
       "backgroundColor": "transparent",
@@ -1152,7 +1152,7 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2028,
-      "version": 2,
+      "version": 14,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -1168,12 +1168,12 @@
           0
         ],
         [
-          0,
-          115
+          -0.005200689642379075,
+          104.5390625
         ],
         [
-          -195,
-          230
+          -152.32843301287483,
+          220.5390625
         ]
       ],
       "startBinding": {
@@ -1197,9 +1197,9 @@
       "startArrowhead": null,
       "endArrowhead": "arrow",
       "lastCommittedPoint": null,
-      "versionNonce": 1790518144,
+      "versionNonce": 1441651402,
       "index": "aR",
-      "updated": 1771390714761
+      "updated": 1771391907680
     },
     {
       "id": "label-https-oauth",
@@ -1309,7 +1309,7 @@
       "id": "box-gateway",
       "type": "rectangle",
       "x": 555,
-      "y": 705,
+      "y": 706,
       "width": 220,
       "height": 65,
       "angle": 0,
@@ -1321,7 +1321,7 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2032,
-      "version": 2,
+      "version": 3,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -1344,15 +1344,15 @@
       ],
       "locked": false,
       "link": null,
-      "versionNonce": 711345024,
+      "versionNonce": 1726354634,
       "index": "aV",
-      "updated": 1771390714761
+      "updated": 1771391893775
     },
     {
       "id": "label-gateway",
       "type": "text",
       "x": 575,
-      "y": 713,
+      "y": 714,
       "width": 180,
       "height": 50,
       "angle": 0,
@@ -1364,7 +1364,7 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2033,
-      "version": 2,
+      "version": 3,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -1381,17 +1381,17 @@
       "originalText": "🔗 AgentCore Gateway\nJWT validation + routing",
       "autoResize": true,
       "lineHeight": 1.25,
-      "versionNonce": 1219605632,
+      "versionNonce": 1164392278,
       "index": "aW",
-      "updated": 1771390714761
+      "updated": 1771391893777
     },
     {
       "id": "arrow-gw-to-mcp",
       "type": "arrow",
       "x": 775,
-      "y": 737,
+      "y": 737.9084444444444,
       "width": 40,
-      "height": 0,
+      "height": 0.41007407407403207,
       "angle": 0,
       "strokeColor": "#e8590c",
       "backgroundColor": "transparent",
@@ -1401,7 +1401,7 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2034,
-      "version": 2,
+      "version": 5,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -1418,7 +1418,7 @@
         ],
         [
           40,
-          0
+          -0.41007407407403207
         ]
       ],
       "startBinding": {
@@ -1442,9 +1442,9 @@
       "startArrowhead": null,
       "endArrowhead": "arrow",
       "lastCommittedPoint": null,
-      "versionNonce": 466736000,
+      "versionNonce": 1823947030,
       "index": "aX",
-      "updated": 1771390714761
+      "updated": 1771391899175
     },
     {
       "id": "box-mcp-server",
@@ -1462,7 +1462,7 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2035,
-      "version": 2,
+      "version": 4,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -1485,9 +1485,9 @@
       ],
       "locked": false,
       "link": null,
-      "versionNonce": 562504832,
+      "versionNonce": 470232202,
       "index": "aY",
-      "updated": 1771390714761
+      "updated": 1771391899174
     },
     {
       "id": "label-mcp-server",
@@ -1505,7 +1505,7 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2036,
-      "version": 2,
+      "version": 4,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -1522,15 +1522,15 @@
       "originalText": "🔷 Neo4j MCP Server\nget-schema  |  read-cypher",
       "autoResize": true,
       "lineHeight": 1.25,
-      "versionNonce": 2034983808,
+      "versionNonce": 1820355478,
       "index": "aZ",
-      "updated": 1771390714761
+      "updated": 1771391899175
     },
     {
       "id": "label-agentcore-note",
       "type": "text",
       "x": 555,
-      "y": 780,
+      "y": 785,
       "width": 300,
       "height": 16,
       "angle": 0,
@@ -1542,7 +1542,7 @@
       "roughness": 0,
       "opacity": 60,
       "seed": 2037,
-      "version": 2,
+      "version": 7,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -1559,17 +1559,17 @@
       "originalText": "Go binary, Docker, ARM64, read-only mode",
       "autoResize": true,
       "lineHeight": 1.25,
-      "versionNonce": 506369152,
+      "versionNonce": 760031946,
       "index": "aa",
-      "updated": 1771390714761
+      "updated": 1771391896835
     },
     {
       "id": "arrow-mcp-to-aura",
       "type": "arrow",
-      "x": 925,
+      "x": 904.2034233048057,
       "y": 770,
-      "width": 0,
-      "height": 60,
+      "width": 57.22290382428605,
+      "height": 90,
       "angle": 0,
       "strokeColor": "#2f9e44",
       "backgroundColor": "transparent",
@@ -1579,7 +1579,7 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 2038,
-      "version": 2,
+      "version": 4,
       "isDeleted": false,
       "groupIds": [],
       "frameId": null,
@@ -1595,8 +1595,8 @@
           0
         ],
         [
-          0,
-          60
+          -57.22290382428605,
+          90
         ]
       ],
       "startBinding": {
@@ -1620,9 +1620,9 @@
       "startArrowhead": null,
       "endArrowhead": "arrow",
       "lastCommittedPoint": null,
-      "versionNonce": 286454656,
+      "versionNonce": 316384854,
       "index": "ab",
-      "updated": 1771390714761
+      "updated": 1771391899175
     },
     {
       "id": "label-bolt",
