@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     openai_embedding_dimensions: int = 1536
 
     # OpenAI chat model — used by the `enrich` command for entity extraction.
-    openai_extraction_model: str = "gpt-4o-mini"
+    openai_extraction_model: str = "gpt-5-mini"
 
     # LLM provider selection — "openai" or "anthropic".
     llm_provider: Literal["openai", "anthropic"] = "openai"

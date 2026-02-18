@@ -18,6 +18,7 @@ from .schema import (
     create_constraints,
     create_embedding_indexes,
     create_extraction_constraints,
+    create_fulltext_indexes,
     create_indexes,
 )
 
@@ -69,6 +70,8 @@ def load() -> None:
         create_constraints(driver)
         print("\nCreating indexes...")
         create_indexes(driver)
+        print("\nCreating fulltext indexes...")
+        create_fulltext_indexes(driver)
         print()
 
         load_nodes(driver, settings.data_dir)
@@ -162,6 +165,7 @@ def enrich_cmd() -> None:
         print("Creating constraints and indexes...")
         create_constraints(driver)
         create_indexes(driver)
+        create_fulltext_indexes(driver)
         # NOTE: extraction constraints are created AFTER the pipeline runs.
         # SimpleKGPipeline uses CREATE (not MERGE), so pre-existing uniqueness
         # constraints on entity labels cause batch write failures when the same

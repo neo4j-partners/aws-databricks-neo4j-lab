@@ -25,6 +25,14 @@ INDEXES: list[tuple[str, str]] = [
     ("Removal", "aircraft_id"),
 ]
 
+# (index_name, label, [properties]) — fulltext indexes for sample queries.
+FULLTEXT_INDEXES: list[tuple[str, str, list[str]]] = [
+    ("maintenance_search", "MaintenanceEvent", ["fault", "corrective_action"]),
+    ("delay_search", "Delay", ["cause"]),
+    ("component_search", "Component", ["name", "type"]),
+    ("document_search", "Document", ["title", "aircraftType"]),
+]
+
 # Constraints for entity types created by the `enrich` command.
 # SimpleKGPipeline deduplicates on the `name` property.
 EXTRACTION_CONSTRAINTS: list[tuple[str, str]] = [
@@ -49,6 +57,17 @@ def create_indexes(driver: Driver) -> None:
             f"CREATE INDEX {index_name} IF NOT EXISTS FOR (n:{label}) ON (n.{prop})"
         )
         print(f"  [OK] Index: {label}.{prop}")
+
+
+def create_fulltext_indexes(driver: Driver) -> None:
+    """Create fulltext indexes for sample demo queries (idempotent)."""
+    for name, label, props in FULLTEXT_INDEXES:
+        props_clause = ", ".join(f"n.{p}" for p in props)
+        driver.execute_query(
+            f"CREATE FULLTEXT INDEX {name} IF NOT EXISTS "
+            f"FOR (n:{label}) ON EACH [{props_clause}]"
+        )
+        print(f"  [OK] Fulltext index: {name} on {label}({', '.join(props)})")
 
 
 def create_extraction_constraints(driver: Driver) -> None:

@@ -100,8 +100,7 @@ def _create_pipeline(
         llm = OpenAILLM(
             model_name=llm_model,
             model_params={
-                "max_tokens": 2000,
-                "temperature": 0,
+                "max_completion_tokens": 2000,
                 "response_format": {"type": "json_object"},
             },
             api_key=openai_api_key,
