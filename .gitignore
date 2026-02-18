@@ -161,6 +161,9 @@ plugins/
 data/
 import/
 
+# Node.js
+node_modules/
+
 # Large generated data files (keep small CSVs, ignore generated large ones)
 *_large.csv
 
