@@ -9,6 +9,8 @@ from typing import Any
 
 from neo4j import Driver
 from neo4j_graphrag.embeddings.openai import AzureOpenAIEmbeddings, OpenAIEmbeddings
+from neo4j_graphrag.experimental.components.text_splitters.base import TextSplitter
+from neo4j_graphrag.experimental.components.types import TextChunks
 
 # Labels for extracted entity nodes (used by clear/verify logic).
 EXTRACTED_LABELS = ["OperatingLimit"]
@@ -49,6 +51,44 @@ DOCUMENTS: list[DocumentMeta] = [
 
 
 # ---------------------------------------------------------------------------
+# Context-aware text splitter
+# ---------------------------------------------------------------------------
+
+
+class ContextPrependingSplitter(TextSplitter):
+    """Wraps a ``TextSplitter`` and prepends a context line to every chunk.
+
+    **Why this is necessary:**  ``SimpleKGPipeline`` passes ``document_metadata``
+    (which includes the aircraft type) only to the lexical graph builder for
+    storage on ``Document`` nodes — it is never injected into the LLM extraction
+    prompt.  The LLM sees only the raw chunk text.  After the inner splitter
+    divides a 30 000-character maintenance manual into ~40 chunks of ~800
+    characters, most chunks land deep in engine-specific sections where the
+    engine designation (e.g. "LEAP-1A") dominates and the aircraft model
+    (e.g. "A321neo") is never mentioned.  Without explicit context, the LLM
+    confuses engine types for aircraft types, breaking downstream cross-links
+    that match on ``OperatingLimit.aircraftType == Aircraft.model``.
+
+    This wrapper solves the problem by delegating splitting to the inner
+    splitter, then prepending a short context header to *every* resulting
+    chunk so the LLM always has access to the document-level aircraft type.
+
+    Set :attr:`context` before each call to ``pipeline.run_async()``.
+    """
+
+    def __init__(self, inner: TextSplitter, context: str = "") -> None:
+        self.inner = inner
+        self.context = context
+
+    async def run(self, text: str) -> TextChunks:
+        result = await self.inner.run(text)
+        if self.context:
+            for chunk in result.chunks:
+                chunk.text = self.context + chunk.text
+        return result
+
+
+# ---------------------------------------------------------------------------
 # Dimension-aware embedder wrapper
 # ---------------------------------------------------------------------------
 
@@ -77,6 +117,80 @@ class DimensionAwareAzureOpenAIEmbeddings(AzureOpenAIEmbeddings):
 
     def embed_query(self, text: str, **kwargs: Any) -> list[float]:
         return super().embed_query(text, dimensions=self._dimensions, **kwargs)
+
+
+# ---------------------------------------------------------------------------
+# Extraction prompt template
+# ---------------------------------------------------------------------------
+
+# Custom prompt that teaches the LLM domain reasoning for aircraft maintenance
+# manuals.  Key improvements over the default ERExtractionTemplate:
+#
+# 1. Document context awareness — tells the LLM to look for a [DOCUMENT CONTEXT]
+#    header (prepended to the text in process_all_documents) for the aircraft type.
+# 2. Aircraft vs engine disambiguation — teaches the LLM that aircraft types are
+#    airframe models, not engine designations.
+# 3. Sensor parameter guidance — instructs the LLM to use the parameter names
+#    from the document's sensor monitoring tables.
+# 4. A concrete few-shot example showing correct extraction.
+#
+# Placeholders: {schema}, {examples}, {text} (required by ERExtractionTemplate).
+# Literal braces must be doubled for Python str.format().
+
+EXTRACTION_PROMPT = """\
+You are an expert aviation engineer extracting structured operating-limit \
+data from aircraft maintenance manuals to build a knowledge graph.
+
+Your task: extract entities (nodes) and relationships from the input text \
+according to the schema below.
+
+Return result as JSON using this format:
+{{"nodes": [{{"id": "0", "label": "OperatingLimit", "properties": {{"name": "EGT - A320-200", "parameterName": "EGT", "aircraftType": "A320-200", "unit": "°C", "maxValue": "695"}}}}],
+"relationships": []}}
+
+Use only the following node and relationship types:
+{schema}
+
+IMPORTANT RULES:
+
+1. DOCUMENT CONTEXT: The input text starts with a [DOCUMENT CONTEXT] line \
+that identifies the aircraft type and title. Use the aircraft type from this \
+context line as the `aircraftType` property on every extracted entity.
+
+2. AIRCRAFT TYPE vs ENGINE MODEL: The `aircraftType` property must be the \
+airframe model (the aircraft you fly, e.g. A320-200, A321neo, B737-800), \
+NOT the engine designation (e.g. V2500, LEAP-1A, CFM56-7B, PW1100G). \
+Maintenance manuals are organized by aircraft type. Engine models appear \
+throughout the text but they are components OF the aircraft, not the \
+aircraft type itself.
+
+3. PARAMETER NAMES: The `parameterName` should use the short sensor \
+monitoring names from the document's sensor tables (e.g. EGT, Vibration, \
+N1Speed, FuelFlow). Prefer concise sensor-style names over verbose \
+descriptions.
+
+4. ENTITY NAME FORMAT: The `name` property must follow the pattern \
+"<parameterName> - <aircraftType>" (e.g. "EGT - A320-200"). This creates \
+a unique identifier per parameter per aircraft type.
+
+5. Only extract entities when the text contains specific numeric limits, \
+thresholds, or operating ranges. Do not create entities for general \
+descriptions without measurable values.
+
+Assign a unique ID (string) to each node and reuse it for relationships.
+
+Output rules:
+- Return ONLY the JSON object, no additional text.
+- Omit any backticks — output raw JSON.
+- The JSON must be a single object, not wrapped in a list.
+- Property names must be in double quotes.
+
+{examples}
+
+Input text:
+
+{text}
+"""
 
 
 # ---------------------------------------------------------------------------
@@ -160,17 +274,18 @@ def _create_pipeline(
             api_key=openai_api_key,
         )
 
-    # --- Text splitter ---
-    splitter = FixedSizeSplitter(
+    # --- Text splitter (with per-chunk context injection) ---
+    inner_splitter = FixedSizeSplitter(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
         approximate=True,
     )
+    splitter = ContextPrependingSplitter(inner_splitter)
 
     # --- Schema ---
     schema = build_extraction_schema()
 
-    return SimpleKGPipeline(
+    pipeline = SimpleKGPipeline(
         llm=llm,
         driver=driver,
         embedder=embedder,
@@ -179,7 +294,9 @@ def _create_pipeline(
         from_pdf=False,
         on_error="IGNORE",
         perform_entity_resolution=True,
+        prompt_template=EXTRACTION_PROMPT,
     )
+    return pipeline, splitter
 
 
 # ---------------------------------------------------------------------------
@@ -210,7 +327,7 @@ def process_all_documents(
     so that approximately that many chunks are produced.  Useful for quick test
     runs without processing the full manuals.
     """
-    pipeline = _create_pipeline(
+    pipeline, splitter = _create_pipeline(
         driver,
         provider=provider,
         openai_api_key=openai_api_key,
@@ -242,6 +359,14 @@ def process_all_documents(
             if max_chars and len(text) > max_chars:
                 text = text[:max_chars]
                 print(f"  Truncated to {max_chars:,} chars (~{enrich_sample_size} chunks).")
+
+            # Update the splitter's context so every chunk the LLM sees starts
+            # with the aircraft type.  The custom EXTRACTION_PROMPT instructs
+            # the LLM to read this header.
+            splitter.context = (
+                f"[DOCUMENT CONTEXT] Aircraft Type: {meta.aircraft_type} | "
+                f"Title: {meta.title}\n\n"
+            )
 
             await pipeline.run_async(
                 text=text,
